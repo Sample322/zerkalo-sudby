@@ -1,0 +1,2 @@
+# Alembic revision scripts land here. Plan 02 creates the first revision
+# (all 16 tables) against Base.metadata. Kept empty in Plan 01 on purpose.
