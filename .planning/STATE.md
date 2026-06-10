@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-10T14:02:37.427Z"
+last_updated: "2026-06-10T14:27:34.822Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 01 (foundation-telegram-auth) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-06-10
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██████░░░░] 60%
 | Phase 01 P01 | 35 | 3 tasks | 47 files |
 | Phase 01 P02 | 30 | 2 tasks | 14 files |
 | Phase 01 P03 | 35 | 2 tasks | 10 files |
+| Phase 01 P04 | 40 | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 1: slug keys + users.telegram_id + payments.payload UNIQUE constraints are the durable integrity guarantees later phases (auth upsert, payment idempotency) and the admin panel rely on.
 - [Phase ?]: Phase 1: MVP seed shipped as JSON files + `python -m app.seed` CLI (not an Alembic data-migration) — re-runnable, content editable independent of schema history (RESEARCH Pattern 6).
 - [Phase ?]: Phase 1: idempotent seed via upsert-by-slug (ON CONFLICT DO UPDATE); spread_positions (no single-column unique key) rebuilt per spread via a scoped delete->insert inside the same transaction.
+- [Phase ?]: Phase 1: initData validator is hand-rolled to the exact Telegram two-stage HMAC (secret=HMAC_SHA256(b'WebAppData',bot_token), constant-time hmac.compare_digest, auth_date freshness); telegram_id derived ONLY from the validated user blob, never the request body.
+- [Phase ?]: Phase 1: JWT is PyJWT HS256 with sub=user UUID + telegram_id claim; decode pins algorithms=['HS256'] so alg:none is rejected; get_current_user is the reusable Bearer gate, require_admin the server-side ADMIN_TELEGRAM_IDS allowlist.
+- [Phase ?]: Phase 1: thin routers delegate to services/telegram_auth.authenticate() (TelegramAuthService reused by the bot in Phase 7); INFRA-05 global Exception handler returns soft in-character JSON (no stacktrace leak), Sentry is a no-op seam deferred to Phase 8.
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-10T14:01:55.127Z
+Last session: 2026-06-10T14:26:45.768Z
 Stopped at: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability updated (85/85 mapped)
 Resume file: None

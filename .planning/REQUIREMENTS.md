@@ -15,15 +15,15 @@
 - [x] **INFRA-02**: Alembic-миграции схемы БД (users, decks, cards, deck_cards, spread_types, spread_positions, deck_spread_compatibility, readings, reading_cards, prompt_templates, user_limits, products, payments, subscriptions, app_events, generation_logs)
 - [x] **INFRA-03**: Seed-data: 7 тем, 6 колод, 7 раскладов с позициями, 78 базовых карт со значениями, базовые prompt-шаблоны
 - [x] **INFRA-04**: Backend healthcheck + конфиг через env с валидацией обязательных секретов при старте (bot token, DB, Redis, LLM key)
-- [ ] **INFRA-05**: Логи + error tracking (Sentry/аналог); ошибки генерации сохраняются, пользователь видит мягкую ошибку, не stacktrace
+- [x] **INFRA-05**: Логи + error tracking (Sentry/аналог); ошибки генерации сохраняются, пользователь видит мягкую ошибку, не stacktrace
 
 ### Authentication (AUTH)
 
-- [ ] **AUTH-01**: Пользователь авторизуется через Telegram WebApp без отдельной регистрации; frontend передаёт `initData` на backend (POST /api/auth/telegram)
-- [ ] **AUTH-02**: Backend валидирует `initData` (HMAC-SHA256, `secret = HMAC_SHA256(key="WebAppData", msg=bot_token)`, sorted data_check_string без `hash`) и проверяет свежесть `auth_date`; невалидные/устаревшие отклоняются
-- [ ] **AUTH-03**: При первом входе создаётся профиль (telegram_id, username, имя, language, photo); при повторном — обновляется `last_seen_at`
-- [ ] **AUTH-04**: Backend выдаёт session token (JWT); frontend использует его для последующих запросов
-- [ ] **AUTH-05**: Доступ к admin-эндпоинтам только для Telegram ID из allowlist (`ADMIN_TELEGRAM_IDS`), проверка на сервере
+- [x] **AUTH-01**: Пользователь авторизуется через Telegram WebApp без отдельной регистрации; frontend передаёт `initData` на backend (POST /api/auth/telegram)
+- [x] **AUTH-02**: Backend валидирует `initData` (HMAC-SHA256, `secret = HMAC_SHA256(key="WebAppData", msg=bot_token)`, sorted data_check_string без `hash`) и проверяет свежесть `auth_date`; невалидные/устаревшие отклоняются
+- [x] **AUTH-03**: При первом входе создаётся профиль (telegram_id, username, имя, language, photo); при повторном — обновляется `last_seen_at`
+- [x] **AUTH-04**: Backend выдаёт session token (JWT); frontend использует его для последующих запросов
+- [x] **AUTH-05**: Доступ к admin-эндпоинтам только для Telegram ID из allowlist (`ADMIN_TELEGRAM_IDS`), проверка на сервере
 
 ### Onboarding (ONB)
 
@@ -189,12 +189,12 @@
 | INFRA-02 | Phase 1 — Foundation & Telegram Auth | Complete |
 | INFRA-03 | Phase 1 — Foundation & Telegram Auth | Complete |
 | INFRA-04 | Phase 1 — Foundation & Telegram Auth | Complete |
-| INFRA-05 | Phase 1 — Foundation & Telegram Auth | Pending |
-| AUTH-01 | Phase 1 — Foundation & Telegram Auth | Pending |
-| AUTH-02 | Phase 1 — Foundation & Telegram Auth | Pending |
-| AUTH-03 | Phase 1 — Foundation & Telegram Auth | Pending |
-| AUTH-04 | Phase 1 — Foundation & Telegram Auth | Pending |
-| AUTH-05 | Phase 1 — Foundation & Telegram Auth | Pending |
+| INFRA-05 | Phase 1 — Foundation & Telegram Auth | Complete |
+| AUTH-01 | Phase 1 — Foundation & Telegram Auth | Complete |
+| AUTH-02 | Phase 1 — Foundation & Telegram Auth | Complete |
+| AUTH-03 | Phase 1 — Foundation & Telegram Auth | Complete |
+| AUTH-04 | Phase 1 — Foundation & Telegram Auth | Complete |
+| AUTH-05 | Phase 1 — Foundation & Telegram Auth | Complete |
 | ONB-01 | Phase 3 — The Ritual (mock) | Pending |
 | ONB-02 | Phase 3 — The Ritual (mock) | Pending |
 | ONB-03 | Phase 3 — The Ritual (mock) | Pending |

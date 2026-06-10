@@ -50,7 +50,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 01-03-PLAN.md — Idempotent seed CLI: 7 topics, 6 decks, 7 spreads+positions, 78 cards, base prompt templates (INFRA-03)
-- [ ] 01-04-PLAN.md — Security spine: initData two-stage HMAC + JWT + auth endpoint + user upsert + Bearer dep + admin allowlist + soft-error handler (AUTH-01..05, INFRA-05)
+- [x] 01-04-PLAN.md — Security spine: initData two-stage HMAC + JWT + auth endpoint + user upsert + Bearer dep + admin allowlist + soft-error handler (AUTH-01..05, INFRA-05)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -182,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Telegram Auth | 3/5 | In Progress|  |
+| 1. Foundation & Telegram Auth | 4/5 | In Progress|  |
 | 2. Deck & Spread Catalog | 0/TBD | Not started | - |
 | 3. The Ritual (mock) | 0/TBD | Not started | - |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
