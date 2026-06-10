@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Minimal ritual atmosphere — full per-deck theming arrives in Phase 2. */
+@theme {
+  --color-night: oklch(18% 0.03 285);
+  --color-veil: oklch(28% 0.04 285);
+  --color-glow: oklch(82% 0.13 90);
+  --color-mist: oklch(72% 0.02 285);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(120% 90% at 50% -10%, var(--color-veil), var(--color-night) 70%);
+  color: var(--color-mist);
+  font-family:
+    ui-serif, Georgia, "Times New Roman", serif;
+  -webkit-font-smoothing: antialiased;
+}
