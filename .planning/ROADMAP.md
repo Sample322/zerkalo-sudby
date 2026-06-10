@@ -13,7 +13,7 @@
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Telegram Auth** - Repo boots end-to-end and the Mini App knows who the user is (validated `initData` → JWT)
+- [x] **Phase 1: Foundation & Telegram Auth** - Repo boots end-to-end and the Mini App knows who the user is (validated `initData` → JWT) (completed 2026-06-10)
 - [ ] **Phase 2: Deck & Spread Catalog** - User browses 6 distinct decks and 7 spreads with topic-based recommendations and per-deck theming
 - [ ] **Phase 3: The Ritual (mock)** - User runs the entire flow — onboarding → question/topic/deck/spread → ritual → reveal — against a mock reading
 - [ ] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated
@@ -54,7 +54,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-05-PLAN.md — Frontend auth wiring: initData → JWT → authenticated state + real-Telegram verify checkpoint (AUTH-01)
+- [x] 01-05-PLAN.md — Frontend auth wiring: initData → JWT → authenticated state + real-Telegram verify checkpoint (AUTH-01)
 
 ### Phase 2: Deck & Spread Catalog
 
@@ -182,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Telegram Auth | 4/5 | In Progress|  |
+| 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 0/TBD | Not started | - |
 | 3. The Ritual (mock) | 0/TBD | Not started | - |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
