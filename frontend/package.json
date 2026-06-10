@@ -6,22 +6,25 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5",
+    "motion": "^12",
     "react": "19.2.*",
     "react-dom": "19.2.*",
-    "@tanstack/react-query": "^5",
-    "zustand": "^5",
-    "motion": "^12"
+    "zustand": "^5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.*",
     "@types/react": "^19.2",
     "@types/react-dom": "^19.2",
     "@vitejs/plugin-react": "^5",
+    "jsdom": "^25.0.1",
     "tailwindcss": "4.3.*",
     "typescript": "~5.7",
-    "vite": "7.3.*"
+    "vite": "7.3.*",
+    "vitest": "^3.2.6"
   }
 }
