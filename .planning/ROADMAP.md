@@ -70,7 +70,18 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A card with no uploaded art still renders with an atmospheric CSS/SVG fallback in its image/thumbnail/back slots (no broken images)
   5. Seed data contains only original deck names and style-free universal card meanings — no RWS/commercial deck references
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+
+**Wave 1** *(parallel — zero file overlap; execute-phase runs them sequentially)*
+
+- [ ] 02-01-PLAN.md — Backend catalog: SpreadType.positions relationship + seed deck_spread_compatibility from §7 + Pydantic schemas + CatalogService + GET /api/decks, /api/decks/{slug}, /api/spreads, /api/spreads/recommend + DB tests (DECK-01..04, SPREAD-01..04)
+- [ ] 02-02-PLAN.md — Frontend foundation: mount QueryClientProvider + Zustand selection store + per-deck theming (data-deck + 6 CSS-var palettes) + DECK-05 CSS/SVG null-art fallback + RTL test harness (UI-02, DECK-05)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-03-PLAN.md — Frontend catalog UI: TanStack Query hooks + DeckCard carousel/SpreadCard/TopicChip + CatalogScreen (selection + live theming + recommendation) wired into App (DECK-01/03, SPREAD-01/03, UI-02)
+
 **UI hint**: yes
 
 ### Phase 3: The Ritual (mock)
@@ -183,7 +194,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
-| 2. Deck & Spread Catalog | 0/TBD | Not started | - |
+| 2. Deck & Spread Catalog | 0/3 | Planned | - |
 | 3. The Ritual (mock) | 0/TBD | Not started | - |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
 | 5. History & Profile | 0/TBD | Not started | - |
