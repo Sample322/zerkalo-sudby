@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import health
+from app.api import admin, auth, health, users
 from app.core.db import engine
 from app.core.logging import configure_logging
 from app.core.redis import redis_client
@@ -41,10 +41,8 @@ app = FastAPI(
 
 # --- Routers ---
 app.include_router(health.router)
+app.include_router(auth.router, prefix="/api")  # POST /api/auth/telegram
+app.include_router(users.router, prefix="/api")  # GET  /api/me
+app.include_router(admin.router, prefix="/api")  # GET  /api/admin/ping (require_admin)
 
-# --- Plan 04 seam -----------------------------------------------------------------
-# app.include_router(auth.router, prefix="/api")     # POST /api/auth/telegram
-# app.include_router(users.router, prefix="/api")    # GET  /api/me
-# app.include_router(admin.router, prefix="/api")    # GET  /api/admin/ping (require_admin)
-# app.add_exception_handler(Exception, soft_error_handler)  # INFRA-05 (no stacktrace leak)
-# ----------------------------------------------------------------------------------
+# --- INFRA-05 seam (global soft-error handler) is wired in Task 3 below. -----------
