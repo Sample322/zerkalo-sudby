@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plansPlans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Walking Skeleton: docker-compose (Postgres 16 + Redis 7) + FastAPI fail-fast config + /healthz + Wave-0 test harness + Vite/React shell (INFRA-01, INFRA-04)
+- [x] 01-01-PLAN.md — Walking Skeleton: docker-compose (Postgres 16 + Redis 7) + FastAPI fail-fast config + /healthz + Wave-0 test harness + Vite/React shell (INFRA-01, INFRA-04)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -182,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Telegram Auth | 0/5 | Not started | - |
+| 1. Foundation & Telegram Auth | 1/5 | In Progress|  |
 | 2. Deck & Spread Catalog | 0/TBD | Not started | - |
 | 3. The Ritual (mock) | 0/TBD | Not started | - |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
