@@ -181,17 +181,101 @@
 
 ## Traceability
 
-Какие фазы покрывают какие требования. Заполняется при создании roadmap (gsd-roadmapper).
+Какие фазы покрывают какие требования. Заполнено при создании roadmap (gsd-roadmapper).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | — | Pending |
+| INFRA-01 | Phase 1 — Foundation & Telegram Auth | Pending |
+| INFRA-02 | Phase 1 — Foundation & Telegram Auth | Pending |
+| INFRA-03 | Phase 1 — Foundation & Telegram Auth | Pending |
+| INFRA-04 | Phase 1 — Foundation & Telegram Auth | Pending |
+| INFRA-05 | Phase 1 — Foundation & Telegram Auth | Pending |
+| AUTH-01 | Phase 1 — Foundation & Telegram Auth | Pending |
+| AUTH-02 | Phase 1 — Foundation & Telegram Auth | Pending |
+| AUTH-03 | Phase 1 — Foundation & Telegram Auth | Pending |
+| AUTH-04 | Phase 1 — Foundation & Telegram Auth | Pending |
+| AUTH-05 | Phase 1 — Foundation & Telegram Auth | Pending |
+| ONB-01 | Phase 3 — The Ritual (mock) | Pending |
+| ONB-02 | Phase 3 — The Ritual (mock) | Pending |
+| ONB-03 | Phase 3 — The Ritual (mock) | Pending |
+| ONB-04 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-01 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-02 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-03 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-04 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-05 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-06 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-07 | Phase 3 — The Ritual (mock) | Pending |
+| DECK-01 | Phase 2 — Deck & Spread Catalog | Pending |
+| DECK-02 | Phase 2 — Deck & Spread Catalog | Pending |
+| DECK-03 | Phase 2 — Deck & Spread Catalog | Pending |
+| DECK-04 | Phase 2 — Deck & Spread Catalog | Pending |
+| DECK-05 | Phase 2 — Deck & Spread Catalog | Pending |
+| SPREAD-01 | Phase 2 — Deck & Spread Catalog | Pending |
+| SPREAD-02 | Phase 2 — Deck & Spread Catalog | Pending |
+| SPREAD-03 | Phase 2 — Deck & Spread Catalog | Pending |
+| SPREAD-04 | Phase 2 — Deck & Spread Catalog | Pending |
+| READ-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-06 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-07 | Phase 3 — The Ritual (mock) | Pending |
+| READ-08 | Phase 3 — The Ritual (mock) | Pending |
+| READ-09 | Phase 3 — The Ritual (mock) | Pending |
+| READ-10 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-11 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| HIST-01 | Phase 5 — History & Profile | Pending |
+| HIST-02 | Phase 5 — History & Profile | Pending |
+| HIST-03 | Phase 5 — History & Profile | Pending |
+| HIST-04 | Phase 5 — History & Profile | Pending |
+| HIST-05 | Phase 5 — History & Profile | Pending |
+| HIST-06 | Phase 5 — History & Profile | Pending |
+| LIMIT-01 | Phase 6 — Free Limits & Soft Paywall | Pending |
+| LIMIT-02 | Phase 6 — Free Limits & Soft Paywall | Pending |
+| LIMIT-03 | Phase 6 — Free Limits & Soft Paywall | Pending |
+| LIMIT-04 | Phase 6 — Free Limits & Soft Paywall | Pending |
+| LIMIT-05 | Phase 6 — Free Limits & Soft Paywall | Pending |
+| PAY-01 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-02 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-03 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-04 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-05 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-06 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-07 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-08 | Phase 7 — Telegram Stars Payments | Pending |
+| SAFE-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-06 | Phase 3 — The Ritual (mock) | Pending |
+| PROF-01 | Phase 5 — History & Profile | Pending |
+| PROF-02 | Phase 5 — History & Profile | Pending |
+| ADMIN-01 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-02 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-03 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-04 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-05 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-06 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-07 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-08 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ADMIN-09 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ANALYTICS-01 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| ANALYTICS-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| UI-01 | Phase 3 — The Ritual (mock) | Pending |
+| UI-02 | Phase 2 — Deck & Spread Catalog | Pending |
+| UI-03 | Phase 3 — The Ritual (mock) | Pending |
+| UI-04 | Phase 3 — The Ritual (mock) | Pending |
+| UI-05 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
+| UI-06 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 
 **Coverage:**
 - v1 requirements: 85 total
-- Mapped to phases: TBD (roadmap)
-- Unmapped: TBD
+- Mapped to phases: 85
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-09*
-*Last updated: 2026-06-09 after initial definition*
+*Last updated: 2026-06-09 after roadmap creation (85/85 requirements mapped to 8 vertical-MVP phases)*
