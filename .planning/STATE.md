@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-10T13:36:19.375Z"
+last_updated: "2026-06-10T14:02:37.427Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 01 (foundation-telegram-auth) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-06-10
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [████░░░░░░] 40%
 *Updated after each plan completion*
 | Phase 01 P01 | 35 | 3 tasks | 47 files |
 | Phase 01 P02 | 30 | 2 tasks | 14 files |
+| Phase 01 P03 | 35 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Recent decisions affecting current work:
 - Card draw + limit checks are backend-only (CSPRNG) throughout.
 - [Phase ?]: Phase 1: full 17-table schema (16 TZ §13 + topics lookup) locked in one initial Alembic migration 0001; native PG ENUMs for the 9 fixed status/type sets; topics is a lookup only (not a FK target), readings.topic stays a TEXT slug.
 - [Phase ?]: Phase 1: slug keys + users.telegram_id + payments.payload UNIQUE constraints are the durable integrity guarantees later phases (auth upsert, payment idempotency) and the admin panel rely on.
+- [Phase ?]: Phase 1: MVP seed shipped as JSON files + `python -m app.seed` CLI (not an Alembic data-migration) — re-runnable, content editable independent of schema history (RESEARCH Pattern 6).
+- [Phase ?]: Phase 1: idempotent seed via upsert-by-slug (ON CONFLICT DO UPDATE); spread_positions (no single-column unique key) rebuilt per spread via a scoped delete->insert inside the same transaction.
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-10T13:35:35.631Z
+Last session: 2026-06-10T14:01:55.127Z
 Stopped at: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability updated (85/85 mapped)
 Resume file: None
