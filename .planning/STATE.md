@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-10T08:51:05.492Z"
+last_updated: "2026-06-10T13:36:19.375Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 01 (foundation-telegram-auth) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-06-10
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [██░░░░░░░░] 20%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 35 | 3 tasks | 47 files |
+| Phase 01 P02 | 30 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Recent decisions affecting current work:
 - Phase 1: `initData` two-stage HMAC + `auth_date` freshness is the security spine; `telegram_id` derived only from validated initData.
 - Phase 4 (KEYSTONE): one structured LLM call per reading + mandatory safety classifier gating generation (crisis short-circuits before draw/charge); limit never consumed on failure.
 - Card draw + limit checks are backend-only (CSPRNG) throughout.
+- [Phase ?]: Phase 1: full 17-table schema (16 TZ §13 + topics lookup) locked in one initial Alembic migration 0001; native PG ENUMs for the 9 fixed status/type sets; topics is a lookup only (not a FK target), readings.topic stays a TEXT slug.
+- [Phase ?]: Phase 1: slug keys + users.telegram_id + payments.payload UNIQUE constraints are the durable integrity guarantees later phases (auth upsert, payment idempotency) and the admin panel rely on.
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-10T08:51:05.485Z
+Last session: 2026-06-10T13:35:35.631Z
 Stopped at: ROADMAP.md and STATE.md created; REQUIREMENTS.md traceability updated (85/85 mapped)
 Resume file: None

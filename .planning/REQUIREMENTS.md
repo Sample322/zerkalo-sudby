@@ -12,7 +12,7 @@
 ### Foundation (INFRA)
 
 - [x] **INFRA-01**: Монорепо (`/frontend`, `/backend` с aiogram-ботом как in-process модулем, `/docs`) с Docker Compose для локальной разработки (PostgreSQL + Redis)
-- [ ] **INFRA-02**: Alembic-миграции схемы БД (users, decks, cards, deck_cards, spread_types, spread_positions, deck_spread_compatibility, readings, reading_cards, prompt_templates, user_limits, products, payments, subscriptions, app_events, generation_logs)
+- [x] **INFRA-02**: Alembic-миграции схемы БД (users, decks, cards, deck_cards, spread_types, spread_positions, deck_spread_compatibility, readings, reading_cards, prompt_templates, user_limits, products, payments, subscriptions, app_events, generation_logs)
 - [ ] **INFRA-03**: Seed-data: 7 тем, 6 колод, 7 раскладов с позициями, 78 базовых карт со значениями, базовые prompt-шаблоны
 - [x] **INFRA-04**: Backend healthcheck + конфиг через env с валидацией обязательных секретов при старте (bot token, DB, Redis, LLM key)
 - [ ] **INFRA-05**: Логи + error tracking (Sentry/аналог); ошибки генерации сохраняются, пользователь видит мягкую ошибку, не stacktrace
@@ -186,7 +186,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 1 — Foundation & Telegram Auth | Complete |
-| INFRA-02 | Phase 1 — Foundation & Telegram Auth | Pending |
+| INFRA-02 | Phase 1 — Foundation & Telegram Auth | Complete |
 | INFRA-03 | Phase 1 — Foundation & Telegram Auth | Pending |
 | INFRA-04 | Phase 1 — Foundation & Telegram Auth | Complete |
 | INFRA-05 | Phase 1 — Foundation & Telegram Auth | Pending |

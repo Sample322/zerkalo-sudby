@@ -45,7 +45,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — SQLAlchemy 2 models + one initial Alembic migration for all 17 tables (16 TZ §13 + topics) (INFRA-02)
+- [x] 01-02-PLAN.md — SQLAlchemy 2 models + one initial Alembic migration for all 17 tables (16 TZ §13 + topics) (INFRA-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -182,7 +182,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Telegram Auth | 1/5 | In Progress|  |
+| 1. Foundation & Telegram Auth | 2/5 | In Progress|  |
 | 2. Deck & Spread Catalog | 0/TBD | Not started | - |
 | 3. The Ritual (mock) | 0/TBD | Not started | - |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
