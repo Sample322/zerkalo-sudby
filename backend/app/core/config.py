@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     INITDATA_MAX_AGE_SECONDS: int = 86400  # 24h initData freshness window
     WEBHOOK_SECRET: str | None = None  # X-Telegram-Bot-Api-Secret-Token (Phase 7)
     LOG_LEVEL: str = "INFO"
+    # Optional error-tracking DSN (INFRA-05). Unset => Sentry init is a strict no-op;
+    # full dashboards/alerting are deferred to Phase 8 (RESEARCH Open Question #4).
+    SENTRY_DSN: str | None = None
 
     @field_validator("ADMIN_TELEGRAM_IDS", mode="before")
     @classmethod
