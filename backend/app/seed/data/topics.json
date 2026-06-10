@@ -1,0 +1,9 @@
+[
+  { "slug": "love", "title": "Любовь", "sort_order": 1, "is_active": true },
+  { "slug": "work", "title": "Работа", "sort_order": 2, "is_active": true },
+  { "slug": "money", "title": "Деньги", "sort_order": 3, "is_active": true },
+  { "slug": "choice", "title": "Выбор", "sort_order": 4, "is_active": true },
+  { "slug": "day", "title": "День", "sort_order": 5, "is_active": true },
+  { "slug": "self_reflection", "title": "Саморефлексия", "sort_order": 6, "is_active": true },
+  { "slug": "general", "title": "Общий вопрос", "sort_order": 7, "is_active": true }
+]
