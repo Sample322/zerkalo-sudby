@@ -44,18 +44,18 @@
 
 ### Decks & Cards (DECK)
 
-- [ ] **DECK-01**: В MVP доступно **6 колод**, все бесплатны: classic_arcana, moon_mirror, shadow_arcana, heart_oracle, path_deck, forest_oracle
-- [ ] **DECK-02**: Каждая колода имеет уникальный тон, атмосферу, `prompt_modifier` и визуальную тему (палитра из ТЗ §21.2)
-- [ ] **DECK-03**: API отдаёт каталог колод и детальную карточку (GET /api/decks, GET /api/decks/{slug})
-- [ ] **DECK-04**: Универсальное значение карты (`cards`) хранится отдельно от колодного стилевого слоя (`deck_cards`); 78 базовых карт засидены
-- [ ] **DECK-05**: Карта в колоде имеет слоты изображения (image/thumbnail/back) с атмосферным CSS/SVG-фолбэком, если арт не загружен
+- [x] **DECK-01**: В MVP доступно **6 колод**, все бесплатны: classic_arcana, moon_mirror, shadow_arcana, heart_oracle, path_deck, forest_oracle
+- [x] **DECK-02**: Каждая колода имеет уникальный тон, атмосферу, `prompt_modifier` и визуальную тему (палитра из ТЗ §21.2)
+- [x] **DECK-03**: API отдаёт каталог колод и детальную карточку (GET /api/decks, GET /api/decks/{slug})
+- [x] **DECK-04**: Универсальное значение карты (`cards`) хранится отдельно от колодного стилевого слоя (`deck_cards`); 78 базовых карт засидены
+- [x] **DECK-05**: Карта в колоде имеет слоты изображения (image/thumbnail/back) с атмосферным CSS/SVG-фолбэком, если арт не загружен
 
 ### Spreads (SPREAD)
 
-- [ ] **SPREAD-01**: В MVP 7 раскладов (three_keys, thread_of_time, between_us, two_roads, day_three_signs, resource_and_risk, what_is_in_shadow), 3–4 карты
-- [ ] **SPREAD-02**: Каждый расклад имеет позиции с заголовком, описанием и `prompt_instruction`
-- [ ] **SPREAD-03**: API отдаёт список раскладов (фильтр по теме/колоде) и рекомендацию (GET /api/spreads, /api/spreads/recommend)
-- [ ] **SPREAD-04**: Рекомендация учитывает совместимость колода↔расклад (`deck_spread_compatibility`)
+- [x] **SPREAD-01**: В MVP 7 раскладов (three_keys, thread_of_time, between_us, two_roads, day_three_signs, resource_and_risk, what_is_in_shadow), 3–4 карты
+- [x] **SPREAD-02**: Каждый расклад имеет позиции с заголовком, описанием и `prompt_instruction`
+- [x] **SPREAD-03**: API отдаёт список раскладов (фильтр по теме/колоде) и рекомендацию (GET /api/spreads, /api/spreads/recommend)
+- [x] **SPREAD-04**: Рекомендация учитывает совместимость колода↔расклад (`deck_spread_compatibility`)
 
 ### Reading Generation (READ)
 
@@ -133,7 +133,7 @@
 ### UI & Atmosphere (UI)
 
 - [ ] **UI-01**: Premium-тёмный UI (стеклянные панели, свечения, градиенты, крупные карты); mobile-first 360–430px; sticky нижняя CTA
-- [ ] **UI-02**: При выборе колоды меняются фон/акцент/микротексты/частицы/тон (пер-колодная тема, 6 палитр ТЗ §21.2)
+- [x] **UI-02**: При выборе колоды меняются фон/акцент/микротексты/частицы/тон (пер-колодная тема, 6 палитр ТЗ §21.2)
 - [ ] **UI-03**: Микроанимации (перемешивание, «дыхание» карты, flip, свечение края, постепенное появление текста, haptic, финальный сбор) через `motion`
 - [ ] **UI-04**: Адаптация под Telegram dark/light тему и safe-area (через Telegram SDK insets, не CSS `env()`)
 - [ ] **UI-05**: Корректные пустые состояния и состояния ошибок в стиле продукта (ТЗ §9.8)
