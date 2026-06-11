@@ -53,6 +53,7 @@ export const REVERSED_EXPLAINER =
 
 export const ONBOARDING_CTA = "Сделать первый расклад";
 export const ONBOARDING_SKIP = "Пропустить";
+export const ONBOARDING_NEXT = "Далее";
 
 // ---------------------------------------------------------------------------------------
 // Selection screen (HOME-01/02/07).
