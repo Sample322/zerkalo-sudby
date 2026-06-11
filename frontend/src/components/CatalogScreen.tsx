@@ -1,11 +1,19 @@
+import { useState } from "react";
+import { motion } from "motion/react";
+
 import { useDecks } from "../hooks/useDecks";
 import { useRecommendation, useSpreads } from "../hooks/useSpreads";
+import { getContentSafeAreaInsets, getSafeAreaInsets } from "../lib/telegram";
+import { createReading } from "../reading/createReading";
 import {
   QUESTION_EMPTY_HELPER,
   QUESTION_PLACEHOLDER,
   QUESTION_TOO_SHORT_HINT,
+  READING_ERROR,
+  START_CTA,
+  START_GATE_HINT,
 } from "../reading/copy";
-import { questionValidity, useSelection } from "../stores/selection";
+import { canStart, questionValidity, useSelection } from "../stores/selection";
 import { useDeckTheme } from "../theme/useDeckTheme";
 import { DeckCarousel } from "./DeckCarousel";
 import { SpreadCard } from "./SpreadCard";
@@ -32,14 +40,60 @@ export function CatalogScreen() {
   const deckSlug = useSelection((s) => s.deckSlug);
   const spreadSlug = useSelection((s) => s.spreadSlug);
   const question = useSelection((s) => s.question);
+  const reversalsEnabled = useSelection((s) => s.reversalsEnabled);
   const setTopic = useSelection((s) => s.setTopic);
   const setDeck = useSelection((s) => s.setDeck);
   const setSpread = useSelection((s) => s.setSpread);
   const setQuestion = useSelection((s) => s.setQuestion);
+  const setReading = useSelection((s) => s.setReading);
+  const goTo = useSelection((s) => s.goTo);
 
   const decksQuery = useDecks();
   const spreadsQuery = useSpreads(topic, deckSlug);
   const recommendation = useRecommendation(topic, deckSlug);
+
+  // HOME-07 start gate (topic + deck + spread all chosen) — the pure store helper, never
+  // re-implemented here. A pending flag debounces double-taps while the seam resolves; an
+  // error flag surfaces the soft in-character failure copy (the Phase-4 swap inherits this).
+  const ready = canStart({ topic, deckSlug, spreadSlug });
+  const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState(false);
+
+  // The chosen spread's positions (from the trusted Phase-2 spreads query) are what
+  // createReading draws against — passed through, never mirrored into client state.
+  const selectedSpread = spreadsQuery.data?.find((s) => s.slug === spreadSlug);
+
+  async function handleStart() {
+    // Guard: the CTA is disabled when !ready, but re-check (and ignore re-entrancy / a
+    // missing spread record) so the handler is robust to races.
+    if (!ready || isStarting || !selectedSpread || !topic || !deckSlug || !spreadSlug) {
+      return;
+    }
+    setIsStarting(true);
+    setStartError(false);
+    try {
+      // THE single Phase-4 boundary (D-05). Build the MockReading via the seam, then write
+      // it to the store `reading` slot via setReading — this is the REQUIRED hand-off the
+      // ritual/reveal/result steps (03-04/05/06) read. setReading MUST run BEFORE
+      // goTo("ritual") so the downstream slot is populated on first paint. The reading is
+      // NEVER held in component state and NEVER in TanStack Query (D-05 architecture guard).
+      const reading = await createReading({
+        question: question.trim().length === 0 ? null : question, // D-13: empty => general
+        topic,
+        deckSlug,
+        spreadSlug,
+        reversalsEnabled,
+        positions: selectedSpread.positions,
+      });
+      setReading(reading);
+      goTo("ritual");
+    } catch {
+      // The mock never rejects, but shape the handler so the Phase-4 swap inherits the error
+      // UX: surface the soft «Колода замолчала…» copy and do NOT advance the step.
+      setStartError(true);
+      setIsStarting(false);
+    }
+  }
 
   // D-13 question hint, derived from the store's pure validity helper (never re-implemented):
   // empty -> a neutral optional helper (NOT an error, HOME-02); 1–9 -> a soft "уточни" hint
@@ -171,6 +225,62 @@ export function CatalogScreen() {
           <p className="px-1 opacity-60">Здесь пока пусто.</p>
         )}
       </section>
+
+      {/*
+        Sticky «Начать расклад» CTA (HOME-07 / UI-01 / UI-04). Pinned to the bottom, accent-
+        filled (Color reserved-for #1), full-width minus md gutters. Bottom padding comes from
+        the Telegram SDK safe-area insets (getSafeAreaInsets / getContentSafeAreaInsets) — NOT
+        env()/100vh — so it clears the home indicator (Pitfall 3 / T-3-06). The pinned band
+        is sized against the Telegram-provided viewportStableHeight var (keyboard-safe: the
+        iOS keyboard can't hide the CTA); `top: auto` keeps it bottom-anchored.
+      */}
+      <div
+        className="fixed inset-x-0 bottom-0 px-4 pt-3"
+        style={{
+          paddingBottom:
+            16 +
+            Math.max(
+              getSafeAreaInsets().bottom,
+              getContentSafeAreaInsets().bottom,
+            ),
+          background:
+            "linear-gradient(to top, var(--deck-bg) 60%, transparent)",
+          // Keyboard-safe anchor: stay within the stable viewport height the keyboard leaves
+          // (Telegram-provided var; falls back to the visual viewport). Never 100vh/env().
+          maxHeight: "var(--tg-viewport-stable-height, 100dvh)",
+        }}
+      >
+        {!ready && (
+          <p className="px-1 pb-2 text-center text-sm opacity-70">
+            {START_GATE_HINT}
+          </p>
+        )}
+        {startError && (
+          <p
+            className="px-1 pb-2 text-center text-sm"
+            style={{ color: "var(--deck-soft)" }}
+          >
+            {READING_ERROR}
+          </p>
+        )}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.97 }}
+          disabled={!ready || isStarting}
+          onClick={handleStart}
+          aria-disabled={!ready || isStarting}
+          className="w-full rounded-2xl px-4 py-4 text-base font-semibold outline-none transition-opacity focus-visible:ring-2 disabled:opacity-50"
+          style={{
+            background: "var(--deck-accent)",
+            color: "var(--deck-bg)",
+            boxShadow: ready
+              ? "0 14px 44px -18px var(--deck-accent)"
+              : "none",
+          }}
+        >
+          {START_CTA}
+        </motion.button>
+      </div>
     </main>
   );
 }

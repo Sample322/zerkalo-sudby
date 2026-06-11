@@ -1,6 +1,10 @@
-import { fireEvent, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+import { BANNED_BRAND_TOKENS } from "../reading/copy";
 import { useSelection } from "../stores/selection";
 import { renderWithClient } from "../test/renderWithClient";
 import { CatalogScreen } from "./CatalogScreen";
@@ -41,7 +45,17 @@ function json(data: unknown): Response {
 }
 
 beforeEach(() => {
-  useSelection.setState({ topic: null, deckSlug: null, spreadSlug: null });
+  // Reset the WHOLE store (existing selection + the Phase-3 flow slice) for isolation.
+  useSelection.setState({
+    topic: null,
+    deckSlug: null,
+    spreadSlug: null,
+    question: "",
+    reversalsEnabled: false,
+    step: "selection",
+    history: [],
+    reading: null,
+  });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string | URL) => {
@@ -55,6 +69,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Unmount the rendered tree so multiple <CatalogScreen/> instances never accumulate in the
+  // shared jsdom document (which would make getByText/getByRole match across tests).
+  cleanup();
   vi.restoreAllMocks();
   document.documentElement.removeAttribute("data-deck");
 });
@@ -76,5 +93,125 @@ test("renders decks + spreads, re-themes on deck select, shows recommendation on
   // SPREAD-04: choosing a topic surfaces the recommendation reason (brand-voice clean).
   fireEvent.click(getByText("Любовь"));
   await waitFor(() => expect(getByText(REASON)).toBeTruthy());
-  expect(/ai|нейросет|модель|сгенерирован/i.test(REASON)).toBe(false);
+  expect(BANNED_BRAND_TOKENS.test(REASON)).toBe(false);
+});
+
+test("HOME-07: «Начать расклад» is disabled with the gating hint until topic+deck+spread are chosen", async () => {
+  const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
+  await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
+
+  // Nothing chosen -> CTA disabled + the quiet gating hint (no dead click, no error).
+  const cta = getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
+  expect(cta.disabled).toBe(true);
+  expect(getByText("Выбери тему, колоду и расклад — и колода будет готова.")).toBeTruthy();
+  // The gating hint copy is brand-safe (SAFE-06 via the shared ban-list, incl. ИИ).
+  expect(
+    BANNED_BRAND_TOKENS.test(
+      "Выбери тему, колоду и расклад — и колода будет готова.",
+    ),
+  ).toBe(false);
+});
+
+test("HOME-07/D-05: with topic+deck+spread set, tapping the CTA builds the reading via createReading, writes it to the store `reading` slot BEFORE advancing to ritual", async () => {
+  // Drive the gate directly through the store (the store-test pattern). spread_0 matches a
+  // slug in the stubbed /api/spreads response so its positions are available to the handler.
+  useSelection.setState({
+    topic: "love",
+    deckSlug: "deck_0",
+    spreadSlug: "spread_0",
+    question: "Что меня ждёт в отношениях этой осенью?",
+  });
+
+  // Record the ORDER of (reading, step) transitions so we can prove setReading runs before
+  // the step changes to "ritual" (the downstream 03-04/05/06 contract).
+  const ritualEntrySnapshot: { readingWasSet: boolean }[] = [];
+  const unsubscribe = useSelection.subscribe((state) => {
+    if (state.step === "ritual") {
+      ritualEntrySnapshot.push({ readingWasSet: state.reading !== null });
+    }
+  });
+
+  const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
+  // Wait for the spreads query to resolve so selectedSpread is populated. Anchor on
+  // "Расклад 1" — it appears ONLY in the spreads list (the recommendation banner shows
+  // SPREADS[0] = "Расклад 0", so that title is ambiguous; "Расклад 1" is unique).
+  await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
+
+  const cta = getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
+  expect(cta.disabled).toBe(false); // gate open
+
+  fireEvent.click(cta);
+
+  // The reading slot is populated with a fully-built MockReading and the step is now "ritual".
+  await waitFor(() => expect(useSelection.getState().step).toBe("ritual"));
+
+  const reading = useSelection.getState().reading;
+  expect(reading).not.toBeNull();
+  // It is the reading createReading built from our params (question passes through; one card
+  // per the single spread position; brand-safe summary present).
+  expect(reading?.question).toBe("Что меня ждёт в отношениях этой осенью?");
+  expect(reading?.topic).toBe("love");
+  expect(reading?.deckSlug).toBe("deck_0");
+  expect(reading?.spreadSlug).toBe("spread_0");
+  expect(reading?.cards).toHaveLength(1);
+  expect(reading?.cards[0]?.positionTitle).toBe("Суть");
+  expect(reading?.summary).toBeTruthy();
+
+  // Ordering guard: at the moment step first became "ritual", the reading was ALREADY set.
+  expect(ritualEntrySnapshot.length).toBeGreaterThan(0);
+  expect(ritualEntrySnapshot[0].readingWasSet).toBe(true);
+
+  unsubscribe();
+});
+
+test("HOME-01/02/D-13: an empty question shows no error and a 1–9-char question shows the gentle too-short hint", async () => {
+  const { getByText, queryByText, getByPlaceholderText } = renderWithClient(
+    <CatalogScreen />,
+  );
+  await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
+
+  const textarea = getByPlaceholderText("О чём спросим колоду?") as HTMLTextAreaElement;
+
+  // Empty question is VALID (HOME-02): the optional neutral helper shows, the too-short hint
+  // does NOT (empty never triggers the "уточни" hint).
+  expect(
+    getByText("Можно спросить колоду о чём-то конкретном или сделать общий расклад."),
+  ).toBeTruthy();
+  expect(
+    queryByText("Попробуй сказать чуть подробнее — так колода услышит точнее."),
+  ).toBeNull();
+
+  // 1–9 chars -> the soft too-short hint (HOME-01); the neutral empty helper is gone.
+  fireEvent.change(textarea, { target: { value: "люб" } });
+  await waitFor(() =>
+    expect(
+      getByText("Попробуй сказать чуть подробнее — так колода услышит точнее."),
+    ).toBeTruthy(),
+  );
+  expect(
+    queryByText("Можно спросить колоду о чём-то конкретном или сделать общий расклад."),
+  ).toBeNull();
+
+  // >=10 chars -> no hint at all (neither the empty helper nor the too-short hint).
+  fireEvent.change(textarea, { target: { value: "люблю ли я его на самом деле?" } });
+  await waitFor(() =>
+    expect(
+      queryByText("Попробуй сказать чуть подробнее — так колода услышит точнее."),
+    ).toBeNull(),
+  );
+  expect(
+    queryByText("Можно спросить колоду о чём-то конкретном или сделать общий расклад."),
+  ).toBeNull();
+});
+
+test("T-3-01: the question is never rendered through a raw-HTML sink (no dangerouslySetInnerHTML in the source)", () => {
+  // The untrusted question must be a controlled React text node only. Source-scan the
+  // component file to guarantee no raw-HTML injection sink is ever introduced. Vitest runs
+  // with cwd = the frontend package root, so resolve the source relative to it.
+  const source = readFileSync(
+    resolve(process.cwd(), "src/components/CatalogScreen.tsx"),
+    "utf8",
+  );
+  expect(source.includes("dangerouslySetInnerHTML")).toBe(false);
+  expect(source.includes(".innerHTML")).toBe(false);
 });
