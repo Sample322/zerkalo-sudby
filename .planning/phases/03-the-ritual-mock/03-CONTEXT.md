@@ -43,7 +43,7 @@ The complete **front-end reading journey against a MOCK reading** — no LLM, no
 - **D-11:** `onboarding_completed` persists to **localStorage** this phase; the `PATCH /api/me/settings` path is Phase 5. ONB-04 satisfied locally (not re-shown after completion within the client).
 - **D-12:** Result-screen actions **«сохранить карточку» and «история» are present but stubbed** (visible, disabled or a "скоро" affordance) — History is Phase 5, share-card is later. **«ещё расклад» is fully wired** (D-04).
 - **D-13:** **Empty question is valid → general reading** (HOME-02). Question rules: 10–500 chars with a gentle "уточни" hint when too short (HOME-01); empty is explicitly allowed (no hint).
-- **D-14:** [informational] Limits, paywall, real draw, safety classifier, analytics events — **NOT in this phase**. The mock flow never calls a generation endpoint. (Negative scope-fence — honored by absence; plan-checker confirmed no plan introduces these. Not separately plan-trackable.)
+- **D-14 [informational]:** Limits, paywall, real draw, safety classifier, analytics events — **NOT in this phase**. The mock flow never calls a generation endpoint. (Negative scope-fence — honored by absence; plan-checker confirmed no plan introduces these. Not separately plan-trackable.)
 
 ### Claude's Discretion
 - Exact onboarding screen copy/order (3–4 screens incl. the ONB-03 reversed-cards explainer in plain, non-scary language — *delay / inner resistance / hidden tension*, never "bad/плохо"); swipe vs button nav, constrained by D-01.
