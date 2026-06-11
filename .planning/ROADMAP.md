@@ -76,7 +76,7 @@ Plans:
 **Wave 1** *(parallel — zero file overlap; execute-phase runs them sequentially)*
 
 - [x] 02-01-PLAN.md — Backend catalog: SpreadType.positions relationship + seed deck_spread_compatibility from §7 + Pydantic schemas + CatalogService + GET /api/decks, /api/decks/{slug}, /api/spreads, /api/spreads/recommend + DB tests (DECK-01..04, SPREAD-01..04)
-- [ ] 02-02-PLAN.md — Frontend foundation: mount QueryClientProvider + Zustand selection store + per-deck theming (data-deck + 6 CSS-var palettes) + DECK-05 CSS/SVG null-art fallback + RTL test harness (UI-02, DECK-05)
+- [x] 02-02-PLAN.md — Frontend foundation: mount QueryClientProvider + Zustand selection store + per-deck theming (data-deck + 6 CSS-var palettes) + DECK-05 CSS/SVG null-art fallback + RTL test harness (UI-02, DECK-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -194,7 +194,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
-| 2. Deck & Spread Catalog | 1/3 | In Progress|  |
+| 2. Deck & Spread Catalog | 2/3 | In Progress|  |
 | 3. The Ritual (mock) | 0/TBD | Not started | - |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
 | 5. History & Profile | 0/TBD | Not started | - |
