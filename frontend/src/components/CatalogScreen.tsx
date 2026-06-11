@@ -1,6 +1,11 @@
 import { useDecks } from "../hooks/useDecks";
 import { useRecommendation, useSpreads } from "../hooks/useSpreads";
-import { useSelection } from "../stores/selection";
+import {
+  QUESTION_EMPTY_HELPER,
+  QUESTION_PLACEHOLDER,
+  QUESTION_TOO_SHORT_HINT,
+} from "../reading/copy";
+import { questionValidity, useSelection } from "../stores/selection";
 import { useDeckTheme } from "../theme/useDeckTheme";
 import { DeckCarousel } from "./DeckCarousel";
 import { SpreadCard } from "./SpreadCard";
@@ -25,18 +30,64 @@ export function CatalogScreen() {
 
   const topic = useSelection((s) => s.topic);
   const deckSlug = useSelection((s) => s.deckSlug);
+  const spreadSlug = useSelection((s) => s.spreadSlug);
+  const question = useSelection((s) => s.question);
   const setTopic = useSelection((s) => s.setTopic);
   const setDeck = useSelection((s) => s.setDeck);
+  const setSpread = useSelection((s) => s.setSpread);
+  const setQuestion = useSelection((s) => s.setQuestion);
 
   const decksQuery = useDecks();
   const spreadsQuery = useSpreads(topic, deckSlug);
   const recommendation = useRecommendation(topic, deckSlug);
+
+  // D-13 question hint, derived from the store's pure validity helper (never re-implemented):
+  // empty -> a neutral optional helper (NOT an error, HOME-02); 1–9 -> a soft "уточни" hint
+  // (HOME-01); >=10 -> nothing. The hint is a Label line and never blocks the ritual.
+  const isEmptyQuestion = question.trim().length === 0;
+  const questionHint = isEmptyQuestion
+    ? QUESTION_EMPTY_HELPER
+    : questionValidity(question).status === "tooShort"
+      ? QUESTION_TOO_SHORT_HINT
+      : null;
 
   return (
     <main
       className="flex flex-1 flex-col gap-6 px-4 pb-24"
       style={{ background: "var(--deck-bg)" }}
     >
+      <section aria-label="Вопрос" className="flex flex-col gap-2">
+        <label
+          htmlFor="reading-question"
+          className="px-1 text-sm uppercase tracking-wide opacity-70"
+        >
+          Вопрос
+        </label>
+        {/*
+          HOME-01/02/D-13 — the single untrusted input this phase (threat T-3-01). Bound to
+          the store `question` via setQuestion as a CONTROLLED React value; the text is only
+          ever a React text node (raw-HTML injection sinks are deliberately never used here).
+          The store clamps to QUESTION_MAX, so the value can't exceed the upper bound.
+        */}
+        <textarea
+          id="reading-question"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder={QUESTION_PLACEHOLDER}
+          rows={3}
+          className="w-full resize-none rounded-2xl border p-4 text-base leading-relaxed outline-none focus-visible:ring-2"
+          style={{
+            color: "var(--deck-soft)",
+            background:
+              "linear-gradient(155deg, color-mix(in srgb, var(--deck-bg) 88%, transparent), color-mix(in srgb, var(--deck-deep) 72%, transparent))",
+            borderColor: "color-mix(in srgb, var(--deck-soft) 22%, transparent)",
+          }}
+        />
+        {questionHint && (
+          <p className="px-1 text-sm opacity-70">{questionHint}</p>
+        )}
+      </section>
+
       <section aria-label="Темы">
         <div className="flex gap-2 overflow-x-auto pb-1">
           {TOPICS.map((t) => (
@@ -94,13 +145,26 @@ export function CatalogScreen() {
         ) : spreadsQuery.data && spreadsQuery.data.length > 0 ? (
           <div className="flex flex-col gap-3">
             {spreadsQuery.data.map((s) => (
-              <SpreadCard
+              // HOME-06: wire SpreadCard.onSelect -> setSpread. The chosen spread gets an
+              // accent ring on its wrapper (the selected affordance) without mislabeling the
+              // card's «рекомендуем» badge, which stays bound to the topic recommendation.
+              <div
                 key={s.slug}
-                spread={s}
-                recommended={
-                  recommendation.data?.recommended_spread.slug === s.slug
+                className="rounded-xl"
+                style={
+                  spreadSlug === s.slug
+                    ? { boxShadow: "0 0 0 2px var(--deck-accent)" }
+                    : undefined
                 }
-              />
+              >
+                <SpreadCard
+                  spread={s}
+                  recommended={
+                    recommendation.data?.recommended_spread.slug === s.slug
+                  }
+                  onSelect={setSpread}
+                />
+              </div>
             ))}
           </div>
         ) : (
