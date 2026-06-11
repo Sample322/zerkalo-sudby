@@ -108,7 +108,7 @@ Plans:
 **Wave 2** *(parallel — zero file overlap; all depend on 03-01)*
 
 - [x] 03-02-PLAN.md — Onboarding: 3–4 skippable slides + reversed-cards explainer + first-reading CTA (ONB-01/02/03/04, SAFE-06)
-- [ ] 03-03-PLAN.md — Selection: question input (10–500/empty-valid/too-short hint) + topic/deck/spread + recommendation + gated «Начать расклад» → createReading → ritual; keyboard-safe sticky CTA (HOME-01..07, UI-01/04, SAFE-06)
+- [x] 03-03-PLAN.md — Selection: question input (10–500/empty-valid/too-short hint) + topic/deck/spread + recommendation + gated «Начать расклад» → createReading → ritual; keyboard-safe sticky CTA (HOME-01..07, UI-01/04, SAFE-06)
 - [ ] 03-04-PLAN.md — Ritual prep: ~3s 3-beat timeline + dimming + compositor-only particles + completion haptic + tap-to-skip + art preload (READ-07, UI-01/03)
 - [ ] 03-05-PLAN.md — Flip-reveal: 3D rotateY FlipCard + tap-to-flip + «Раскрыть все» stagger + per-card phrase + per-flip haptic (READ-08, UI-01/03)
 - [ ] 03-06-PLAN.md — Result: question/topic/deck/spread/date + per-card glass cards + summary panel + «Ещё расклад» wired (D-04) + save/история stubbed (D-12) (READ-09, UI-01/03, SAFE-06)
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
-| 3. The Ritual (mock) | 2/6 | In Progress|  |
+| 3. The Ritual (mock) | 3/6 | In Progress|  |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
