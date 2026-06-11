@@ -27,9 +27,9 @@
 
 ### Onboarding (ONB)
 
-- [ ] **ONB-01**: При первом запуске показывается onboarding 3–4 экрана (приветствие, «выбирай атмосферу/колоду», «это подсказка, а не приговор», CTA первого расклада)
-- [ ] **ONB-02**: Пользователь может пропустить onboarding
-- [ ] **ONB-03**: Механика перевёрнутых карт объясняется простым языком (не «плохо», а задержка/внутреннее сопротивление/скрытое напряжение)
+- [x] **ONB-01**: При первом запуске показывается onboarding 3–4 экрана (приветствие, «выбирай атмосферу/колоду», «это подсказка, а не приговор», CTA первого расклада)
+- [x] **ONB-02**: Пользователь может пропустить onboarding
+- [x] **ONB-03**: Механика перевёрнутых карт объясняется простым языком (не «плохо», а задержка/внутреннее сопротивление/скрытое напряжение)
 - [x] **ONB-04**: Факт прохождения сохраняется (`onboarding_completed`); повторно не показывается
 
 ### Main Flow (HOME)
@@ -195,9 +195,9 @@
 | AUTH-03 | Phase 1 — Foundation & Telegram Auth | Complete |
 | AUTH-04 | Phase 1 — Foundation & Telegram Auth | Complete |
 | AUTH-05 | Phase 1 — Foundation & Telegram Auth | Complete |
-| ONB-01 | Phase 3 — The Ritual (mock) | Pending |
-| ONB-02 | Phase 3 — The Ritual (mock) | Pending |
-| ONB-03 | Phase 3 — The Ritual (mock) | Pending |
+| ONB-01 | Phase 3 — The Ritual (mock) | Complete |
+| ONB-02 | Phase 3 — The Ritual (mock) | Complete |
+| ONB-03 | Phase 3 — The Ritual (mock) | Complete |
 | ONB-04 | Phase 3 — The Ritual (mock) | Complete |
 | HOME-01 | Phase 3 — The Ritual (mock) | Complete |
 | HOME-02 | Phase 3 — The Ritual (mock) | Complete |
