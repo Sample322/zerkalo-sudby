@@ -5,14 +5,16 @@ PostgreSQL ``INSERT ... ON CONFLICT (slug) DO UPDATE`` so re-running ``run_seed`
 produces identical row counts with no duplicate-key error (T-03-01 mitigation).
 
 FK-safe order (RESEARCH Pattern 6): ``topics`` -> ``decks`` -> ``cards`` ->
-``spread_types`` -> ``spread_positions`` -> ``prompt_templates``. The Phase-1 INFRA-03
-counts do NOT require ``deck_cards`` / ``deck_spread_compatibility`` (those are
-authored alongside art/compat in Phase 2), so this loader seeds only the rows the
-counts depend on.
+``spread_types`` -> ``spread_positions`` -> ``prompt_templates`` ->
+``deck_spread_compatibility``. Phase 2 (SPREAD-04) closes the seed gap: the
+``deck_spread_compatibility`` rows are derived from REFERENCE-TZ §7 (per-deck recommended
+spread lists in ``compatibility.json``) and seeded AFTER decks + spreads exist, because
+each row needs both their ids.
 
-``spread_positions`` has no natural single-column unique key, so it is made idempotent
-per spread with a scoped delete-then-insert inside the same transaction (keyed by
-``spread_type_id``); the outer caller commits once.
+``spread_positions`` and ``deck_spread_compatibility`` have no natural single-column
+unique key, so each is made idempotent with a scoped delete-then-insert inside the same
+transaction (``spread_positions`` keyed by ``spread_type_id``; compatibility keyed by
+``deck_id``); the outer caller commits once.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     Card,
     Deck,
+    DeckSpreadCompatibility,
     PromptTemplate,
     SpreadPosition,
     SpreadType,
@@ -93,6 +96,67 @@ async def _upsert_spreads(session: AsyncSession, rows: list[dict[str, Any]]) -> 
             )
 
 
+async def _upsert_compatibility(
+    session: AsyncSession, rows: list[dict[str, Any]]
+) -> int:
+    """Derive + upsert ``deck_spread_compatibility`` from REFERENCE-TZ §7 (SPREAD-04).
+
+    ``rows`` is ``compatibility.json``: one object per deck with the deck slug and its
+    recommended spread slugs (transcribed from §7). For each deck we resolve the deck row +
+    each spread row, then rebuild the deck's compatibility rows with a scoped
+    delete-then-insert (keyed by ``deck_id`` — there is no single-column unique key),
+    mirroring the ``spread_positions`` idempotency pattern.
+
+    Every spread listed under a deck in §7 is a *recommended* spread, so each inserted row
+    gets ``is_recommended=True``. ``compatibility_score`` is the size of the topic overlap
+    between the deck's and the spread's ``recommended_topics`` (orchestrator directive 3 /
+    RESEARCH derivation rule) — a deterministic, re-derivable signal the recommender ranks on.
+
+    Returns the total number of compatibility rows written.
+    """
+    written = 0
+    for row in rows:
+        deck = (
+            await session.execute(
+                select(Deck).where(Deck.slug == row["deck_slug"])
+            )
+        ).scalar_one_or_none()
+        if deck is None:  # pragma: no cover - guards a malformed compatibility.json
+            raise ValueError(f"compatibility references unknown deck '{row['deck_slug']}'")
+
+        deck_topics = set(deck.recommended_topics or [])
+
+        # Rebuild THIS deck's compatibility rows only (scoped delete -> insert).
+        await session.execute(
+            delete(DeckSpreadCompatibility).where(
+                DeckSpreadCompatibility.deck_id == deck.id
+            )
+        )
+        for spread_slug in row.get("recommended_spread_slugs", []):
+            spread = (
+                await session.execute(
+                    select(SpreadType).where(SpreadType.slug == spread_slug)
+                )
+            ).scalar_one_or_none()
+            if spread is None:  # pragma: no cover - guards a malformed compatibility.json
+                raise ValueError(
+                    f"compatibility references unknown spread '{spread_slug}'"
+                )
+
+            spread_topics = set(spread.recommended_topics or [])
+            score = len(deck_topics & spread_topics)
+            await session.execute(
+                pg_insert(DeckSpreadCompatibility).values(
+                    deck_id=deck.id,
+                    spread_type_id=spread.id,
+                    compatibility_score=score,
+                    is_recommended=True,
+                )
+            )
+            written += 1
+    return written
+
+
 async def run_seed(session: AsyncSession) -> dict[str, int]:
     """Load and upsert all MVP seed content in FK-safe order.
 
@@ -105,12 +169,15 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
     spreads = _load("spreads.json")
     cards = _load("cards.json")
     prompts = _load("prompts.json")
+    compatibility = _load("compatibility.json")
 
     await upsert_by_slug(session, Topic, topics)
     await upsert_by_slug(session, Deck, decks)
     await upsert_by_slug(session, Card, cards)
     await _upsert_spreads(session, spreads)
     await upsert_by_slug(session, PromptTemplate, prompts)
+    # Compatibility needs deck + spread ids, so it runs AFTER both are upserted.
+    compat_count = await _upsert_compatibility(session, compatibility)
 
     return {
         "topics": len(topics),
@@ -119,6 +186,7 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
         "spread_positions": sum(len(s.get("positions", [])) for s in spreads),
         "cards": len(cards),
         "prompt_templates": len(prompts),
+        "deck_spread_compatibility": compat_count,
     }
 
 

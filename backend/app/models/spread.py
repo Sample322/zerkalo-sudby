@@ -12,7 +12,7 @@ import uuid
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
 from app.models.enums import AccessType, access_type_enum
@@ -32,6 +32,15 @@ class SpreadType(UUIDPrimaryKeyMixin, Base):
     )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
+    # ORM-only relationship (no DDL change) — lets the catalog service eager-load
+    # positions via selectinload(); ordered by position_index so SpreadOut serializes
+    # the slots in reading order (Phase 2 catalog, RESEARCH Pattern 1 / Pitfall 2).
+    positions: Mapped[list["SpreadPosition"]] = relationship(
+        back_populates="spread_type",
+        order_by="SpreadPosition.position_index",
+        cascade="all, delete-orphan",
+    )
+
 
 class SpreadPosition(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "spread_positions"
@@ -43,6 +52,8 @@ class SpreadPosition(UUIDPrimaryKeyMixin, Base):
     title: Mapped[str] = mapped_column(String)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     prompt_instruction: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    spread_type: Mapped["SpreadType"] = relationship(back_populates="positions")
 
 
 __all__ = ["SpreadType", "SpreadPosition"]

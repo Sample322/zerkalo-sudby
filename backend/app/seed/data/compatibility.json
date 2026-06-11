@@ -1,0 +1,59 @@
+[
+  {
+    "deck_slug": "classic_arcana",
+    "recommended_spread_slugs": [
+      "three_keys",
+      "thread_of_time",
+      "two_roads",
+      "day_three_signs",
+      "resource_and_risk"
+    ]
+  },
+  {
+    "deck_slug": "moon_mirror",
+    "recommended_spread_slugs": [
+      "three_keys",
+      "thread_of_time",
+      "between_us",
+      "day_three_signs",
+      "what_is_in_shadow"
+    ]
+  },
+  {
+    "deck_slug": "shadow_arcana",
+    "recommended_spread_slugs": [
+      "what_is_in_shadow",
+      "three_keys",
+      "thread_of_time",
+      "two_roads"
+    ]
+  },
+  {
+    "deck_slug": "heart_oracle",
+    "recommended_spread_slugs": [
+      "between_us",
+      "three_keys",
+      "thread_of_time",
+      "two_roads"
+    ]
+  },
+  {
+    "deck_slug": "path_deck",
+    "recommended_spread_slugs": [
+      "resource_and_risk",
+      "two_roads",
+      "three_keys",
+      "thread_of_time"
+    ]
+  },
+  {
+    "deck_slug": "forest_oracle",
+    "recommended_spread_slugs": [
+      "three_keys",
+      "thread_of_time",
+      "two_roads",
+      "day_three_signs",
+      "what_is_in_shadow"
+    ]
+  }
+]
