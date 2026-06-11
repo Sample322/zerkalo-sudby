@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./theme/deckThemes.css";
 
 /* Minimal ritual atmosphere — full per-deck theming arrives in Phase 2. */
 @theme {
@@ -17,9 +18,12 @@ body,
 body {
   margin: 0;
   background:
-    radial-gradient(120% 90% at 50% -10%, var(--color-veil), var(--color-night) 70%);
+    radial-gradient(120% 90% at 50% -10%, var(--deck-deep), var(--deck-bg) 70%);
   color: var(--color-mist);
   font-family:
     ui-serif, Georgia, "Times New Roman", serif;
   -webkit-font-smoothing: antialiased;
+  transition:
+    background 400ms ease,
+    color 400ms ease;
 }

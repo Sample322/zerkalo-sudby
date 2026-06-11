@@ -1,0 +1,53 @@
+/* Per-deck runtime palettes (UI-02). Values transcribed from backend decks.json
+   visual_style / TZ §21.2 as bg / accent / soft / deep. useDeckTheme writes the
+   [data-deck=<slug>] attribute on <html>, which swaps the active variable set; the
+   body transition (index.css) makes the change visibly smooth. */
+
+:root {
+  --deck-bg: #0b0a12;
+  --deck-accent: #c9a45c;
+  --deck-soft: #e5d3a3;
+  --deck-deep: #1b1726;
+}
+
+[data-deck="classic_arcana"] {
+  --deck-bg: #1e1510;
+  --deck-accent: #c9a45c;
+  --deck-soft: #f3e3c3;
+  --deck-deep: #6b3f1d;
+}
+
+[data-deck="moon_mirror"] {
+  --deck-bg: #0b1026;
+  --deck-accent: #5e6ad2;
+  --deck-soft: #c7d2fe;
+  --deck-deep: #9bd5ff;
+}
+
+[data-deck="shadow_arcana"] {
+  --deck-bg: #08070a;
+  --deck-accent: #8b5cf6;
+  --deck-soft: #d6c7ff;
+  --deck-deep: #2a1838;
+}
+
+[data-deck="heart_oracle"] {
+  --deck-bg: #1a0710;
+  --deck-accent: #e8a0b8;
+  --deck-soft: #f6d7de;
+  --deck-deep: #8f1d46;
+}
+
+[data-deck="path_deck"] {
+  --deck-bg: #101318;
+  --deck-accent: #c2a46d;
+  --deck-soft: #e5d3a3;
+  --deck-deep: #697386;
+}
+
+[data-deck="forest_oracle"] {
+  --deck-bg: #07130d;
+  --deck-accent: #d08a2d;
+  --deck-soft: #d7c58a;
+  --deck-deep: #1f5a3d;
+}
