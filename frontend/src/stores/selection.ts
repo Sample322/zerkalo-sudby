@@ -1,16 +1,85 @@
-// Client-only ritual selection: the topic / deck / spread the user is choosing.
-// Server catalog lists (decks/spreads) belong to TanStack Query and must NOT be
-// duplicated here (ARCHITECTURE: React Query owns server state, Zustand holds UI state).
+// Client-only ritual selection + the flow step-machine (D-02). The user's topic / deck /
+// spread choices, the free-text question, the reversals toggle, the `step` state-machine
+// with history-backed in-app back (D-03), and the single ephemeral mock `reading` slot.
+//
+// Server catalog lists (decks/spreads/recommendation) belong to TanStack Query and must
+// NOT be duplicated here (ARCHITECTURE: React Query owns server state, Zustand holds UI
+// state). The mock `reading` is ephemeral client state — it lives ONLY here, NEVER in Query.
 
 import { create } from "zustand";
+import type { Step } from "../flow/steps";
+import type { MockReading } from "../reading/types";
+
+/** Min/max bounds for the free-text question (HOME-01 / D-13). Empty is explicitly valid. */
+export const QUESTION_MIN = 10;
+export const QUESTION_MAX = 500;
+
+/** Discriminated result of validating the question text (pure, React-free). */
+export type QuestionValidity =
+  | { status: "valid" }
+  | { status: "tooShort" };
 
 export interface SelectionState {
+  // --- existing selection (kept verbatim) ---
   topic: string | null;
   deckSlug: string | null;
   spreadSlug: string | null;
   setTopic: (topic: string | null) => void;
   setDeck: (deckSlug: string | null) => void;
   setSpread: (spreadSlug: string | null) => void;
+
+  // --- flow slice (Phase 3) ---
+  /** The free-text question (HOME-01/02). Empty string = general reading (D-13). */
+  question: string;
+  /** Local reversals toggle (D-07). Off => all upright. */
+  reversalsEnabled: boolean;
+  /** The current screen the flow machine is on (D-02). */
+  step: Step;
+  /** Previous steps, newest last — backs the in-app back affordance (D-03). */
+  history: Step[];
+  /**
+   * The single ephemeral mock reading (D-05). Writer: plan 03-03 (selection CTA).
+   * Readers: plans 03-04/05 (reveal) and 03-06 (result). `null` until built; the
+   * Phase-4 backend reading swaps in here unchanged (createReading return type).
+   */
+  reading: MockReading | null;
+
+  setQuestion: (q: string) => void;
+  toggleReversals: () => void;
+  /** Navigate to a step, recording the current step on `history` for back (D-03). */
+  goTo: (s: Step) => void;
+  /** Pop `history` and restore the prior step (the in-app back, D-03). No-op if empty. */
+  back: () => void;
+  /** D-04: return to selection KEEPING question + topic; deck/spread stay re-selectable. */
+  startReadingAgain: () => void;
+  /** Deposit (or clear) the freshly-built mock reading; touches ONLY `reading`. */
+  setReading: (reading: MockReading | null) => void;
+}
+
+/**
+ * Question validity (HOME-01 / HOME-02 / D-13), as a pure helper so it is unit-testable
+ * without React (mirrors session.ts `deriveAvailableReadings`):
+ *   - empty            -> valid  (general reading; no hint)
+ *   - 1..9 chars       -> tooShort (gentle "уточни" hint)
+ *   - >= 10 chars      -> valid
+ * The upper bound is enforced by clamping at the input (`setQuestion`), so a stored
+ * question is never longer than QUESTION_MAX and never reads as "too short" past 10.
+ */
+export function questionValidity(question: string): QuestionValidity {
+  const len = question.trim().length;
+  if (len === 0) return { status: "valid" };
+  if (len < QUESTION_MIN) return { status: "tooShort" };
+  return { status: "valid" };
+}
+
+/**
+ * HOME-07 start gate: the ritual can begin only when a topic, a deck, AND a spread are
+ * all chosen. Pure (operates on a slice) so it is testable without React.
+ */
+export function canStart(
+  state: Pick<SelectionState, "topic" | "deckSlug" | "spreadSlug">,
+): boolean {
+  return Boolean(state.topic && state.deckSlug && state.spreadSlug);
 }
 
 export const useSelection = create<SelectionState>((set) => ({
@@ -20,4 +89,38 @@ export const useSelection = create<SelectionState>((set) => ({
   setTopic: (topic) => set({ topic }),
   setDeck: (deckSlug) => set({ deckSlug }),
   setSpread: (spreadSlug) => set({ spreadSlug }),
+
+  question: "",
+  reversalsEnabled: false,
+  step: "onboarding",
+  history: [],
+  reading: null,
+
+  // Clamp at the upper bound so stored text never exceeds QUESTION_MAX (HOME-01).
+  setQuestion: (q) => set({ question: q.slice(0, QUESTION_MAX) }),
+  toggleReversals: () =>
+    set((s) => ({ reversalsEnabled: !s.reversalsEnabled })),
+
+  goTo: (s) =>
+    set((state) => ({ step: s, history: [...state.history, state.step] })),
+
+  back: () =>
+    set((state) => {
+      if (state.history.length === 0) return {};
+      const history = state.history.slice(0, -1);
+      const prev = state.history[state.history.length - 1];
+      return { step: prev, history };
+    }),
+
+  // D-04: back to selection without clearing question/topic (deck/spread re-selectable).
+  // `reading` is intentionally NOT cleared — the prior reading stays available until the
+  // next build overwrites it via setReading.
+  startReadingAgain: () =>
+    set((state) => ({
+      step: "selection",
+      history: [...state.history, state.step],
+    })),
+
+  // Cross-plan writer/reader seam — mutates ONLY `reading`.
+  setReading: (reading) => set({ reading }),
 }));
