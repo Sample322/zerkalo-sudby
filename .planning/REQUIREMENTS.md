@@ -206,15 +206,15 @@
 | HOME-05 | Phase 3 — The Ritual (mock) | Pending |
 | HOME-06 | Phase 3 — The Ritual (mock) | Pending |
 | HOME-07 | Phase 3 — The Ritual (mock) | Pending |
-| DECK-01 | Phase 2 — Deck & Spread Catalog | Pending |
-| DECK-02 | Phase 2 — Deck & Spread Catalog | Pending |
-| DECK-03 | Phase 2 — Deck & Spread Catalog | Pending |
-| DECK-04 | Phase 2 — Deck & Spread Catalog | Pending |
-| DECK-05 | Phase 2 — Deck & Spread Catalog | Pending |
-| SPREAD-01 | Phase 2 — Deck & Spread Catalog | Pending |
-| SPREAD-02 | Phase 2 — Deck & Spread Catalog | Pending |
-| SPREAD-03 | Phase 2 — Deck & Spread Catalog | Pending |
-| SPREAD-04 | Phase 2 — Deck & Spread Catalog | Pending |
+| DECK-01 | Phase 2 — Deck & Spread Catalog | Complete |
+| DECK-02 | Phase 2 — Deck & Spread Catalog | Complete |
+| DECK-03 | Phase 2 — Deck & Spread Catalog | Complete |
+| DECK-04 | Phase 2 — Deck & Spread Catalog | Complete |
+| DECK-05 | Phase 2 — Deck & Spread Catalog | Complete |
+| SPREAD-01 | Phase 2 — Deck & Spread Catalog | Complete |
+| SPREAD-02 | Phase 2 — Deck & Spread Catalog | Complete |
+| SPREAD-03 | Phase 2 — Deck & Spread Catalog | Complete |
+| SPREAD-04 | Phase 2 — Deck & Spread Catalog | Complete |
 | READ-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | READ-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | READ-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
@@ -265,7 +265,7 @@
 | ANALYTICS-01 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 | ANALYTICS-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | UI-01 | Phase 3 — The Ritual (mock) | Pending |
-| UI-02 | Phase 2 — Deck & Spread Catalog | Pending |
+| UI-02 | Phase 2 — Deck & Spread Catalog | Complete |
 | UI-03 | Phase 3 — The Ritual (mock) | Pending |
 | UI-04 | Phase 3 — The Ritual (mock) | Pending |
 | UI-05 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |

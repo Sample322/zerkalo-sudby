@@ -194,7 +194,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
-| 2. Deck & Spread Catalog | 3/3 | Complete   | 2026-06-11 |
+| 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 0/TBD | Not started | - |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
 | 5. History & Profile | 0/TBD | Not started | - |
