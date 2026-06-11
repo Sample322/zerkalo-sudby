@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-11T21:46:52.633Z"
-last_activity: 2026-06-11 -- Phase 03 planning complete
+last_updated: "2026-06-11T22:02:30.389Z"
+last_activity: 2026-06-11
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 14
-  completed_plans: 8
+  completed_plans: 9
   percent: 25
 ---
 
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Один и тот же вопрос ощущается по-разному в разных колодах — красивый мистический ритуал в Telegram, дающий глубокий, но бережный ответ.
-**Current focus:** Phase 3 — the ritual (mock)
+**Current focus:** Phase 03 — the-ritual-mock
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
+Phase: 03 (the-ritual-mock) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-06-11 -- Phase 03 planning complete
+Last activity: 2026-06-11
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 64%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 01 P03 | 35 | 2 tasks | 10 files |
 | Phase 01 P04 | 40 | 3 tasks | 19 files |
 | Phase 01 P05 | 10 | 1 tasks | 13 files |
+| Phase 03 P01 | 10 | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 1: JWT is PyJWT HS256 with sub=user UUID + telegram_id claim; decode pins algorithms=['HS256'] so alg:none is rejected; get_current_user is the reusable Bearer gate, require_admin the server-side ADMIN_TELEGRAM_IDS allowlist.
 - [Phase ?]: Phase 1: thin routers delegate to services/telegram_auth.authenticate() (TelegramAuthService reused by the bot in Phase 7); INFRA-05 global Exception handler returns soft in-character JSON (no stacktrace leak), Sentry is a no-op seam deferred to Phase 8.
 - [Phase ?]: Phase 1: frontend auth wiring complete — getInitData() reads window.Telegram.WebApp.initData with a DEV-only VITE_DEV_INIT_DATA fallback (stripped from prod bundle); useSession (Zustand) holds jwt/user/availableReadings/status; apiFetch is the reusable Authorization: Bearer seam for all later phases; AuthGate renders authenticating/authenticated/error with in-character copy and zero AI-branding.
+- [Phase ?]: Phase 3: FlowRoot is the single AnimatePresence step-switch (D-02); Wave-2 plans replace only their own screen stub, never FlowRoot.
+- [Phase ?]: Phase 3: ephemeral mock reading lives only in the Zustand store (reading slot + setReading), never TanStack Query; createReading() is the single Phase-4 source-swap seam (D-05).
+- [Phase ?]: Phase 3: canonical SAFE-06 BANNED_BRAND_TOKENS helper in reading/copy.ts detects the standalone Cyrillic ИИ token without false-positiving benign words (W-1); all Wave-2 SAFE-06 tests import it.
 
 ### Pending Todos
 
@@ -102,6 +106,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-11T16:31:26.248Z
+Last session: 2026-06-11T22:01:53.587Z
 Stopped at: Phase 3 UI-SPEC approved
-Resume file: .planning/phases/03-the-ritual-mock/03-UI-SPEC.md
+Resume file: None

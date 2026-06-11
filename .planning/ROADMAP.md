@@ -103,7 +103,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Flow spine: Zustand step-machine (D-02/03/04/13) + FlowRoot (MotionConfig reducedMotion=never + LazyMotion + AnimatePresence) + telegram.ts theme/safe-area/haptics (UI-04) + MockReading type + createReading() seam (D-05) + card-pool fixture (D-06) + reversals draw (D-07) + copy module (SAFE-06) + onboarding flag (ONB-04) + 4 screen stubs (HOME-01/02/07, READ-08/09, UI-03/04, SAFE-06, ONB-04)
+- [x] 03-01-PLAN.md — Flow spine: Zustand step-machine (D-02/03/04/13) + FlowRoot (MotionConfig reducedMotion=never + LazyMotion + AnimatePresence) + telegram.ts theme/safe-area/haptics (UI-04) + MockReading type + createReading() seam (D-05) + card-pool fixture (D-06) + reversals draw (D-07) + copy module (SAFE-06) + onboarding flag (ONB-04) + 4 screen stubs (HOME-01/02/07, READ-08/09, UI-03/04, SAFE-06, ONB-04)
 
 **Wave 2** *(parallel — zero file overlap; all depend on 03-01)*
 
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
-| 3. The Ritual (mock) | 0/6 | Planned | - |
+| 3. The Ritual (mock) | 1/6 | In Progress|  |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |

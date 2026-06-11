@@ -30,17 +30,17 @@
 - [ ] **ONB-01**: При первом запуске показывается onboarding 3–4 экрана (приветствие, «выбирай атмосферу/колоду», «это подсказка, а не приговор», CTA первого расклада)
 - [ ] **ONB-02**: Пользователь может пропустить onboarding
 - [ ] **ONB-03**: Механика перевёрнутых карт объясняется простым языком (не «плохо», а задержка/внутреннее сопротивление/скрытое напряжение)
-- [ ] **ONB-04**: Факт прохождения сохраняется (`onboarding_completed`); повторно не показывается
+- [x] **ONB-04**: Факт прохождения сохраняется (`onboarding_completed`); повторно не показывается
 
 ### Main Flow (HOME)
 
-- [ ] **HOME-01**: Пользователь вводит вопрос своими словами (10–500 символов); при слишком коротком — мягкая подсказка уточнить
-- [ ] **HOME-02**: Можно сделать общий расклад без вопроса (пустой вопрос допустим)
+- [x] **HOME-01**: Пользователь вводит вопрос своими словами (10–500 символов); при слишком коротком — мягкая подсказка уточнить
+- [x] **HOME-02**: Можно сделать общий расклад без вопроса (пустой вопрос допустим)
 - [ ] **HOME-03**: Пользователь выбирает тему из 7 (любовь, работа, деньги, выбор, день, саморефлексия, общий вопрос)
 - [ ] **HOME-04**: Приложение рекомендует расклад по теме (с причиной); пользователь может выбрать другой
 - [ ] **HOME-05**: Пользователь выбирает колоду в карусели карточек (название, атмосфера, для каких вопросов, preview, тон)
 - [ ] **HOME-06**: Пользователь выбирает расклад (карточки с количеством карт)
-- [ ] **HOME-07**: Кнопка «Начать расклад» доступна при выбранных теме+колоде+раскладе (или дефолтах); иначе мягкая подсказка
+- [x] **HOME-07**: Кнопка «Начать расклад» доступна при выбранных теме+колоде+раскладе (или дефолтах); иначе мягкая подсказка
 
 ### Decks & Cards (DECK)
 
@@ -66,8 +66,8 @@
 - [ ] **READ-05**: Интерпретация карты содержит: название, позицию, положение, короткое значение, глубокую интерпретацию под вопрос, мистический акцент колоды
 - [ ] **READ-06**: Итог содержит связку карт, главный фактор, на что обратить внимание, мягкий совет, завершающую фразу в стиле колоды
 - [ ] **READ-07**: Экран подготовки (ритуал): состояния «слышит вопрос / перемешиваются / рядом», затемнение, частицы, haptic при завершении
-- [ ] **READ-08**: Поочерёдное раскрытие карт с flip-анимацией; короткая фраза перед интерпретацией; «Открыть карту» и «раскрыть все» после первой
-- [ ] **READ-09**: Экран результата: вопрос/тема/колода/расклад/дата, карточки карт, общий итог, кнопки «сохранить карточку / ещё расклад / история»
+- [x] **READ-08**: Поочерёдное раскрытие карт с flip-анимацией; короткая фраза перед интерпретацией; «Открыть карту» и «раскрыть все» после первой
+- [x] **READ-09**: Экран результата: вопрос/тема/колода/расклад/дата, карточки карт, общий итог, кнопки «сохранить карточку / ещё расклад / история»
 - [ ] **READ-10**: Лимит списывается только при успешном создании расклада
 - [ ] **READ-11**: Тон и формулировки результата соответствуют колоде (prompt-модификатор) и бренду (без «AI/нейросеть/модель»)
 
@@ -106,7 +106,7 @@
 - [ ] **SAFE-03**: crisis (самоповреждение/насилие) → НЕ мистическое предсказание; поддерживающий безопасный ответ + предложение обратиться к живому специалисту/службам
 - [ ] **SAFE-04**: Запрещены категоричные предсказания, утверждения чувств другого как факт, мед./юр./фин. категоричные советы, фаталистичные/пугающие формулировки
 - [ ] **SAFE-05**: Используются разрешённые мягкие формулировки («карты указывают/подсвечивают/возможное направление/не приговор, а подсказка»)
-- [ ] **SAFE-06**: В UI/кнопках/результатах нет упоминаний «AI/нейросеть/модель/сгенерировано ИИ»
+- [x] **SAFE-06**: В UI/кнопках/результатах нет упоминаний «AI/нейросеть/модель/сгенерировано ИИ»
 
 ### Profile & Settings (PROF)
 
@@ -134,8 +134,8 @@
 
 - [ ] **UI-01**: Premium-тёмный UI (стеклянные панели, свечения, градиенты, крупные карты); mobile-first 360–430px; sticky нижняя CTA
 - [x] **UI-02**: При выборе колоды меняются фон/акцент/микротексты/частицы/тон (пер-колодная тема, 6 палитр ТЗ §21.2)
-- [ ] **UI-03**: Микроанимации (перемешивание, «дыхание» карты, flip, свечение края, постепенное появление текста, haptic, финальный сбор) через `motion`
-- [ ] **UI-04**: Адаптация под Telegram dark/light тему и safe-area (через Telegram SDK insets, не CSS `env()`)
+- [x] **UI-03**: Микроанимации (перемешивание, «дыхание» карты, flip, свечение края, постепенное появление текста, haptic, финальный сбор) через `motion`
+- [x] **UI-04**: Адаптация под Telegram dark/light тему и safe-area (через Telegram SDK insets, не CSS `env()`)
 - [ ] **UI-05**: Корректные пустые состояния и состояния ошибок в стиле продукта (ТЗ §9.8)
 - [ ] **UI-06**: Share-card расклада (фон колоды, 3–4 карты, название расклада, короткий итог; без личного вопроса по умолчанию)
 
@@ -198,14 +198,14 @@
 | ONB-01 | Phase 3 — The Ritual (mock) | Pending |
 | ONB-02 | Phase 3 — The Ritual (mock) | Pending |
 | ONB-03 | Phase 3 — The Ritual (mock) | Pending |
-| ONB-04 | Phase 3 — The Ritual (mock) | Pending |
-| HOME-01 | Phase 3 — The Ritual (mock) | Pending |
-| HOME-02 | Phase 3 — The Ritual (mock) | Pending |
+| ONB-04 | Phase 3 — The Ritual (mock) | Complete |
+| HOME-01 | Phase 3 — The Ritual (mock) | Complete |
+| HOME-02 | Phase 3 — The Ritual (mock) | Complete |
 | HOME-03 | Phase 3 — The Ritual (mock) | Pending |
 | HOME-04 | Phase 3 — The Ritual (mock) | Pending |
 | HOME-05 | Phase 3 — The Ritual (mock) | Pending |
 | HOME-06 | Phase 3 — The Ritual (mock) | Pending |
-| HOME-07 | Phase 3 — The Ritual (mock) | Pending |
+| HOME-07 | Phase 3 — The Ritual (mock) | Complete |
 | DECK-01 | Phase 2 — Deck & Spread Catalog | Complete |
 | DECK-02 | Phase 2 — Deck & Spread Catalog | Complete |
 | DECK-03 | Phase 2 — Deck & Spread Catalog | Complete |
@@ -222,8 +222,8 @@
 | READ-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | READ-06 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | READ-07 | Phase 3 — The Ritual (mock) | Pending |
-| READ-08 | Phase 3 — The Ritual (mock) | Pending |
-| READ-09 | Phase 3 — The Ritual (mock) | Pending |
+| READ-08 | Phase 3 — The Ritual (mock) | Complete |
+| READ-09 | Phase 3 — The Ritual (mock) | Complete |
 | READ-10 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | READ-11 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | HIST-01 | Phase 5 — History & Profile | Pending |
@@ -250,7 +250,7 @@
 | SAFE-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | SAFE-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | SAFE-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
-| SAFE-06 | Phase 3 — The Ritual (mock) | Pending |
+| SAFE-06 | Phase 3 — The Ritual (mock) | Complete |
 | PROF-01 | Phase 5 — History & Profile | Pending |
 | PROF-02 | Phase 5 — History & Profile | Pending |
 | ADMIN-01 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
@@ -266,8 +266,8 @@
 | ANALYTICS-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | UI-01 | Phase 3 — The Ritual (mock) | Pending |
 | UI-02 | Phase 2 — Deck & Spread Catalog | Complete |
-| UI-03 | Phase 3 — The Ritual (mock) | Pending |
-| UI-04 | Phase 3 — The Ritual (mock) | Pending |
+| UI-03 | Phase 3 — The Ritual (mock) | Complete |
+| UI-04 | Phase 3 — The Ritual (mock) | Complete |
 | UI-05 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 | UI-06 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 
