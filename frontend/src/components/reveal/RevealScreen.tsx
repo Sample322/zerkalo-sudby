@@ -45,7 +45,11 @@ export function RevealScreen() {
   const [read, setRead] = useState<ReadonlySet<string>>(new Set());
 
   // The reveal step is only reachable once selection built a reading; guard defensively.
-  if (!reading) return null;
+  // Return an (empty) element rather than null so the FlowRoot screen registry's
+  // `() => Element` contract holds (FlowRoot is intentionally not edited by this plan).
+  if (!reading) {
+    return <main className="flex min-h-full items-center justify-center" />;
+  }
 
   const cards = reading.cards;
   const anyFlipped = flipped.size > 0;
