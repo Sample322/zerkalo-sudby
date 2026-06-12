@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Telegram Auth** - Repo boots end-to-end and the Mini App knows who the user is (validated `initData` → JWT) (completed 2026-06-10)
 - [x] **Phase 2: Deck & Spread Catalog** - User browses 6 distinct decks and 7 spreads with topic-based recommendations and per-deck theming (completed 2026-06-11)
-- [ ] **Phase 3: The Ritual (mock)** - User runs the entire flow — onboarding → question/topic/deck/spread → ritual → reveal — against a mock reading
+- [x] **Phase 3: The Ritual (mock)** - User runs the entire flow — onboarding → question/topic/deck/spread → ritual → reveal — against a mock reading (completed 2026-06-12)
 - [ ] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated
 - [ ] **Phase 5: History & Profile** - User revisits, reopens, and soft-deletes past readings, and manages profile/settings
 - [ ] **Phase 6: Free Limits & Soft Paywall** - User is bounded to 3 free readings/week with a deterministic reset and an honest paywall
@@ -111,7 +111,7 @@ Plans:
 - [x] 03-03-PLAN.md — Selection: question input (10–500/empty-valid/too-short hint) + topic/deck/spread + recommendation + gated «Начать расклад» → createReading → ritual; keyboard-safe sticky CTA (HOME-01..07, UI-01/04, SAFE-06)
 - [x] 03-04-PLAN.md — Ritual prep: ~3s 3-beat timeline + dimming + compositor-only particles + completion haptic + tap-to-skip + art preload (READ-07, UI-01/03)
 - [x] 03-05-PLAN.md — Flip-reveal: 3D rotateY FlipCard + tap-to-flip + «Раскрыть все» stagger + per-card phrase + per-flip haptic (READ-08, UI-01/03)
-- [ ] 03-06-PLAN.md — Result: question/topic/deck/spread/date + per-card glass cards + summary panel + «Ещё расклад» wired (D-04) + save/история stubbed (D-12) (READ-09, UI-01/03, SAFE-06)
+- [x] 03-06-PLAN.md — Result: question/topic/deck/spread/date + per-card glass cards + summary panel + «Ещё расклад» wired (D-04) + save/история stubbed (D-12) (READ-09, UI-01/03, SAFE-06)
 
 **UI hint**: yes
 
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
-| 3. The Ritual (mock) | 5/6 | In Progress|  |
+| 3. The Ritual (mock) | 6/6 | Complete   | 2026-06-12 |
 | 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
