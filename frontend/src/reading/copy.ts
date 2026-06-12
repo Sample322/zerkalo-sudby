@@ -109,6 +109,8 @@ export const RESULT_AGAIN_CTA = "Ещё расклад";
 export const RESULT_SAVE_CTA = "Сохранить карточку";
 export const RESULT_HISTORY_CTA = "История";
 export const RESULT_SOON_BADGE = "скоро";
+// Shown in the meta row when the reading has no question (HOME-02 / D-13).
+export const RESULT_GENERAL = "Общий расклад";
 
 // Meta-row labels (тема / колода / расклад / дата / вопрос).
 export const RESULT_LABELS = {
