@@ -92,6 +92,16 @@ export const SHORT_PHRASES: readonly string[] = [
   "Колода обращает внимание на тихий, но важный поворот.",
 ] as const;
 
+// Advance reveal -> result, and the shared in-app back affordance (D-03).
+export const REVEAL_TO_RESULT = "Перейти к итогу";
+export const NAV_BACK = "Назад";
+
+// READ-08 положение карты (D-07) — RU labels for the orientation enum.
+export const ORIENTATION_LABELS: Record<"upright" | "reversed", string> = {
+  upright: "Прямое положение",
+  reversed: "Перевёрнутое положение",
+};
+
 // ---------------------------------------------------------------------------------------
 // Result (READ-09/D-12).
 export const RESULT_HEADER = "Расклад готов";
