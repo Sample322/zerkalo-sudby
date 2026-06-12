@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 
 import { useDecks } from "../hooks/useDecks";
 import { useRecommendation, useSpreads } from "../hooks/useSpreads";
@@ -263,7 +263,7 @@ export function CatalogScreen() {
             {READING_ERROR}
           </p>
         )}
-        <motion.button
+        <m.button
           type="button"
           whileTap={{ scale: 0.97 }}
           disabled={!ready || isStarting}
@@ -279,7 +279,7 @@ export function CatalogScreen() {
           }}
         >
           {START_CTA}
-        </motion.button>
+        </m.button>
       </div>
     </main>
   );

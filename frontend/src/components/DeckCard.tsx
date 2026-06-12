@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 
 import type { Deck } from "../api/decks";
 import { CardArt } from "./CardArtFallback";
@@ -29,7 +29,7 @@ export function DeckCard({ deck, active, onSelect }: DeckCardProps) {
     .join(" · ");
 
   return (
-    <motion.button
+    <m.button
       type="button"
       onClick={() => onSelect(deck.slug)}
       aria-pressed={active}
@@ -64,6 +64,6 @@ export function DeckCard({ deck, active, onSelect }: DeckCardProps) {
           </span>
         )}
       </span>
-    </motion.button>
+    </m.button>
   );
 }

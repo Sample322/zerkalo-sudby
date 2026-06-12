@@ -4,7 +4,6 @@ import * as m from "motion/react-m";
 
 import { useSelection } from "../../stores/selection";
 import {
-  NAV_BACK,
   ORIENTATION_LABELS,
   REVEAL_OPEN_ALL,
   REVEAL_READ_MEANING,
@@ -39,7 +38,6 @@ const detailItem = {
 export function RevealScreen() {
   const reading = useSelection((s) => s.reading);
   const goTo = useSelection((s) => s.goTo);
-  const back = useSelection((s) => s.back);
 
   const [flipped, setFlipped] = useState<ReadonlySet<string>>(new Set());
   const [read, setRead] = useState<ReadonlySet<string>>(new Set());
@@ -77,15 +75,6 @@ export function RevealScreen() {
       className="flex min-h-full flex-col px-6 pb-28 pt-6"
       style={{ color: "var(--deck-soft)" }}
     >
-      <button
-        type="button"
-        onClick={back}
-        className="self-start text-sm opacity-70"
-        style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer" }}
-      >
-        {NAV_BACK}
-      </button>
-
       <m.div
         variants={detailsContainer}
         initial="rest"
