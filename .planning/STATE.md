@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-13T15:08:01.108Z"
+last_updated: "2026-06-13T15:33:03.321Z"
 last_activity: 2026-06-13
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 38
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 04 (Real Personal Reading (KEYSTONE)) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-06-13
 
-Progress: [█████████░] 90%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [█████████░] 90%
 | Phase 04 P02 | 30 | 2 tasks | 5 files |
 | Phase 04 P03 | 25 | 2 tasks | 4 files |
 | Phase 04 P04 | 30 | 2 tasks | 3 files |
+| Phase 04 P05 | 55min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 4 (Plan 04): PromptEngine.build composes ONE messages.parse prompt from ACTIVE prompt_templates (system §16 + deck_modifier_<slug> §19 carrying the mandatory D-02 signature + fused §17 per-card blocks + §18 summary); safety §20.3 fragment appended ONLY when safety_action==SAFETY_MODIFIER (D-05/SAFE-02); always Russian (D-14) + restated ≤140 short_meaning (D-10).
 - [Phase ?]: Phase 4 (Plan 04): prompt_version composed from active template type@version fields (e.g. system@v1+deck_modifier@v2+single_card@v1+final_summary@v1) → readings.prompt_version + generation_logs (ANALYTICS-02/T-04-22); a missing active template raises ValueError (surfaced misconfig, never a degraded prompt).
 - [Phase ?]: Phase 4 (Plan 04): D-02 signature seeded into all 6 deck_modifier rows (v2); generic D-04 refusal (no region/phone, v2); D-06 abusive-redirect seeded as a NEW safety-type 'redirect' row (no PromptTemplateType added) — single admin-editable source resolved via PromptEngine.refusal_copy/redirect_copy.
+- [Phase ?]: Phase 4 (Plan 05): ReadingService.create_reading is the keystone — owns the AsyncSession transaction + the LOCKED gate->draw->generate->consume order; limit consumed in EXACTLY one place (success branch before commit); crisis/abusive persist a FAILED parent reading first (NOT-NULL generation_logs.reading_id FK) then short-circuit before draw; honest fail (D-09) = status=failed + truncated server-side error + soft section-9.8 200 body, NO consume, NO templated stand-in
+- [Phase ?]: Phase 4 (Plan 05): collaborators injected via constructor (default=real services); _normalize_classify/_unpack_generation adapt BOTH the real services (ClassifyResult/GenerationResult) and the bare-value test fakes (SafetyVerdict/ReadingOutput) through one seam; ReadingOutput mapped onto DB by position_index (Pitfall 3), soft_advice folded into reading_cards.interpretation, full ReadingSummary JSON into readings.summary_full; one generation_logs row per ACTUAL LLM call (classify only when classify() returned call-meta)
+- [Phase ?]: Phase 4 (Plan 05): seeded_catalog now synthesizes the deck_cards style layer (the seed JSON omits it — deck imagery is a later content task) so the backend-only CSPRNG draw has an active pool; seeded spread_positions.position_index is 1-based not 0-based, so fake LLM outputs echo the actual drawn indices
 
 ### Pending Todos
 
@@ -125,6 +129,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-13T15:07:18.181Z
-Stopped at: Completed 04-02-PLAN.md (CardDrawService + brand_guard)
+Last session: 2026-06-13T15:33:03.312Z
+Stopped at: Completed 04-05-PLAN.md (ReadingService keystone + POST /api/readings)
 Resume file: None

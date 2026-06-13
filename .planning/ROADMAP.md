@@ -144,7 +144,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-05-PLAN.md — ReadingService.create_reading orchestration (gate→draw→generate→consume, honest fail D-09, generation_logs, DB mapping) + POST /api/readings router (READ-01/03/04/05/06/10/11, SAFE-01/02/03, ANALYTICS-02)
+- [x] 04-05-PLAN.md — ReadingService.create_reading orchestration (gate→draw→generate→consume, honest fail D-09, generation_logs, DB mapping) + POST /api/readings router (READ-01/03/04/05/06/10/11, SAFE-01/02/03, ANALYTICS-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -230,7 +230,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
-| 4. Real Personal Reading (KEYSTONE) | 4/6 | In Progress|  |
+| 4. Real Personal Reading (KEYSTONE) | 5/6 | In Progress|  |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |

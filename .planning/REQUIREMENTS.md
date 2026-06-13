@@ -59,7 +59,7 @@
 
 ### Reading Generation (READ)
 
-- [ ] **READ-01**: Создание расклада POST /api/readings (вопрос, тема, колода, расклад, reversals) после проверки лимита
+- [x] **READ-01**: Создание расклада POST /api/readings (вопрос, тема, колода, расклад, reversals) после проверки лимита
 - [x] **READ-02**: Карты выбираются на backend криптостойким random; orientation: reversals off → upright, on → 70% upright / 30% reversed; seed/debug_hash сохраняется скрыто
 - [x] **READ-03**: Reading проходит pending → generating; интерпретации всех карт + итог генерируются **одним структурированным LLM-вызовом** (`messages.parse`), валидируются по JSON-схеме
 - [x] **READ-04**: При невалидном JSON — одна корректирующая ретрай-попытка; при таймауте/провале reading=failed, лимит **не списывается**, пользователь видит мягкую ошибку
@@ -68,7 +68,7 @@
 - [x] **READ-07**: Экран подготовки (ритуал): состояния «слышит вопрос / перемешиваются / рядом», затемнение, частицы, haptic при завершении
 - [x] **READ-08**: Поочерёдное раскрытие карт с flip-анимацией; короткая фраза перед интерпретацией; «Открыть карту» и «раскрыть все» после первой
 - [x] **READ-09**: Экран результата: вопрос/тема/колода/расклад/дата, карточки карт, общий итог, кнопки «сохранить карточку / ещё расклад / история»
-- [ ] **READ-10**: Лимит списывается только при успешном создании расклада
+- [x] **READ-10**: Лимит списывается только при успешном создании расклада
 - [x] **READ-11**: Тон и формулировки результата соответствуют колоде (prompt-модификатор) и бренду (без «AI/нейросеть/модель»)
 
 ### History (HIST)
@@ -128,7 +128,7 @@
 ### Analytics (ANALYTICS)
 
 - [ ] **ANALYTICS-01**: Логируются ключевые события в `app_events` (app_opened, onboarding_*, question_entered, topic/deck/spread_selected, reading_started/completed/failed, card_revealed, summary_viewed, history_opened, paywall_viewed, product_clicked, payment_*, subscription_started, settings changes)
-- [ ] **ANALYTICS-02**: `generation_logs` пишут prompt_version, модель, токены, latency, статус, ошибку для каждой генерации
+- [x] **ANALYTICS-02**: `generation_logs` пишут prompt_version, модель, токены, latency, статус, ошибку для каждой генерации
 
 ### UI & Atmosphere (UI)
 
@@ -215,7 +215,7 @@
 | SPREAD-02 | Phase 2 — Deck & Spread Catalog | Complete |
 | SPREAD-03 | Phase 2 — Deck & Spread Catalog | Complete |
 | SPREAD-04 | Phase 2 — Deck & Spread Catalog | Complete |
-| READ-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
@@ -224,7 +224,7 @@
 | READ-07 | Phase 3 — The Ritual (mock) | Complete |
 | READ-08 | Phase 3 — The Ritual (mock) | Complete |
 | READ-09 | Phase 3 — The Ritual (mock) | Complete |
-| READ-10 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-10 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-11 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | HIST-01 | Phase 5 — History & Profile | Pending |
 | HIST-02 | Phase 5 — History & Profile | Pending |
@@ -263,7 +263,7 @@
 | ADMIN-08 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 | ADMIN-09 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 | ANALYTICS-01 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
-| ANALYTICS-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| ANALYTICS-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | UI-01 | Phase 3 — The Ritual (mock) | Complete |
 | UI-02 | Phase 2 — Deck & Spread Catalog | Complete |
 | UI-03 | Phase 3 — The Ritual (mock) | Complete |
