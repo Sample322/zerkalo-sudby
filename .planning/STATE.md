@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-13T10:26:52.519Z"
+last_updated: "2026-06-13T14:43:48.794Z"
 last_activity: 2026-06-13
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
   percent: 38
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 04 (Real Personal Reading (KEYSTONE)) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-06-13
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████████░░] 75%
 | Phase 03 P01 | 10 | 3 tasks | 16 files |
 | Phase 03 P02 | 5 | 2 tasks | 3 files |
 | Phase 04 P01 | 8 | 3 tasks | 14 files |
+| Phase 04 P02 | 30 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 4: LLM-output schemas put the length target in Field(description) only — never max_length/min_length (Anthropic SDK strips length constraints, constrained decoding ignores them — RESEARCH Pitfall 1).
 - [Phase ?]: Phase 4: ReadingOut surfaces all five §18 summary fields under the frontend MockReading names so the Plan-06 data-source swap is mechanical; the 3 overflow LLM fields persisted losslessly later (Plan 05).
 - [Phase ?]: Phase 4: FakeLLM/FakeSafety are injectable async service stand-ins (via app.dependency_overrides) so integration tests never hit Anthropic; seeded_catalog reuses run_seed in the savepoint transaction.
+- [Phase 04]: Phase 4 (Plan 02): CardDrawService is backend-only CSPRNG draw — secrets.SystemRandom for shuffle AND the orientation coin, never stdlib random; pure _assign_orientations helper takes an injectable rng so the 70/30 ratio is tested deterministically while production stays CSPRNG.
+- [Phase 04]: Phase 4 (Plan 02): CardDrawService writes nothing — returns frozen DrawnCard records (card_id, deck_card_id, position_id, position_index, orientation + joined universal meaning); ReadingService (Plan 05) owns reading_cards INSERT and the transaction; no seed/debug_hash column per A5/OQ1.
+- [Phase 04]: Phase 4 (Plan 02): backend core/brand_guard.py is a 1:1 port of frontend BANNED_BRAND_TOKENS (one source of truth, W-1); LOG+FLAG disposition (OQ2) — flags a brand slip on generated text, never fails the reading.
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-13T10:26:39.985Z
-Stopped at: Phase 4 context gathered
+Last session: 2026-06-13T14:43:48.786Z
+Stopped at: Completed 04-02-PLAN.md (CardDrawService + brand_guard)
 Resume file: None

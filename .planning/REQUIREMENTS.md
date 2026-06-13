@@ -60,7 +60,7 @@
 ### Reading Generation (READ)
 
 - [ ] **READ-01**: Создание расклада POST /api/readings (вопрос, тема, колода, расклад, reversals) после проверки лимита
-- [ ] **READ-02**: Карты выбираются на backend криптостойким random; orientation: reversals off → upright, on → 70% upright / 30% reversed; seed/debug_hash сохраняется скрыто
+- [x] **READ-02**: Карты выбираются на backend криптостойким random; orientation: reversals off → upright, on → 70% upright / 30% reversed; seed/debug_hash сохраняется скрыто
 - [x] **READ-03**: Reading проходит pending → generating; интерпретации всех карт + итог генерируются **одним структурированным LLM-вызовом** (`messages.parse`), валидируются по JSON-схеме
 - [ ] **READ-04**: При невалидном JSON — одна корректирующая ретрай-попытка; при таймауте/провале reading=failed, лимит **не списывается**, пользователь видит мягкую ошибку
 - [x] **READ-05**: Интерпретация карты содержит: название, позицию, положение, короткое значение, глубокую интерпретацию под вопрос, мистический акцент колоды
@@ -69,7 +69,7 @@
 - [x] **READ-08**: Поочерёдное раскрытие карт с flip-анимацией; короткая фраза перед интерпретацией; «Открыть карту» и «раскрыть все» после первой
 - [x] **READ-09**: Экран результата: вопрос/тема/колода/расклад/дата, карточки карт, общий итог, кнопки «сохранить карточку / ещё расклад / история»
 - [ ] **READ-10**: Лимит списывается только при успешном создании расклада
-- [ ] **READ-11**: Тон и формулировки результата соответствуют колоде (prompt-модификатор) и бренду (без «AI/нейросеть/модель»)
+- [x] **READ-11**: Тон и формулировки результата соответствуют колоде (prompt-модификатор) и бренду (без «AI/нейросеть/модель»)
 
 ### History (HIST)
 
@@ -104,8 +104,8 @@
 - [x] **SAFE-01**: Перед генерацией вопрос классифицируется (normal / relationship/financial/health/legal_sensitive / crisis / abusive) — regex-префильтр + классификация; гейтит генерацию
 - [ ] **SAFE-02**: normal → обычная генерация; sensitive → добавляется safety-модификатор в prompt
 - [ ] **SAFE-03**: crisis (самоповреждение/насилие) → НЕ мистическое предсказание; поддерживающий безопасный ответ + предложение обратиться к живому специалисту/службам
-- [ ] **SAFE-04**: Запрещены категоричные предсказания, утверждения чувств другого как факт, мед./юр./фин. категоричные советы, фаталистичные/пугающие формулировки
-- [ ] **SAFE-05**: Используются разрешённые мягкие формулировки («карты указывают/подсвечивают/возможное направление/не приговор, а подсказка»)
+- [x] **SAFE-04**: Запрещены категоричные предсказания, утверждения чувств другого как факт, мед./юр./фин. категоричные советы, фаталистичные/пугающие формулировки
+- [x] **SAFE-05**: Используются разрешённые мягкие формулировки («карты указывают/подсвечивают/возможное направление/не приговор, а подсказка»)
 - [x] **SAFE-06**: В UI/кнопках/результатах нет упоминаний «AI/нейросеть/модель/сгенерировано ИИ»
 
 ### Profile & Settings (PROF)
@@ -216,7 +216,7 @@
 | SPREAD-03 | Phase 2 — Deck & Spread Catalog | Complete |
 | SPREAD-04 | Phase 2 — Deck & Spread Catalog | Complete |
 | READ-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
-| READ-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | READ-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
@@ -225,7 +225,7 @@
 | READ-08 | Phase 3 — The Ritual (mock) | Complete |
 | READ-09 | Phase 3 — The Ritual (mock) | Complete |
 | READ-10 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
-| READ-11 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-11 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | HIST-01 | Phase 5 — History & Profile | Pending |
 | HIST-02 | Phase 5 — History & Profile | Pending |
 | HIST-03 | Phase 5 — History & Profile | Pending |
@@ -248,8 +248,8 @@
 | SAFE-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | SAFE-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
-| SAFE-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
-| SAFE-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
+| SAFE-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-06 | Phase 3 — The Ritual (mock) | Complete |
 | PROF-01 | Phase 5 — History & Profile | Pending |
 | PROF-02 | Phase 5 — History & Profile | Pending |
