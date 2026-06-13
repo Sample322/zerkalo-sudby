@@ -17,6 +17,13 @@ dependencies = [
     # Human-approved addition during the Package Legitimacy checkpoint so the lock
     # is established once and stays consistent. github.com/aiogram/aiogram
     "aiogram==3.28.*",
+    # LLM client + resilience — Phase 4 (KEYSTONE). Human-approved during the Package
+    # Legitimacy checkpoint (both slopcheck [OK]/pypi, registry-confirmed, locally
+    # resolvable: anthropic 0.109.1, tenacity 9.1.4). anthropic is the CLAUDE.md-locked
+    # provider (messages.parse Structured Outputs). github.com/anthropics/anthropic-sdk-python
+    "anthropic>=0.69,<1",
+    # Bounded retry + per-attempt timeout around the single LLM call. github.com/jd/tenacity
+    "tenacity>=9,<10",
 ]
 
 [project.optional-dependencies]
