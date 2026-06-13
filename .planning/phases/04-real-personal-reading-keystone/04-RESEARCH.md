@@ -549,22 +549,24 @@ Recommended: make `LLMService` and `SafetyService` injectable into `ReadingServi
 
 These assumptions are safe defaults flagged for the planner/discuss-phase; none contradict a locked decision.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three resolved and absorbed into the plans: (1) seed-hash out-of-MVP — accepted in 04-02; (2) brand-guard LOG+FLAG — encoded in 04-02 + 04-05; (3) signature/refusal/redirect copy — authored by the planner in 04-04.
 
 1. **Per-reading seed/debug_hash storage (§12.5).**
    - What we know: §12.5 says "save seed/debug_hash hidden"; the locked `readings` model has no such column; `reading_cards` durably records the actual draw.
    - What's unclear: whether exact draw reproducibility is an MVP requirement or a debug nicety.
-   - Recommendation: treat as out-of-MVP (the immutable `reading_cards` rows are the record); if reproducibility is wanted later, add a column in a future migration. Do not block Phase 4.
+   - **RESOLVED:** treat as out-of-MVP (the immutable `reading_cards` rows are the record); if reproducibility is wanted later, add a column in a future migration. Do not block Phase 4.
 
 2. **Brand-voice guard severity on generated text (SAFE-06 on output).**
    - What we know: the system prompt forbids AI/brand words; a backend port of `BANNED_BRAND_TOKENS` can detect violations post-generation.
    - What's unclear: whether a detected violation should fail/retry the reading or just log a warning.
-   - Recommendation: **log + flag** (don't fail the reading) for MVP — a brand-word slip is rare with the §16 prompt and far less bad than an honest-fail. Planner decides.
+   - **RESOLVED:** **log + flag** (don't fail the reading) for MVP — a brand-word slip is rare with the §16 prompt and far less bad than an honest-fail. Planner decides.
 
 3. **Exact per-deck signature wording + `safety_modifier` + `refusal`/redirect copy.**
    - What we know: §19 tones, §20.3 safe-formulation example, §9.8 copy, D-02/D-04/D-06 give the requirements.
    - What's unclear: the literal sentences (delegated to planner per CONTEXT).
-   - Recommendation: planner authors them into the `prompt_templates` seed/text, passing the SAFE-06 ban-list and §15.1 allow/ban lists.
+   - **RESOLVED:** planner authors them into the `prompt_templates` seed/text, passing the SAFE-06 ban-list and §15.1 allow/ban lists.
 
 ## Environment Availability
 
