@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+// Phase-4 seam tests (D-07): createReading no longer builds a local fixture — it POSTs to
+// /api/readings through the apiFetch Bearer seam and maps the backend ReadingOut onto the
+// UNCHANGED MockReading shape. The mock-only reversals/rng tests are gone (orientation is
+// now server-decided, D-13 70/30 on the backend). `fetch` is stubbed; no live backend.
 
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useSession } from "../stores/session";
 import { BANNED_BRAND_TOKENS } from "./copy";
 import { createReading } from "./createReading";
+import type { ReadingOutResponse } from "./types";
 
 const POSITIONS = [
   { title: "Суть" },
@@ -11,71 +18,216 @@ const POSITIONS = [
 
 function baseParams(overrides: Record<string, unknown> = {}) {
   return {
-    question: "Что мне важно увидеть?",
+    question: "Что мне важно увидеть в отношениях?",
     topic: "love",
     deckSlug: "moon_mirror",
     spreadSlug: "three_card",
-    reversalsEnabled: false,
+    reversalsEnabled: true,
     positions: POSITIONS,
     ...overrides,
   };
 }
 
-describe("createReading — the Phase-4 seam (D-05)", () => {
-  it("is async and returns a Promise<MockReading>", async () => {
+// A completed backend ReadingOut (the §14.5 contract). Field names are the backend
+// snake_case shape ReadingCardOut / ReadingSummaryOut; the mapping camelCase's them.
+function completedReadingOut(
+  overrides: Partial<ReadingOutResponse> = {},
+): ReadingOutResponse {
+  return {
+    reading_id: "11111111-1111-1111-1111-111111111111",
+    status: "completed",
+    cards: [
+      {
+        name: "Звезда",
+        position_title: "Суть",
+        orientation: "upright",
+        short_meaning: "Тихая надежда и ясность намерения.",
+        interpretation: "В центре ситуации — спокойная вера в то, что важное уже зреет.",
+        deck_accent: "Колода произносит это тихо, своим языком.",
+      },
+      {
+        name: "Башня",
+        position_title: "Препятствие",
+        orientation: "reversed",
+        short_meaning: "Перемена, которая давно назрела.",
+        interpretation: "Старое держится из привычки — отпускание освободит силы.",
+        deck_accent: "В голосе колоды слышится мягкое напоминание.",
+      },
+      {
+        name: "Солнце",
+        position_title: "Совет",
+        orientation: "upright",
+        short_meaning: "Доверься тёплому, ясному движению.",
+        interpretation: "Маленькая открытость сейчас стоит больше осторожного молчания.",
+        deck_accent: "Колода добавляет к этому тёплый оттенок смысла.",
+      },
+    ],
+    summary: {
+      linkage: "Карты складываются в один внутренний поворот.",
+      main_factor: "Главное сейчас — спокойное внимание к тому, что уже происходит.",
+      attention: "Стоит заметить чувства, которые проявляются не сразу.",
+      soft_advice: "Двигайся мягко и без спешки — у этой темы свой ритм.",
+      closing_phrase: "Колода остаётся рядом: выбор всегда остаётся за тобой.",
+    },
+    remaining_limits: 2,
+    ...overrides,
+  };
+}
+
+/** Stub the global fetch with a scripted Response and capture the request for assertions. */
+function stubFetch(body: unknown, init: ResponseInit = { status: 200 }) {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fetchMock = vi.fn(async (url: string | URL, requestInit: RequestInit = {}) => {
+    calls.push({ url: String(url), init: requestInit });
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+      ...init,
+    });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return calls;
+}
+
+beforeEach(() => {
+  // apiFetch reads the JWT from the session store; seed one so the Bearer header is attached.
+  useSession.setState({ jwt: "test-jwt-token" });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  useSession.setState({ jwt: null });
+});
+
+describe("createReading — real POST /api/readings via apiFetch (D-07 mechanical swap)", () => {
+  it("is async and resolves to a MockReading on a completed response", async () => {
+    stubFetch(completedReadingOut());
     const result = createReading(baseParams());
     expect(result).toBeInstanceOf(Promise);
-    await result;
-  });
-
-  it("returns one card per spread position, every READ-05 field populated", async () => {
-    const reading = await createReading(baseParams());
+    const reading = await result;
     expect(reading.cards).toHaveLength(POSITIONS.length);
-    for (const card of reading.cards) {
-      expect(card.name).toBeTruthy();
-      expect(card.positionTitle).toBeTruthy();
-      expect(card.orientation).toMatch(/^(upright|reversed)$/);
-      expect(card.shortMeaning).toBeTruthy();
-      expect(card.interpretation).toBeTruthy();
-      expect(card.deckAccent).toBeTruthy();
-      expect(card.shortPhrase).toBeTruthy();
-    }
   });
 
-  it("summary has all READ-06 fields populated", async () => {
-    const { summary } = await createReading(baseParams());
-    expect(summary.linkage).toBeTruthy();
-    expect(summary.mainFactor).toBeTruthy();
-    expect(summary.attention).toBeTruthy();
-    expect(summary.softAdvice).toBeTruthy();
-    expect(summary.closingPhrase).toBeTruthy();
+  // [test_posts_to_readings_endpoint] + [test_request_body_shape]
+  it("POSTs to /api/readings with the §14.5 body field names + the Bearer header", async () => {
+    const calls = stubFetch(completedReadingOut());
+    await createReading(baseParams());
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toContain("/api/readings");
+    expect(calls[0].init.method).toBe("POST");
+
+    const headers = new Headers(calls[0].init.headers);
+    expect(headers.get("Authorization")).toBe("Bearer test-jwt-token");
+    expect(headers.get("Content-Type")).toBe("application/json");
+
+    const sent = JSON.parse(String(calls[0].init.body));
+    expect(sent).toEqual({
+      question: "Что мне важно увидеть в отношениях?",
+      topic: "love",
+      deck_slug: "moon_mirror",
+      spread_slug: "three_card",
+      reversals_enabled: true,
+    });
+    // The mock-only `positions`/`rng` must NOT leak into the request body.
+    expect(sent).not.toHaveProperty("positions");
+    expect(sent).not.toHaveProperty("rng");
   });
 
-  it("echoes the inputs; createdAt is an ISO string", async () => {
+  // [test_request_body_shape] — null question for a general reading (HOME-02 / D-13).
+  it("sends question:null for an empty general reading (HOME-02)", async () => {
+    const calls = stubFetch(completedReadingOut());
+    await createReading(baseParams({ question: null }));
+    const sent = JSON.parse(String(calls[0].init.body));
+    expect(sent.question).toBeNull();
+  });
+
+  // [test_maps_readingout_to_mockreading]
+  it("maps every per-card field ReadingOut → MockReading (snake → camel)", async () => {
+    stubFetch(completedReadingOut());
     const reading = await createReading(baseParams());
-    expect(reading.topic).toBe("love");
-    expect(reading.deckSlug).toBe("moon_mirror");
-    expect(reading.spreadSlug).toBe("three_card");
-    expect(reading.question).toBe("Что мне важно увидеть?");
-    expect(() => new Date(reading.createdAt).toISOString()).not.toThrow();
-    expect(reading.createdAt).toBe(new Date(reading.createdAt).toISOString());
-  });
 
-  it("question is null for a general reading (HOME-02)", async () => {
-    const reading = await createReading(baseParams({ question: null }));
-    expect(reading.question).toBeNull();
-  });
-
-  it("positionTitle of each card comes from the passed positions (spread-driven)", async () => {
-    const reading = await createReading(baseParams());
+    expect(reading.cards.map((c) => c.name)).toEqual(["Звезда", "Башня", "Солнце"]);
     expect(reading.cards.map((c) => c.positionTitle)).toEqual([
       "Суть",
       "Препятствие",
       "Совет",
     ]);
+    expect(reading.cards.map((c) => c.orientation)).toEqual([
+      "upright",
+      "reversed",
+      "upright",
+    ]);
+    const first = reading.cards[0];
+    expect(first.shortMeaning).toBe("Тихая надежда и ясность намерения.");
+    expect(first.interpretation).toBe(
+      "В центре ситуации — спокойная вера в то, что важное уже зреет.",
+    );
+    expect(first.deckAccent).toBe("Колода произносит это тихо, своим языком.");
+    // shortPhrase has no backend field — it is sourced from the in-character copy bank.
+    for (const card of reading.cards) {
+      expect(card.shortPhrase).toBeTruthy();
+    }
   });
 
-  it("generated card + summary copy is brand-safe (SAFE-06, incl. ИИ)", async () => {
+  // [test_maps_readingout_to_mockreading] — the 5 summary fields via the documented name map.
+  it("maps all five summary fields (connection→linkage, attention_point→attention, …)", async () => {
+    stubFetch(completedReadingOut());
+    const { summary } = await createReading(baseParams());
+    expect(summary.linkage).toBe("Карты складываются в один внутренний поворот.");
+    expect(summary.mainFactor).toBe(
+      "Главное сейчас — спокойное внимание к тому, что уже происходит.",
+    );
+    expect(summary.attention).toBe(
+      "Стоит заметить чувства, которые проявляются не сразу.",
+    );
+    expect(summary.softAdvice).toBe(
+      "Двигайся мягко и без спешки — у этой темы свой ритм.",
+    );
+    expect(summary.closingPhrase).toBe(
+      "Колода остаётся рядом: выбор всегда остаётся за тобой.",
+    );
+  });
+
+  it("passes the inputs through; createdAt is a valid ISO string", async () => {
+    stubFetch(completedReadingOut());
+    const reading = await createReading(baseParams());
+    expect(reading.topic).toBe("love");
+    expect(reading.deckSlug).toBe("moon_mirror");
+    expect(reading.spreadSlug).toBe("three_card");
+    expect(reading.question).toBe("Что мне важно увидеть в отношениях?");
+    expect(reading.createdAt).toBe(new Date(reading.createdAt).toISOString());
+  });
+
+  // [test_failure_rejects] — non-OK HTTP status.
+  it("rejects on a non-OK response (so the caller shows §9.8 and does not advance)", async () => {
+    stubFetch({ detail: "boom" }, { status: 500 });
+    await expect(createReading(baseParams())).rejects.toThrow();
+  });
+
+  // [test_failure_rejects] — soft 200 honest-fail body (status=failed, cards=[]).
+  it("rejects on a soft honest-fail body (status='failed', cards empty)", async () => {
+    stubFetch(
+      completedReadingOut({
+        status: "failed",
+        cards: [],
+        summary: {
+          linkage: "",
+          main_factor: "",
+          attention: "",
+          soft_advice:
+            "Колода замолчала на мгновение. Попробуй открыть расклад ещё раз — вопрос уже сохранён.",
+          closing_phrase: "",
+        },
+        remaining_limits: 3,
+      }),
+    );
+    await expect(createReading(baseParams())).rejects.toThrow();
+  });
+
+  // [test_mapped_copy_brand_safe]
+  it("the mapped card + summary copy is brand-safe (SAFE-06, incl. ИИ)", async () => {
+    stubFetch(completedReadingOut());
     const reading = await createReading(baseParams());
     const text = [
       ...reading.cards.flatMap((c) => [
@@ -88,45 +240,5 @@ describe("createReading — the Phase-4 seam (D-05)", () => {
       ...Object.values(reading.summary),
     ].join(" ");
     expect(BANNED_BRAND_TOKENS.test(text)).toBe(false);
-  });
-});
-
-describe("reversals (D-07) — deterministic via injected RNG", () => {
-  it("OFF → every card orientation is upright (regardless of RNG)", async () => {
-    const reading = await createReading(
-      baseParams({ reversalsEnabled: false, rng: () => 0 }),
-    );
-    expect(reading.cards.every((c) => c.orientation === "upright")).toBe(true);
-  });
-
-  it("ON + rng < 0.3 → cards are reversed", async () => {
-    const reading = await createReading(
-      baseParams({ reversalsEnabled: true, rng: () => 0.1 }),
-    );
-    expect(reading.cards.every((c) => c.orientation === "reversed")).toBe(true);
-  });
-
-  it("ON + rng >= 0.3 → cards are upright", async () => {
-    const reading = await createReading(
-      baseParams({ reversalsEnabled: true, rng: () => 0.9 }),
-    );
-    expect(reading.cards.every((c) => c.orientation === "upright")).toBe(true);
-  });
-
-  it("ON → only 'upright'/'reversed' values ever appear (no other strings)", async () => {
-    // A varying RNG cycles through both branches; assert the value domain is closed.
-    let n = 0;
-    const reading = await createReading(
-      baseParams({
-        reversalsEnabled: true,
-        rng: () => {
-          n += 1;
-          return (n % 5) / 10; // 0.1, 0.2, 0.3, 0.4, 0 … spans both sides of 0.3
-        },
-      }),
-    );
-    for (const card of reading.cards) {
-      expect(["upright", "reversed"]).toContain(card.orientation);
-    }
   });
 });

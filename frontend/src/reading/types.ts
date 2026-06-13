@@ -47,3 +47,46 @@ export interface MockReading {
   cards: MockReadingCard[];
   summary: MockReadingSummary;
 }
+
+// ---------------------------------------------------------------------------------------
+// Phase-4 backend contract (POST /api/readings response, TZ §14.5). These mirror the
+// backend `ReadingOut` / `ReadingCardOut` / `ReadingSummaryOut` (snake_case) so the
+// createReading seam can map them onto the camelCase MockReading shape above mechanically
+// (D-07). The backend already pre-maps the LLM summary names (connection→linkage,
+// attention_point→attention, advice→soft_advice, closing_phrase) — see
+// backend/app/schemas/reading.py `ReadingSummaryOut`. Declared here (not `any`) so the
+// mapping in createReading.ts is fully typed (web TS rules: no `any`).
+
+/** One drawn card in the §14.5 response — the authoritative server-side per-card row. */
+export interface ReadingCardOutResponse {
+  name: string;
+  position_title: string;
+  /** "upright" | "reversed" — server-decided (D-13 70/30 CSPRNG). */
+  orientation: string;
+  short_meaning: string;
+  interpretation: string;
+  deck_accent: string;
+}
+
+/** The §14.5 response summary — all five §18 fields, already named for the frontend. */
+export interface ReadingSummaryOutResponse {
+  linkage: string;
+  main_factor: string;
+  attention: string;
+  soft_advice: string;
+  closing_phrase: string;
+}
+
+/**
+ * The `POST /api/readings` response body (TZ §14.5). On the soft/honest-fail paths
+ * (paywall / refusal / redirect / generation failure) `status` is `failed`, `cards` is
+ * empty, and the §9.8 in-character copy rides in `summary.soft_advice` — the seam treats
+ * any non-`completed` status (or an empty card list) as a failure and rejects (D-08/D-09).
+ */
+export interface ReadingOutResponse {
+  reading_id: string;
+  status: string;
+  cards: ReadingCardOutResponse[];
+  summary: ReadingSummaryOutResponse | null;
+  remaining_limits: number | null;
+}
