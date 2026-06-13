@@ -129,7 +129,27 @@ Plans:
   4. When the model returns invalid JSON or times out, the user sees a soft in-character error, the reading is marked failed, and the user's limit is NOT consumed (after exactly one corrective retry, then DB fallback)
   5. Every generation writes `prompt_version`, model, input/output tokens, latency, status, and any error to `generation_logs`
 
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+
+**Wave 0**
+
+- [ ] 04-01-PLAN.md — Foundation: add anthropic+tenacity (legitimacy checkpoint) + schemas/reading.py contracts (ReadingOutput/SafetyVerdict/ReadingCreate/ReadingOut) + AsyncAnthropic client + 9 Wave-0 test stubs + fake_llm/fake_safety/seeded_catalog fixtures (READ-03/05/06, SAFE-01)
+
+**Wave 1** *(parallel — zero file overlap; all depend on 04-01)*
+
+- [ ] 04-02-PLAN.md — CardDrawService (backend-only CSPRNG draw, 70/30 orientation, D-13) + backend brand guard (SAFE-06 port) (READ-02, READ-11, SAFE-04/05)
+- [ ] 04-03-PLAN.md — LLMService (messages.parse + tenacity 1-retry Haiku→Sonnet + timeout + usage) + SafetyService (regex pre-filter + Haiku classify → SafetyVerdict + routing) (READ-03/04, SAFE-01/02/04/05)
+- [ ] 04-04-PLAN.md — PromptEngine (fused §17+§18 single-call prompt + D-02 per-deck signatures + safety_modifier + prompt_version) + prompts.json content (generic D-04 refusal, D-06 redirect, signatures) (READ-03/05/06/11, SAFE-02/03/04/05)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-05-PLAN.md — ReadingService.create_reading orchestration (gate→draw→generate→consume, honest fail D-09, generation_logs, DB mapping) + POST /api/readings router (READ-01/03/04/05/06/10/11, SAFE-01/02/03, ANALYTICS-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-06-PLAN.md — Frontend seam swap (createReading → POST /api/readings via apiFetch, ReadingOut→MockReading) + failure UX (Повторить + Сменить колоду, D-07/D-08) + manual UAT (per-deck felt-quality, live smoke, crisis tone) (READ-01, READ-11)
+
 **UI hint**: yes
 
 ### Phase 5: History & Profile
@@ -210,7 +230,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
-| 4. Real Personal Reading (KEYSTONE) | 0/TBD | Not started | - |
+| 4. Real Personal Reading (KEYSTONE) | 0/6 | Planned | - |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
