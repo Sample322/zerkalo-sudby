@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import admin, auth, decks, health, spreads, users
+from app.api import admin, auth, decks, health, readings, spreads, users
 from app.core.db import engine
 from app.core.errors import unhandled_exception_handler
 from app.core.logging import configure_logging
@@ -49,6 +49,7 @@ app.include_router(users.router, prefix="/api")  # GET  /api/me
 app.include_router(admin.router, prefix="/api")  # GET  /api/admin/ping (require_admin)
 app.include_router(decks.router, prefix="/api")  # GET  /api/decks, /api/decks/{slug}
 app.include_router(spreads.router, prefix="/api")  # GET  /api/spreads, /api/spreads/recommend
+app.include_router(readings.router, prefix="/api")  # POST /api/readings (Bearer JWT)
 
 # --- INFRA-05: global soft-error handler (no stacktrace leak to the client) --------
 # Registered for the bare ``Exception`` only — FastAPI keeps its own HTTPException /
