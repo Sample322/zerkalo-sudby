@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-13T14:43:48.794Z"
+last_updated: "2026-06-13T14:55:54.990Z"
 last_activity: 2026-06-13
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 20
-  completed_plans: 16
+  completed_plans: 17
   percent: 38
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 04 (Real Personal Reading (KEYSTONE)) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-06-13
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 80%
 | Phase 03 P02 | 5 | 2 tasks | 3 files |
 | Phase 04 P01 | 8 | 3 tasks | 14 files |
 | Phase 04 P02 | 30 | 2 tasks | 5 files |
+| Phase 04 P03 | 25 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,10 @@ Recent decisions affecting current work:
 - [Phase 04]: Phase 4 (Plan 02): CardDrawService is backend-only CSPRNG draw — secrets.SystemRandom for shuffle AND the orientation coin, never stdlib random; pure _assign_orientations helper takes an injectable rng so the 70/30 ratio is tested deterministically while production stays CSPRNG.
 - [Phase 04]: Phase 4 (Plan 02): CardDrawService writes nothing — returns frozen DrawnCard records (card_id, deck_card_id, position_id, position_index, orientation + joined universal meaning); ReadingService (Plan 05) owns reading_cards INSERT and the transaction; no seed/debug_hash column per A5/OQ1.
 - [Phase 04]: Phase 4 (Plan 02): backend core/brand_guard.py is a 1:1 port of frontend BANNED_BRAND_TOKENS (one source of truth, W-1); LOG+FLAG disposition (OQ2) — flags a brand slip on generated text, never fails the reading.
+- [Phase 04]: Plan 03: LLMService wraps ONE messages.parse(output_format=ReadingOutput) in tenacity AsyncRetrying (stop_after_attempt(2), reraise) — attempt 1 claude-haiku-4-5, the single corrective retry claude-sonnet-4-6 (D-12) keyed off retry_state.attempt_number; aliases only, no dated snapshot.
+- [Phase 04]: Plan 03: RETRYABLE=(ValidationError, anthropic.APIStatusError/APIConnectionError, TimeoutError, _NonSchemaStopReason); refusal/max_tokens stop_reason wrapped retryable (Pitfall 2). Exhaustion raises typed LLMGenerationError → Plan 05 honest-fails (D-09), never templated. GenerationResult carries generation_logs fields (ANALYTICS-02).
+- [Phase 04]: Plan 03: SafetyService.classify Stage 1 pure regex returns crisis_sensitive instantly + empty/None→normal (HOME-02), both NO call (meta=None); Stage 2 tiny messages.parse(output_format=SafetyVerdict) Haiku for undecided. Pure route()→SafetyAction (crisis→REFUSAL, abusive→REDIRECT, *_sensitive→SAFETY_MODIFIER, normal→GENERATE); continues_to_draw = gate-before-draw boundary (D-03/04/05/06).
+- [Phase 04]: Plan 03: LLMService + SafetyService take an injectable AsyncAnthropic client (default = core/llm_client singleton via local import); unit tests mock messages.parse with AsyncMock — no network, no ANTHROPIC_API_KEY. The Plan-05 + test mock seam.
 
 ### Pending Todos
 
@@ -116,6 +121,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-13T14:43:48.786Z
+Last session: 2026-06-13T14:53:57.375Z
 Stopped at: Completed 04-02-PLAN.md (CardDrawService + brand_guard)
 Resume file: None

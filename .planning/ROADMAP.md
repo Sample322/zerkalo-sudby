@@ -139,7 +139,7 @@ Plans:
 **Wave 1** *(parallel — zero file overlap; all depend on 04-01)*
 
 - [x] 04-02-PLAN.md — CardDrawService (backend-only CSPRNG draw, 70/30 orientation, D-13) + backend brand guard (SAFE-06 port) (READ-02, READ-11, SAFE-04/05)
-- [ ] 04-03-PLAN.md — LLMService (messages.parse + tenacity 1-retry Haiku→Sonnet + timeout + usage) + SafetyService (regex pre-filter + Haiku classify → SafetyVerdict + routing) (READ-03/04, SAFE-01/02/04/05)
+- [x] 04-03-PLAN.md — LLMService (messages.parse + tenacity 1-retry Haiku→Sonnet + timeout + usage) + SafetyService (regex pre-filter + Haiku classify → SafetyVerdict + routing) (READ-03/04, SAFE-01/02/04/05)
 - [ ] 04-04-PLAN.md — PromptEngine (fused §17+§18 single-call prompt + D-02 per-deck signatures + safety_modifier + prompt_version) + prompts.json content (generic D-04 refusal, D-06 redirect, signatures) (READ-03/05/06/11, SAFE-02/03/04/05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -230,7 +230,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
-| 4. Real Personal Reading (KEYSTONE) | 2/6 | In Progress|  |
+| 4. Real Personal Reading (KEYSTONE) | 3/6 | In Progress|  |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |

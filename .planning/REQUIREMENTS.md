@@ -62,7 +62,7 @@
 - [ ] **READ-01**: Создание расклада POST /api/readings (вопрос, тема, колода, расклад, reversals) после проверки лимита
 - [x] **READ-02**: Карты выбираются на backend криптостойким random; orientation: reversals off → upright, on → 70% upright / 30% reversed; seed/debug_hash сохраняется скрыто
 - [x] **READ-03**: Reading проходит pending → generating; интерпретации всех карт + итог генерируются **одним структурированным LLM-вызовом** (`messages.parse`), валидируются по JSON-схеме
-- [ ] **READ-04**: При невалидном JSON — одна корректирующая ретрай-попытка; при таймауте/провале reading=failed, лимит **не списывается**, пользователь видит мягкую ошибку
+- [x] **READ-04**: При невалидном JSON — одна корректирующая ретрай-попытка; при таймауте/провале reading=failed, лимит **не списывается**, пользователь видит мягкую ошибку
 - [x] **READ-05**: Интерпретация карты содержит: название, позицию, положение, короткое значение, глубокую интерпретацию под вопрос, мистический акцент колоды
 - [x] **READ-06**: Итог содержит связку карт, главный фактор, на что обратить внимание, мягкий совет, завершающую фразу в стиле колоды
 - [x] **READ-07**: Экран подготовки (ритуал): состояния «слышит вопрос / перемешиваются / рядом», затемнение, частицы, haptic при завершении
@@ -102,7 +102,7 @@
 ### Safety (SAFE)
 
 - [x] **SAFE-01**: Перед генерацией вопрос классифицируется (normal / relationship/financial/health/legal_sensitive / crisis / abusive) — regex-префильтр + классификация; гейтит генерацию
-- [ ] **SAFE-02**: normal → обычная генерация; sensitive → добавляется safety-модификатор в prompt
+- [x] **SAFE-02**: normal → обычная генерация; sensitive → добавляется safety-модификатор в prompt
 - [ ] **SAFE-03**: crisis (самоповреждение/насилие) → НЕ мистическое предсказание; поддерживающий безопасный ответ + предложение обратиться к живому специалисту/службам
 - [x] **SAFE-04**: Запрещены категоричные предсказания, утверждения чувств другого как факт, мед./юр./фин. категоричные советы, фаталистичные/пугающие формулировки
 - [x] **SAFE-05**: Используются разрешённые мягкие формулировки («карты указывают/подсвечивают/возможное направление/не приговор, а подсказка»)
@@ -218,7 +218,7 @@
 | READ-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | READ-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
-| READ-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| READ-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-06 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-07 | Phase 3 — The Ritual (mock) | Complete |
@@ -246,7 +246,7 @@
 | PAY-07 | Phase 7 — Telegram Stars Payments | Pending |
 | PAY-08 | Phase 7 — Telegram Stars Payments | Pending |
 | SAFE-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
-| SAFE-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
 | SAFE-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
