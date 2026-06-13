@@ -9,7 +9,9 @@ import {
   QUESTION_EMPTY_HELPER,
   QUESTION_PLACEHOLDER,
   QUESTION_TOO_SHORT_HINT,
+  READING_CHANGE_DECK,
   READING_ERROR,
+  READING_RETRY,
   START_CTA,
   START_GATE_HINT,
 } from "../reading/copy";
@@ -88,11 +90,20 @@ export function CatalogScreen() {
       setReading(reading);
       goTo("ritual");
     } catch {
-      // The mock never rejects, but shape the handler so the Phase-4 swap inherits the error
-      // UX: surface the soft «Колода замолчала…» copy and do NOT advance the step.
+      // D-08: a failed generation surfaces the soft §9.8 «Колода замолчала…» copy and does
+      // NOT advance the step. The recovery affordances (Повторить / Сменить колоду) render in
+      // the sticky band below. The limit was NOT consumed server-side (D-09), so Повторить —
+      // which simply re-invokes handleStart with the unchanged store params — is free.
       setStartError(true);
       setIsStarting(false);
     }
+  }
+
+  // D-08 «Сменить колоду»: dismiss the failure panel and return to the live selection screen
+  // with the question + selections PRESERVED (D-04 — never clear `question`). We are already
+  // on the selection step, so the user is free to tap a different deck in the carousel.
+  function handleChangeDeck() {
+    setStartError(false);
   }
 
   // D-13 question hint, derived from the store's pure validity helper (never re-implemented):
@@ -250,36 +261,73 @@ export function CatalogScreen() {
           maxHeight: "var(--tg-viewport-stable-height, 100dvh)",
         }}
       >
-        {!ready && (
+        {!ready && !startError && (
           <p className="px-1 pb-2 text-center text-sm opacity-70">
             {START_GATE_HINT}
           </p>
         )}
-        {startError && (
-          <p
-            className="px-1 pb-2 text-center text-sm"
-            style={{ color: "var(--deck-soft)" }}
+        {startError ? (
+          // D-08 failure UX: the soft §9.8 line + Повторить (re-run same, free) + Сменить
+          // колоду (back to deck selection, question preserved). No spinner — the ritual,
+          // not this screen, covers the real latency (D-07).
+          <div className="flex flex-col gap-3">
+            <p
+              className="px-1 text-center text-sm"
+              style={{ color: "var(--deck-soft)" }}
+            >
+              {READING_ERROR}
+            </p>
+            <div className="flex gap-3">
+              <m.button
+                type="button"
+                whileTap={{ scale: 0.97 }}
+                disabled={isStarting}
+                onClick={handleStart}
+                aria-disabled={isStarting}
+                className="flex-1 rounded-2xl px-4 py-4 text-base font-semibold outline-none transition-opacity focus-visible:ring-2 disabled:opacity-50"
+                style={{
+                  background: "var(--deck-accent)",
+                  color: "var(--deck-bg)",
+                  boxShadow: "0 14px 44px -18px var(--deck-accent)",
+                }}
+              >
+                {READING_RETRY}
+              </m.button>
+              <m.button
+                type="button"
+                whileTap={{ scale: 0.97 }}
+                onClick={handleChangeDeck}
+                className="flex-1 rounded-2xl border px-4 py-4 text-base font-semibold outline-none focus-visible:ring-2"
+                style={{
+                  color: "var(--deck-soft)",
+                  borderColor:
+                    "color-mix(in srgb, var(--deck-soft) 36%, transparent)",
+                  background: "transparent",
+                }}
+              >
+                {READING_CHANGE_DECK}
+              </m.button>
+            </div>
+          </div>
+        ) : (
+          <m.button
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            disabled={!ready || isStarting}
+            onClick={handleStart}
+            aria-disabled={!ready || isStarting}
+            className="w-full rounded-2xl px-4 py-4 text-base font-semibold outline-none transition-opacity focus-visible:ring-2 disabled:opacity-50"
+            style={{
+              background: "var(--deck-accent)",
+              color: "var(--deck-bg)",
+              boxShadow: ready
+                ? "0 14px 44px -18px var(--deck-accent)"
+                : "none",
+            }}
           >
-            {READING_ERROR}
-          </p>
+            {START_CTA}
+          </m.button>
         )}
-        <m.button
-          type="button"
-          whileTap={{ scale: 0.97 }}
-          disabled={!ready || isStarting}
-          onClick={handleStart}
-          aria-disabled={!ready || isStarting}
-          className="w-full rounded-2xl px-4 py-4 text-base font-semibold outline-none transition-opacity focus-visible:ring-2 disabled:opacity-50"
-          style={{
-            background: "var(--deck-accent)",
-            color: "var(--deck-bg)",
-            boxShadow: ready
-              ? "0 14px 44px -18px var(--deck-accent)"
-              : "none",
-          }}
-        >
-          {START_CTA}
-        </m.button>
       </div>
     </main>
   );

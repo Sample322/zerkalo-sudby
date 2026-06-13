@@ -131,9 +131,14 @@ export const SUMMARY_LABELS = {
 } as const;
 
 // ---------------------------------------------------------------------------------------
-// Error state (TZ §9.8) — the future generation-failure seam string.
+// Error state (TZ §9.8) — the generation-failure copy + the D-08 recovery affordances.
+// On a failed reading the selection screen shows READING_ERROR plus two buttons: Повторить
+// (re-run the same reading — the limit was NOT consumed, so the retry is free) and Сменить
+// колоду (stay on selection, pick a different deck; the question is preserved, D-04).
 export const READING_ERROR =
   "Колода замолчала на мгновение. Попробуй открыть расклад ещё раз — вопрос уже сохранён.";
+export const READING_RETRY = "Повторить";
+export const READING_CHANGE_DECK = "Сменить колоду";
 
 // ---------------------------------------------------------------------------------------
 // Brand-safe building blocks createReading uses to assemble per-card + summary copy.

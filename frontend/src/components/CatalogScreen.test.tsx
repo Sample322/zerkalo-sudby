@@ -37,6 +37,31 @@ const SPREADS = Array.from({ length: 7 }, (_, i) => ({
 const REASON = "Для темы «любовь» этот расклад открывает вопрос мягко и по существу.";
 const RECOMMENDATION = { recommended_spread: SPREADS[0], reason: REASON };
 
+// A completed POST /api/readings response (the §14.5 ReadingOut the seam now maps onto
+// MockReading). One card, matching the single stubbed spread position ("Суть").
+const COMPLETED_READING_OUT = {
+  reading_id: "11111111-1111-1111-1111-111111111111",
+  status: "completed",
+  cards: [
+    {
+      name: "Звезда",
+      position_title: "Суть",
+      orientation: "upright",
+      short_meaning: "Тихая надежда и ясность намерения.",
+      interpretation: "В центре ситуации — спокойная вера в то, что важное уже зреет.",
+      deck_accent: "Колода произносит это тихо, своим языком.",
+    },
+  ],
+  summary: {
+    linkage: "Карты складываются в один внутренний поворот.",
+    main_factor: "Спокойное внимание к тому, что уже происходит.",
+    attention: "Стоит заметить чувства, которые проявляются не сразу.",
+    soft_advice: "Двигайся мягко и без спешки — у этой темы свой ритм.",
+    closing_phrase: "Колода остаётся рядом: выбор всегда остаётся за тобой.",
+  },
+  remaining_limits: 2,
+};
+
 function json(data: unknown): Response {
   return new Response(JSON.stringify(data), {
     status: 200,
@@ -60,6 +85,9 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (url: string | URL) => {
       const u = String(url);
+      // POST /api/readings — the Phase-4 seam now hits the network; return a completed
+      // §14.5 ReadingOut so createReading resolves and the happy path advances to ritual.
+      if (u.includes("/api/readings")) return json(COMPLETED_READING_OUT);
       if (u.includes("/api/spreads/recommend")) return json(RECOMMENDATION);
       if (u.includes("/api/spreads")) return json(SPREADS);
       if (u.includes("/api/decks")) return json(DECKS);
