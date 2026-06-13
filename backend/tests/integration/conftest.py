@@ -24,6 +24,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_session
 from app.core.db import engine
 from app.main import app
+from app.schemas.reading import (
+    CardInterpretation,
+    ReadingOutput,
+    ReadingSummary,
+    SafetyCategory,
+    SafetyVerdict,
+)
 
 
 @pytest.fixture
@@ -59,3 +66,120 @@ async def auth_client(auth_session: AsyncSession) -> AsyncIterator[object]:
             yield ac
     finally:
         app.dependency_overrides.pop(get_session, None)
+
+
+# ---------------------------------------------------------------------------------------
+# Wave-0 LLM/safety/catalog fixtures — the deterministic substrate Plans 02-06 run against.
+#
+# NONE of these touch Anthropic or the network. ``fake_llm`` / ``fake_safety`` are injectable
+# stand-ins for the (future) ``LLMService`` / ``SafetyService`` so a later plan substitutes
+# them via ``app.dependency_overrides`` and asserts status transitions / generation_logs /
+# limit behaviour without a real API call. ``seeded_catalog`` reuses the real seed loader so
+# the flow has genuine deck/spread/cards rows to draw from.
+# ---------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fake_reading_output() -> ReadingOutput:
+    """A fully-populated, brand-safe ``ReadingOutput`` (one card per a 3-card spread).
+
+    RU placeholder copy that obeys the SAFE-06 ban-list (no AI/ИИ/нейросеть/модель) and the
+    non-fatalistic voice. Used as the default success payload for ``fake_llm`` and as a literal
+    in flow/limit/log tests. ``position_index`` values 0..2 mirror a three-position spread.
+    """
+    cards = [
+        CardInterpretation(
+            position_index=i,
+            short_meaning=f"Карта {i + 1} говорит о тихом, но важном движении.",
+            interpretation=(
+                "Сейчас ситуация только складывается. Дай ей немного времени и наблюдай "
+                "за тем, что проявляется не сразу."
+            ),
+            mystical_accent="Колода произносит это мягко, своим языком.",
+            soft_advice="Двигайся без спешки — у этой темы есть свой ритм.",
+        )
+        for i in range(3)
+    ]
+    return ReadingOutput(
+        cards=cards,
+        summary=ReadingSummary(
+            summary_short="Расклад о спокойном внимании к тому, что уже происходит.",
+            connection="Карты складываются в общий узор — вместе они говорят об одном движении.",
+            main_factor="Готовность мягко принять перемены.",
+            attention_point="На чувства, которые проявляются постепенно.",
+            advice="Прислушайся к себе и не торопи решения.",
+            closing_phrase="Колода остаётся рядом: выбор всегда остаётся за тобой.",
+        ),
+    )
+
+
+class FakeLLM:
+    """Injectable stand-in for the future ``LLMService`` — never calls Anthropic.
+
+    ``generate(...)`` returns the configured ``ReadingOutput`` by default. Parametrize the
+    failure modes for the honest-fail / corrective-retry paths:
+      * ``raise_times=N`` — raise ``ValidationError`` on the first N calls (then succeed);
+      * ``raise_times`` ≥ the retry budget models a total failure (honest fail, D-09).
+    ``calls`` records how many times ``generate`` was invoked (assert no call on crisis short-circuit).
+    """
+
+    def __init__(self, output: ReadingOutput, raise_times: int = 0) -> None:
+        self._output = output
+        self._raise_times = raise_times
+        self.calls = 0
+
+    async def generate(self, *args: object, **kwargs: object) -> ReadingOutput:
+        self.calls += 1
+        if self.calls <= self._raise_times:
+            # Mirror the real validation-failure surface (the corrective-retry trigger).
+            from pydantic import ValidationError
+
+            raise ValidationError.from_exception_data("ReadingOutput", [])
+        return self._output
+
+
+@pytest.fixture
+def fake_llm(fake_reading_output: ReadingOutput) -> FakeLLM:
+    """Default success ``FakeLLM``. Tests rebuild ``FakeLLM(output, raise_times=...)`` as needed."""
+    return FakeLLM(fake_reading_output)
+
+
+class FakeSafety:
+    """Injectable stand-in for the future ``SafetyService`` — never calls Anthropic.
+
+    ``classify(...)`` returns a ``SafetyVerdict`` with the configured category (default
+    ``normal``). Parametrize to ``crisis_sensitive`` / ``abusive_or_manipulative`` / any
+    ``*_sensitive`` member to exercise the gate routing (D-03/04/05/06). ``calls`` records
+    invocations so a test can assert the gate ran BEFORE the draw.
+    """
+
+    def __init__(self, category: SafetyCategory = SafetyCategory.NORMAL) -> None:
+        self._category = category
+        self.calls = 0
+
+    async def classify(self, *args: object, **kwargs: object) -> SafetyVerdict:
+        self.calls += 1
+        return SafetyVerdict(category=self._category)
+
+
+@pytest.fixture
+def fake_safety() -> FakeSafety:
+    """Default ``normal`` ``FakeSafety``. Tests rebuild ``FakeSafety(category=...)`` as needed."""
+    return FakeSafety()
+
+
+@pytest.fixture
+async def seeded_catalog(auth_session: AsyncSession) -> dict[str, int]:
+    """Seed the real MVP catalog into the transaction-isolated session (skips if PG is down).
+
+    Reuses ``app.seed.loader.run_seed`` so the reading flow has genuine deck/spread/cards/
+    prompt-template rows to draw from — no hand-built fixtures, one source of truth. Runs inside
+    the ``auth_session`` savepoint transaction, so it is rolled back at teardown (nothing
+    persists between tests). ``_db_ready`` (transitively, via ``auth_session``) skips the whole
+    thing when Postgres is unreachable, mirroring the rest of the integration suite.
+    """
+    from app.seed.loader import run_seed
+
+    counts = await run_seed(auth_session)
+    await auth_session.flush()
+    return counts
