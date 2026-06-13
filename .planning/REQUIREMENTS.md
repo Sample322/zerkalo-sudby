@@ -103,7 +103,7 @@
 
 - [x] **SAFE-01**: Перед генерацией вопрос классифицируется (normal / relationship/financial/health/legal_sensitive / crisis / abusive) — regex-префильтр + классификация; гейтит генерацию
 - [x] **SAFE-02**: normal → обычная генерация; sensitive → добавляется safety-модификатор в prompt
-- [ ] **SAFE-03**: crisis (самоповреждение/насилие) → НЕ мистическое предсказание; поддерживающий безопасный ответ + предложение обратиться к живому специалисту/службам
+- [x] **SAFE-03**: crisis (самоповреждение/насилие) → НЕ мистическое предсказание; поддерживающий безопасный ответ + предложение обратиться к живому специалисту/службам
 - [x] **SAFE-04**: Запрещены категоричные предсказания, утверждения чувств другого как факт, мед./юр./фин. категоричные советы, фаталистичные/пугающие формулировки
 - [x] **SAFE-05**: Используются разрешённые мягкие формулировки («карты указывают/подсвечивают/возможное направление/не приговор, а подсказка»)
 - [x] **SAFE-06**: В UI/кнопках/результатах нет упоминаний «AI/нейросеть/модель/сгенерировано ИИ»
@@ -247,7 +247,7 @@
 | PAY-08 | Phase 7 — Telegram Stars Payments | Pending |
 | SAFE-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-02 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
-| SAFE-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Pending |
+| SAFE-03 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-06 | Phase 3 — The Ritual (mock) | Complete |

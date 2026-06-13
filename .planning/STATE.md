@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-13T14:55:54.990Z"
+last_updated: "2026-06-13T15:08:01.108Z"
 last_activity: 2026-06-13
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 20
-  completed_plans: 17
+  completed_plans: 18
   percent: 38
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 04 (Real Personal Reading (KEYSTONE)) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-06-13
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 85%
 | Phase 04 P01 | 8 | 3 tasks | 14 files |
 | Phase 04 P02 | 30 | 2 tasks | 5 files |
 | Phase 04 P03 | 25 | 2 tasks | 4 files |
+| Phase 04 P04 | 30 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 03: RETRYABLE=(ValidationError, anthropic.APIStatusError/APIConnectionError, TimeoutError, _NonSchemaStopReason); refusal/max_tokens stop_reason wrapped retryable (Pitfall 2). Exhaustion raises typed LLMGenerationError → Plan 05 honest-fails (D-09), never templated. GenerationResult carries generation_logs fields (ANALYTICS-02).
 - [Phase 04]: Plan 03: SafetyService.classify Stage 1 pure regex returns crisis_sensitive instantly + empty/None→normal (HOME-02), both NO call (meta=None); Stage 2 tiny messages.parse(output_format=SafetyVerdict) Haiku for undecided. Pure route()→SafetyAction (crisis→REFUSAL, abusive→REDIRECT, *_sensitive→SAFETY_MODIFIER, normal→GENERATE); continues_to_draw = gate-before-draw boundary (D-03/04/05/06).
 - [Phase 04]: Plan 03: LLMService + SafetyService take an injectable AsyncAnthropic client (default = core/llm_client singleton via local import); unit tests mock messages.parse with AsyncMock — no network, no ANTHROPIC_API_KEY. The Plan-05 + test mock seam.
+- [Phase ?]: Phase 4 (Plan 04): PromptEngine.build composes ONE messages.parse prompt from ACTIVE prompt_templates (system §16 + deck_modifier_<slug> §19 carrying the mandatory D-02 signature + fused §17 per-card blocks + §18 summary); safety §20.3 fragment appended ONLY when safety_action==SAFETY_MODIFIER (D-05/SAFE-02); always Russian (D-14) + restated ≤140 short_meaning (D-10).
+- [Phase ?]: Phase 4 (Plan 04): prompt_version composed from active template type@version fields (e.g. system@v1+deck_modifier@v2+single_card@v1+final_summary@v1) → readings.prompt_version + generation_logs (ANALYTICS-02/T-04-22); a missing active template raises ValueError (surfaced misconfig, never a degraded prompt).
+- [Phase ?]: Phase 4 (Plan 04): D-02 signature seeded into all 6 deck_modifier rows (v2); generic D-04 refusal (no region/phone, v2); D-06 abusive-redirect seeded as a NEW safety-type 'redirect' row (no PromptTemplateType added) — single admin-editable source resolved via PromptEngine.refusal_copy/redirect_copy.
 
 ### Pending Todos
 
@@ -121,6 +125,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-13T14:53:57.375Z
+Last session: 2026-06-13T15:07:18.181Z
 Stopped at: Completed 04-02-PLAN.md (CardDrawService + brand_guard)
 Resume file: None
