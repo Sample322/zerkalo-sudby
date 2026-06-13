@@ -3,3 +3,7 @@
 Routers under ``app/api`` stay thin and delegate here so the same logic can be called from
 the aiogram bot handlers (Phase 7) without going through HTTP.
 """
+
+from app.services.reading import ReadingInputError, ReadingService
+
+__all__ = ["ReadingInputError", "ReadingService"]

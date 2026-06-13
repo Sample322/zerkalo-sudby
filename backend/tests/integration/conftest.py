@@ -168,18 +168,65 @@ def fake_safety() -> FakeSafety:
     return FakeSafety()
 
 
+async def _ensure_deck_cards(session: AsyncSession) -> int:
+    """Synthesize the ``deck_cards`` style layer for every (active deck, card) pair.
+
+    The seed JSON deliberately omits ``deck_cards`` — per ``app/seed/data/_gen_cards.py`` the
+    deck imagery / style rows are a later content task, so ``run_seed`` writes only the 78
+    universal ``cards``. But the backend-only draw (``CardDrawService``) selects from the active
+    deck's ``deck_cards``, so the reading flow + the READ-02 draw tests need at least one active
+    ``deck_cards`` row per (deck, card). This builds the minimal, style-free set (placeholder
+    imagery, no deck-specific meaning — the universal meaning stays on ``cards``) so the draw has
+    a real pool to shuffle. Idempotent within a test: it only inserts pairs that do not yet exist.
+    """
+    from sqlalchemy import select
+
+    from app.models import Card, Deck, DeckCard
+
+    decks = (
+        await session.execute(select(Deck).where(Deck.is_active.is_(True)))
+    ).scalars().all()
+    cards = (await session.execute(select(Card))).scalars().all()
+    existing = {
+        (deck_id, card_id)
+        for deck_id, card_id in (
+            await session.execute(select(DeckCard.deck_id, DeckCard.card_id))
+        ).all()
+    }
+    written = 0
+    for deck in decks:
+        for card in cards:
+            if (deck.id, card.id) in existing:
+                continue
+            session.add(
+                DeckCard(
+                    deck_id=deck.id,
+                    card_id=card.id,
+                    image_url=f"https://assets.local/{deck.slug}/{card.slug}.webp",
+                    thumbnail_url=f"https://assets.local/{deck.slug}/{card.slug}.thumb.webp",
+                    is_active=True,
+                )
+            )
+            written += 1
+    await session.flush()
+    return written
+
+
 @pytest.fixture
 async def seeded_catalog(auth_session: AsyncSession) -> dict[str, int]:
     """Seed the real MVP catalog into the transaction-isolated session (skips if PG is down).
 
     Reuses ``app.seed.loader.run_seed`` so the reading flow has genuine deck/spread/cards/
-    prompt-template rows to draw from — no hand-built fixtures, one source of truth. Runs inside
-    the ``auth_session`` savepoint transaction, so it is rolled back at teardown (nothing
-    persists between tests). ``_db_ready`` (transitively, via ``auth_session``) skips the whole
-    thing when Postgres is unreachable, mirroring the rest of the integration suite.
+    prompt-template rows to draw from — no hand-built fixtures, one source of truth. Then
+    synthesizes the ``deck_cards`` style layer (which the seed JSON omits — see
+    ``_ensure_deck_cards``) so the backend-only draw has an active pool. Runs inside the
+    ``auth_session`` savepoint transaction, so it is rolled back at teardown (nothing persists
+    between tests). ``_db_ready`` (transitively, via ``auth_session``) skips the whole thing when
+    Postgres is unreachable, mirroring the rest of the integration suite.
     """
     from app.seed.loader import run_seed
 
     counts = await run_seed(auth_session)
+    counts["deck_cards"] = await _ensure_deck_cards(auth_session)
     await auth_session.flush()
     return counts
