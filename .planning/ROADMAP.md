@@ -134,7 +134,7 @@ Plans:
 
 **Wave 0**
 
-- [ ] 04-01-PLAN.md — Foundation: add anthropic+tenacity (legitimacy checkpoint) + schemas/reading.py contracts (ReadingOutput/SafetyVerdict/ReadingCreate/ReadingOut) + AsyncAnthropic client + 9 Wave-0 test stubs + fake_llm/fake_safety/seeded_catalog fixtures (READ-03/05/06, SAFE-01)
+- [x] 04-01-PLAN.md — Foundation: add anthropic+tenacity (legitimacy checkpoint) + schemas/reading.py contracts (ReadingOutput/SafetyVerdict/ReadingCreate/ReadingOut) + AsyncAnthropic client + 9 Wave-0 test stubs + fake_llm/fake_safety/seeded_catalog fixtures (READ-03/05/06, SAFE-01)
 
 **Wave 1** *(parallel — zero file overlap; all depend on 04-01)*
 
@@ -230,7 +230,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
-| 4. Real Personal Reading (KEYSTONE) | 0/6 | Planned | - |
+| 4. Real Personal Reading (KEYSTONE) | 1/6 | In Progress|  |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |

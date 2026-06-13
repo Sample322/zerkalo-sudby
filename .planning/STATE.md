@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-13T09:48:03.839Z"
-last_activity: 2026-06-13 -- Phase 4 planning complete
+last_updated: "2026-06-13T10:26:52.519Z"
+last_activity: 2026-06-13
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 20
-  completed_plans: 14
+  completed_plans: 15
   percent: 38
 ---
 
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Один и тот же вопрос ощущается по-разному в разных колодах — красивый мистический ритуал в Telegram, дающий глубокий, но бережный ответ.
-**Current focus:** Phase 4 — real personal reading (keystone)
+**Current focus:** Phase 04 — Real Personal Reading (KEYSTONE)
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 04 (Real Personal Reading (KEYSTONE)) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-06-13 -- Phase 4 planning complete
+Last activity: 2026-06-13
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███████░░░] 71%
 | Phase 01 P05 | 10 | 1 tasks | 13 files |
 | Phase 03 P01 | 10 | 3 tasks | 16 files |
 | Phase 03 P02 | 5 | 2 tasks | 3 files |
+| Phase 04 P01 | 8 | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 3: FlowRoot is the single AnimatePresence step-switch (D-02); Wave-2 plans replace only their own screen stub, never FlowRoot.
 - [Phase ?]: Phase 3: ephemeral mock reading lives only in the Zustand store (reading slot + setReading), never TanStack Query; createReading() is the single Phase-4 source-swap seam (D-05).
 - [Phase ?]: Phase 3: canonical SAFE-06 BANNED_BRAND_TOKENS helper in reading/copy.ts detects the standalone Cyrillic ИИ token without false-positiving benign words (W-1); all Wave-2 SAFE-06 tests import it.
+- [Phase ?]: Phase 4: LLM-output schemas put the length target in Field(description) only — never max_length/min_length (Anthropic SDK strips length constraints, constrained decoding ignores them — RESEARCH Pitfall 1).
+- [Phase ?]: Phase 4: ReadingOut surfaces all five §18 summary fields under the frontend MockReading names so the Plan-06 data-source swap is mechanical; the 3 overflow LLM fields persisted losslessly later (Plan 05).
+- [Phase ?]: Phase 4: FakeLLM/FakeSafety are injectable async service stand-ins (via app.dependency_overrides) so integration tests never hit Anthropic; seeded_catalog reuses run_seed in the savepoint transaction.
 
 ### Pending Todos
 
@@ -108,6 +112,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-12T16:47:39.745Z
+Last session: 2026-06-13T10:26:39.985Z
 Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-real-personal-reading-keystone/04-CONTEXT.md
+Resume file: None
