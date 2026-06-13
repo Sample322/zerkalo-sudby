@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Telegram Auth** - Repo boots end-to-end and the Mini App knows who the user is (validated `initData` → JWT) (completed 2026-06-10)
 - [x] **Phase 2: Deck & Spread Catalog** - User browses 6 distinct decks and 7 spreads with topic-based recommendations and per-deck theming (completed 2026-06-11)
 - [x] **Phase 3: The Ritual (mock)** - User runs the entire flow — onboarding → question/topic/deck/spread → ritual → reveal — against a mock reading (completed 2026-06-12)
-- [ ] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated
+- [x] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated (completed 2026-06-13)
 - [ ] **Phase 5: History & Profile** - User revisits, reopens, and soft-deletes past readings, and manages profile/settings
 - [ ] **Phase 6: Free Limits & Soft Paywall** - User is bounded to 3 free readings/week with a deterministic reset and an honest paywall
 - [ ] **Phase 7: Telegram Stars Payments** - User buys reading packs or a recurring subscription via Stars to unlock more readings
@@ -148,7 +148,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-06-PLAN.md — Frontend seam swap (createReading → POST /api/readings via apiFetch, ReadingOut→MockReading) + failure UX (Повторить + Сменить колоду, D-07/D-08) + manual UAT (per-deck felt-quality, live smoke, crisis tone) (READ-01, READ-11)
+- [x] 04-06-PLAN.md — Frontend seam swap (createReading → POST /api/readings via apiFetch, ReadingOut→MockReading) + failure UX (Повторить + Сменить колоду, D-07/D-08) + manual UAT (per-deck felt-quality, live smoke, crisis tone) (READ-01, READ-11)
 
 **UI hint**: yes
 
@@ -230,7 +230,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Foundation & Telegram Auth | 5/5 | Complete   | 2026-06-10 |
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
-| 4. Real Personal Reading (KEYSTONE) | 5/6 | In Progress|  |
+| 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete   | 2026-06-13 |
 | 5. History & Profile | 0/TBD | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
