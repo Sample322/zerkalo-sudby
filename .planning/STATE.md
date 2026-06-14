@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-14T14:21:01.419Z"
+last_updated: "2026-06-14T14:33:03.043Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 27
-  completed_plans: 21
+  completed_plans: 22
   percent: 50
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 05 (History & Profile) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-06-14
 
-Progress: [████████░░] 78%
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [████████░░] 78%
 | Phase 04 P05 | 55min | 2 tasks | 9 files |
 | Phase 04 P06 | 5 | 2 tasks | 7 files |
 | Phase 05 P01 | 8min | 3 tasks | 8 files |
+| Phase 05 P02 | 10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 4 (Plan 05): seeded_catalog now synthesizes the deck_cards style layer (the seed JSON omits it — deck imagery is a later content task) so the backend-only CSPRNG draw has an active pool; seeded spread_positions.position_index is 1-based not 0-based, so fake LLM outputs echo the actual drawn indices
 - [Phase 05]: Phase 5 (Plan 01): Wave-0 red substrate — create_completed_reading/make_user_with_limits helpers (FakeSafety+FakeLLM, no Anthropic) drive the real ReadingService keystone so list/detail/delete tests never re-drive POST; every later endpoint slice has an xfail(strict=False)->xpass target; DB-touching tests skip cleanly without Postgres (83 pass/65 skip baseline+1 from the gate-signature lock).
 - [Phase 05]: Phase 5 (Plan 01): HIST-05 consent gate locked "by absence" — test_build_has_no_history_parameter (signature introspection, passes today, no DB) is the regression fence so a v2 author cannot wire prior-reading content into PromptEngine.build silently; the 4 load-bearing invariants + cross-user IDOR-404 each exist as named tests; quota-sensitive + IDOR tests mint a Bearer via encode_jwt(sub,telegram_id) for a make_user_with_limits user so the seeded readings match the JWT identity / a distinct victim.
+- [Phase 05]: Phase 5 (Plan 02): history list = GET /api/readings -> light ReadingListItemOut (7 §9.6 fields, NO interpretation, distinct from heavy ReadingOut) via ReadingService.list_readings — two-query no-lazy-load page (select(Reading) join Deck/SpreadType titles + ONE explicit select(ReadingCard) join DeckCard thumbnails grouped by position_index; NO Reading.cards relationship, Pitfall 1); COMPLETED-only + deleted_at IS NULL + user_id from JWT (IDOR T-05-01); FREE_HISTORY_CAP=10 display-cap (effective window min(limit, CAP-offset), offset>=cap->[], older rows RETAINED not pruned, exported in __all__ as the Phase-6/7 tier-limit seam); thin GET router mirrors POST (limit ge=1 le=10 / offset ge=0). Turns 05-01 list red tests green (clean-skip without PG).
 
 ### Pending Todos
 
@@ -134,6 +136,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T14:21:01.410Z
+Last session: 2026-06-14T14:33:03.034Z
 Stopped at: Phase 5 context gathered
 Resume file: None
