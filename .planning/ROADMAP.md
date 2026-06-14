@@ -16,7 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Telegram Auth** - Repo boots end-to-end and the Mini App knows who the user is (validated `initData` → JWT) (completed 2026-06-10)
 - [x] **Phase 2: Deck & Spread Catalog** - User browses 6 distinct decks and 7 spreads with topic-based recommendations and per-deck theming (completed 2026-06-11)
 - [x] **Phase 3: The Ritual (mock)** - User runs the entire flow — onboarding → question/topic/deck/spread → ritual → reveal — against a mock reading (completed 2026-06-12)
-- [x] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated (completed 2026-06-13)
+- [x] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated
+ (completed 2026-06-13)
 - [ ] **Phase 5: History & Profile** - User revisits, reopens, and soft-deletes past readings, and manages profile/settings
 - [ ] **Phase 6: Free Limits & Soft Paywall** - User is bounded to 3 free readings/week with a deterministic reset and an honest paywall
 - [ ] **Phase 7: Telegram Stars Payments** - User buys reading packs or a recurring subscription via Stars to unlock more readings
@@ -166,7 +167,31 @@ Plans:
   4. The user sees their profile (`GET /api/me`: Telegram name, available-readings count, subscription, settings) and can change settings (`PATCH /api/me/settings`: reversals toggle, history-personalization consent, onboarding flag)
   5. History is not used for personalization unless `allow_history_personalization` is explicitly enabled, and free history retains the last 10 readings
 
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+
+**Wave 0**
+
+- [ ] 05-01-PLAN.md — Wave-0 test substrate: shared `create_completed_reading` helper + 5 new red test files + cross-user(IDOR)/`/me` extensions (HIST-01..06, PROF-01/02)
+
+**Wave 1** *(parallel — zero file overlap; all depend on 05-01)*
+
+- [ ] 05-02-PLAN.md — Backend history list: `ReadingListItemOut` + `ReadingService.list_readings` (user-scoped, soft-delete-excluding, COMPLETED-only, `FREE_HISTORY_CAP=10`) + `GET /api/readings` (HIST-01/02/06)
+- [ ] 05-03-PLAN.md — Backend settings + consent gate: `SettingsPatch` + `PATCH /api/me/settings` (partial, JWT-scoped) + HIST-05/D-06 closed-gate lock (PROF-01/02, HIST-05)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 05-04-PLAN.md — Backend detail/delete/restore: immutable `GET /api/readings/{id}` (reuse `_build_response`) + soft-delete `DELETE` + `POST /{id}/restore` + IDOR 404 + D-09 reversals-source (HIST-03/04, PROF-02)
+
+**Wave 3** *(blocked on 05-02; FE foundation + first FE slice)*
+
+- [ ] 05-05-PLAN.md — FE foundation + History list: step-machine + FlowRoot stubs + `useReadingsList`/`fetchReadings` + all brand-safe copy + History screen + Home/Result entry points (HIST-01/02/06)
+
+**Wave 4** *(parallel — zero file overlap; depend on 05-05 + their backend)*
+
+- [ ] 05-06-PLAN.md — FE reopen + delete/undo: `ResultScreen` detail mode (immutable, fade-in) + swipe-to-delete + `UndoSnackbar` (optimistic delete/restore) (HIST-03/04)
+- [ ] 05-07-PLAN.md — FE Profile/Settings: identity + toggles (optimistic `PATCH`, count hidden D-08) + onboarding localStorage→server migration + reversals-source (PROF-01/02)
+
 **UI hint**: yes
 
 ### Phase 6: Free Limits & Soft Paywall
@@ -231,7 +256,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
 | 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete    | 2026-06-13 |
-| 5. History & Profile | 0/TBD | Not started | - |
+| 5. History & Profile | 0/7 | Not started | - |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
 | 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |
