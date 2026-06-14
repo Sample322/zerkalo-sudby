@@ -334,6 +334,23 @@ class PromptEngine:
             for row in rows
         }
 
+    # ----------------------------------------------------------------------------------------
+    # HIST-05 / D-06 — CLOSED CONSENT GATE (negative requirement; do NOT "fix" this away).
+    #
+    # History is INTENTIONALLY not a parameter of ``build`` and no prior reading is ever fetched
+    # for the prompt. Phase 5 is consent-flag-and-gate ONLY: it persists the
+    # ``allow_history_personalization`` flag (via ``PATCH /api/me/settings``) but feeds NOTHING
+    # from a user's past readings into the §18 prompt — the gate is closed BY ABSENCE. Even with
+    # ``allow_history_personalization=True`` the assembled prompt carries no prior-reading text,
+    # which ``test_prompt_has_no_history_even_with_flag_on`` +
+    # ``test_build_has_no_history_parameter`` lock as a regression fence.
+    #
+    # Do NOT add a ``history`` / ``history_context`` / ``prior_readings`` parameter, a prior-reading
+    # fetch, or a history prompt branch here (or in ``ReadingService.create_reading``). The actual
+    # history-personalization / "повторный анализ" feature is v2 (ENG-02); when it is built it MUST
+    # reintroduce the consent gate (only inject history when the flag is ON) rather than wiring
+    # history in unconditionally. Removing this absence silently re-opens a privacy boundary.
+    # ----------------------------------------------------------------------------------------
     async def build(
         self,
         session: AsyncSession,
