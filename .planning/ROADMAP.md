@@ -177,7 +177,7 @@ Plans:
 **Wave 1** *(parallel — zero file overlap; all depend on 05-01)*
 
 - [x] 05-02-PLAN.md — Backend history list: `ReadingListItemOut` + `ReadingService.list_readings` (user-scoped, soft-delete-excluding, COMPLETED-only, `FREE_HISTORY_CAP=10`) + `GET /api/readings` (HIST-01/02/06)
-- [ ] 05-03-PLAN.md — Backend settings + consent gate: `SettingsPatch` + `PATCH /api/me/settings` (partial, JWT-scoped) + HIST-05/D-06 closed-gate lock (PROF-01/02, HIST-05)
+- [x] 05-03-PLAN.md — Backend settings + consent gate: `SettingsPatch` + `PATCH /api/me/settings` (partial, JWT-scoped) + HIST-05/D-06 closed-gate lock (PROF-01/02, HIST-05)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -256,7 +256,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
 | 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete    | 2026-06-13 |
-| 5. History & Profile | 2/7 | In Progress|  |
+| 5. History & Profile | 3/7 | In Progress|  |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
 | 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |
