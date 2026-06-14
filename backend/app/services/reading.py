@@ -57,11 +57,13 @@ from sqlalchemy.orm import selectinload
 
 from app.core.brand_guard import contains_banned_brand_token
 from app.models import (
+    Card,
     Deck,
     DeckCard,
     GenerationLog,
     Reading,
     ReadingCard,
+    SpreadPosition,
     SpreadType,
     User,
     UserLimits,
@@ -215,13 +217,21 @@ class ReadingService:
         )
 
         # 3. CSPRNG draw + persist pending + immutable reading_cards.
+        # D-09 / PROF-02: the draw's reversals come from the PERSISTED user flag (default ON,
+        # Phase-4 D-13), NOT the request body. ``ReadingCreate.reversals_enabled`` is still an
+        # accepted field for backward compatibility, but the persisted ``user.reversals_enabled``
+        # (set via PATCH /api/me/settings, 05-03) is authoritative — after opting out, every new
+        # reading is upright-only. The same value is recorded onto ``readings.reversals_enabled``.
+        reversals_enabled = user.reversals_enabled
         draw_records = await self._card_draw.draw(
             session,
             deck_id=deck.id,
             spread=spread,
-            reversals_enabled=req.reversals_enabled,
+            reversals_enabled=reversals_enabled,
         )
-        reading = await self._persist_pending(session, user, req, deck, spread, draw_records)
+        reading = await self._persist_pending(
+            session, user, req, deck, spread, draw_records, reversals_enabled
+        )
 
         # The classify call (if a real one happened) is now logged against the existing reading.
         await self._log_classify(session, reading.id, classify_result)
@@ -366,6 +376,129 @@ class ReadingService:
             grouped.setdefault(reading_id, []).append(thumbnail_url)
         return grouped
 
+    # ------------------------------------------------------------------ detail / delete / restore
+
+    async def get_reading_detail(
+        self, session: AsyncSession, user: User, reading_id: object
+    ) -> ReadingOut:
+        """Return the IMMUTABLE stored reading by id (HIST-03) — reused, never regenerated.
+
+        The reading is read back exactly as it was originally generated: the persisted
+        ``reading_cards`` (short_meaning/interpretation/mystical_accent) + the ``summary_full``
+        JSON, mapped through the SAME ``_build_response`` the create path uses, so two GETs return
+        an identical body and ``ResultScreen`` renders it via the same ``ReadingOut`` contract.
+        There is NO LLM call and NO re-draw here.
+
+        Scoped to ``user.id`` (the JWT identity, NEVER a body — T-05-IDOR) and excluding
+        soft-deleted rows (``deleted_at IS NULL`` — Pitfall 4): a reading owned by another user OR
+        an already-deleted one raises ``ReadingInputError`` → the router maps it to a 404 (not 403
+        — a non-owned id must be indistinguishable from a non-existent one, no existence leak).
+        """
+        reading = (
+            await session.execute(
+                select(Reading).where(
+                    Reading.id == reading_id,
+                    Reading.user_id == user.id,
+                    Reading.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if reading is None:
+            raise ReadingInputError("reading not found")
+
+        # The reading's immutable cards, in position order (explicit select — no lazy relationship,
+        # Pitfall 1; the established style mirrors ``_persist_output``/``list_readings``).
+        cards = (
+            await session.execute(
+                select(ReadingCard)
+                .where(ReadingCard.reading_id == reading.id)
+                .order_by(ReadingCard.position_index)
+            )
+        ).scalars().all()
+
+        # Reconstruct the authoritative transient labels ``_build_response`` reads: card titles
+        # from ``cards.title`` (by ``reading_cards.card_id``) and position titles from
+        # ``spread_positions.title`` (by ``reading_cards.position_id``). Both via one explicit
+        # ``select`` each — never a fresh draw, never a lazy load.
+        card_titles = await self._titles_by_id(
+            session, Card, [card.card_id for card in cards]
+        )
+        position_titles = await self._titles_by_id(
+            session, SpreadPosition, [card.position_id for card in cards]
+        )
+        for card in cards:
+            card._card_title = card_titles.get(card.card_id, "")  # noqa: SLF001 - transient label
+            card._position_title = position_titles.get(  # noqa: SLF001 - transient label
+                card.position_id, ""
+            )
+
+        # Detail does not consume a quota (remaining=None) — it is a pure read of a frozen reading.
+        return self._build_response(reading, list(cards), remaining=None)
+
+    @staticmethod
+    async def _titles_by_id(
+        session: AsyncSession, model: type, ids: list[object]
+    ) -> dict[object, str]:
+        """Map ``id`` → ``title`` for ``Card``/``SpreadPosition`` over the detail's drawn rows.
+
+        One explicit ``select(model.id, model.title)`` for the whole reading (no per-row query, no
+        lazy relationship). Used to rebuild the authoritative card/position labels the immutable
+        ``_build_response`` mapper expects, sourced from the persisted joins (not a fresh draw).
+        """
+        if not ids:
+            return {}
+        rows = (
+            await session.execute(
+                select(model.id, model.title).where(model.id.in_(ids))
+            )
+        ).all()
+        return {row[0]: row[1] for row in rows}
+
+    async def soft_delete(
+        self, session: AsyncSession, user: User, reading_id: object
+    ) -> None:
+        """Soft-delete the user's reading (HIST-04) — set ``deleted_at``, never a hard delete.
+
+        Scoped to ``user.id`` (T-05-IDOR): a non-owned OR already-deleted id raises
+        ``ReadingInputError`` → 404, so one user can neither delete nor probe another's reading,
+        and a double-delete is a clean 404. The row is RETAINED with a timestamp (D-04) so it can
+        be restored within the undo window; it simply disappears from the list and detail 404s.
+        """
+        reading = (
+            await session.execute(
+                select(Reading).where(
+                    Reading.id == reading_id,
+                    Reading.user_id == user.id,
+                )
+            )
+        ).scalar_one_or_none()
+        if reading is None or reading.deleted_at is not None:
+            raise ReadingInputError("reading not found")
+        reading.deleted_at = datetime.now(UTC)
+        await session.commit()
+
+    async def restore(
+        self, session: AsyncSession, user: User, reading_id: object
+    ) -> None:
+        """Restore a soft-deleted reading (D-03 undo) — null ``deleted_at`` on the user's row.
+
+        Scoped to ``user.id`` (T-05-IDOR): a non-owned id raises ``ReadingInputError`` → 404, so a
+        user can never restore another's reading. Restoring an already-active reading is a no-op
+        (``deleted_at`` is set back to None either way); the reading reappears in the list.
+        """
+        reading = (
+            await session.execute(
+                select(Reading).where(
+                    Reading.id == reading_id,
+                    Reading.user_id == user.id,
+                )
+            )
+        ).scalar_one_or_none()
+        if reading is None:
+            raise ReadingInputError("reading not found")
+        reading.deleted_at = None
+        await session.commit()
+
     # ------------------------------------------------------------------ resolution / quota
 
     async def _resolve_deck(self, session: AsyncSession, slug: str) -> Deck:
@@ -430,13 +563,16 @@ class ReadingService:
         deck: Deck,
         spread: SpreadType,
         draw_records: list[DrawnCard],
+        reversals_enabled: bool,
     ) -> Reading:
         """Create the ``readings`` row (PENDING) + the immutable ``reading_cards`` from the draw.
 
         ``len(draw_records)`` MUST equal the spread's ``card_count`` (Pitfall 3 — validate the
         count before persisting). The interpretation columns are left NULL here; they are filled
         from the single-call output in ``_persist_output`` (Pattern 3 — cards persisted before
-        generation).
+        generation). ``reversals_enabled`` is the value ACTUALLY used for the draw (the persisted
+        ``user.reversals_enabled`` per D-09), recorded so ``readings.reversals_enabled`` reflects
+        what was drawn, not the request body.
         """
         if len(draw_records) != spread.card_count:
             raise ReadingInputError("draw did not match the spread card count")
@@ -448,7 +584,7 @@ class ReadingService:
             deck_id=deck.id,
             spread_type_id=spread.id,
             status=ReadingStatus.PENDING,
-            reversals_enabled=req.reversals_enabled,
+            reversals_enabled=reversals_enabled,
         )
         session.add(reading)
         await session.flush()  # assign reading.id for the FK + the classify log row
@@ -708,7 +844,9 @@ class ReadingService:
             deck_id=deck.id,
             spread_type_id=spread.id,
             status=ReadingStatus.FAILED,
-            reversals_enabled=req.reversals_enabled,
+            # D-09: even on a no-draw short-circuit, record the persisted user flag (the request
+            # body is never authoritative for reversals), keeping the column consistent.
+            reversals_enabled=user.reversals_enabled,
         )
         session.add(reading)
         await session.flush()
