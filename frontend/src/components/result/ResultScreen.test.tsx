@@ -5,22 +5,37 @@ import {
   type RenderResult,
 } from "@testing-library/react";
 import { domAnimation, LazyMotion } from "motion/react";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { useSelection } from "../../stores/selection";
 import {
+  NAV_BACK,
   RESULT_AGAIN_CTA,
   RESULT_HEADER,
   RESULT_HISTORY_CTA,
   RESULT_SAVE_CTA,
   containsBannedBrandToken,
 } from "../../reading/copy";
-import type { MockReading } from "../../reading/types";
+import type { MockReading, ReadingOutResponse } from "../../reading/types";
+import type { ReadingListItem } from "../../api/readings";
 import { ResultScreen } from "./ResultScreen";
 
 // ResultScreen renders `m.*` inside FlowRoot's <LazyMotion features={domAnimation}> in
 // production, so the test supplies the same provider. Assertions are on rendered fields +
 // store transitions (the "final gather" stagger feel is Manual-Only per 03-VALIDATION).
+//
+// The screen now calls useReadingDetail + useReadingsList unconditionally (detail mode reads
+// the reading by id; live mode passes a null id). We mock the hooks module so BOTH modes work
+// without a QueryClient: live tests get empty hook data (they use the store `reading`), and the
+// detail test scripts the immutable body + the list-item meta.
+
+const mockUseReadingDetail = vi.fn();
+const mockUseReadingsList = vi.fn();
+
+vi.mock("../../hooks/useReadings", () => ({
+  useReadingDetail: (id: string | null) => mockUseReadingDetail(id),
+  useReadingsList: () => mockUseReadingsList(),
+}));
 
 const FAKE_READING: MockReading = {
   question: "Стоит ли мне сменить работу?",
@@ -75,23 +90,30 @@ function renderResult(): RenderResult {
 }
 
 beforeEach(() => {
+  // Default: empty hook data (live-mode tests rely on the store `reading`).
+  mockUseReadingDetail.mockReturnValue({ data: undefined });
+  mockUseReadingsList.mockReturnValue({ data: undefined });
+
   useSelection.setState({
     step: "result",
     history: ["reveal"],
     reading: FAKE_READING,
     question: FAKE_READING.question ?? "",
     topic: FAKE_READING.topic,
+    detailReadingId: null,
   });
 });
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
   useSelection.setState({
     reading: null,
     history: [],
     step: "onboarding",
     question: "",
     topic: null,
+    detailReadingId: null,
   });
 });
 
@@ -158,6 +180,115 @@ test("«История» is un-stubbed (D-10) — enabled and routes to the Hist
 });
 
 test("the full rendered result copy contains no banned brand-voice token (SAFE-06)", () => {
+  const { container } = renderResult();
+  expect(containsBannedBrandToken(container.textContent ?? "")).toBe(false);
+});
+
+// ---------------------------------------------------------------------------------------
+// Detail mode (HIST-03) — reopen an immutable past reading. The screen reads the fetched
+// reading by id, maps it through the shared mapper, fades it in, and shows ONLY a back→History
+// affordance (none of the live-flow CTAs).
+
+const DETAIL_OUT: ReadingOutResponse = {
+  reading_id: "past-1",
+  status: "completed",
+  cards: [
+    {
+      name: "Колесница",
+      position_title: "Суть",
+      orientation: "upright",
+      short_meaning: "Движение вперёд с ясным намерением.",
+      interpretation: "В центре ситуации — собранность и готовность держать курс.",
+      deck_accent: "Колода произносит это тихо, своим языком.",
+    },
+  ],
+  summary: {
+    linkage: "Карта собирает фокус в одно ясное направление.",
+    main_factor: "Главное сейчас — держать выбранный ритм.",
+    attention: "Стоит заметить, где спешка мешает услышать себя.",
+    soft_advice: "Двигайся уверенно, но без давления на себя.",
+    closing_phrase: "Колода остаётся рядом: выбор всегда за тобой.",
+  },
+  remaining_limits: null,
+};
+
+const DETAIL_ITEM: ReadingListItem = {
+  reading_id: "past-1",
+  created_at: "2026-06-09T10:00:00.000Z",
+  question: "Куда мне двигаться дальше?",
+  deck_name: "Зеркало Луны",
+  spread_name: "Одна карта",
+  card_thumbnails: [""],
+  summary_short: "Короткий знак о движении вперёд.",
+};
+
+function enterDetailMode(): void {
+  mockUseReadingDetail.mockReturnValue({ data: DETAIL_OUT });
+  mockUseReadingsList.mockReturnValue({ data: [DETAIL_ITEM] });
+  useSelection.setState({
+    step: "readingDetail",
+    history: ["history"],
+    reading: null,
+    detailReadingId: "past-1",
+  });
+}
+
+test("detail mode renders the fetched immutable reading + list-item meta (HIST-03)", () => {
+  enterDetailMode();
+  const { getByText } = renderResult();
+
+  // Per-card + summary content comes from the immutable detail body.
+  expect(getByText("Колесница")).toBeTruthy();
+  expect(getByText("В центре ситуации — собранность и готовность держать курс.")).toBeTruthy();
+  expect(getByText("Карта собирает фокус в одно ясное направление.")).toBeTruthy();
+
+  // Meta (question / deck / spread / date) comes from the tapped history list item.
+  expect(getByText("Куда мне двигаться дальше?")).toBeTruthy();
+  expect(getByText("Зеркало Луны")).toBeTruthy();
+  expect(getByText("Одна карта")).toBeTruthy();
+  expect(getByText("09.06.2026")).toBeTruthy();
+});
+
+test("detail mode fetches the detail keyed by detailReadingId", () => {
+  enterDetailMode();
+  renderResult();
+  expect(mockUseReadingDetail).toHaveBeenCalledWith("past-1");
+});
+
+test("detail mode shows a back→History affordance and NONE of the live-flow CTAs (D-11)", () => {
+  enterDetailMode();
+  const { queryByText, getByLabelText } = renderResult();
+
+  // Back affordance present (returns to History via back()).
+  const backBtn = getByLabelText(NAV_BACK);
+  expect(backBtn).toBeTruthy();
+  fireEvent.click(backBtn);
+  expect(useSelection.getState().step).toBe("history");
+
+  // None of the live result CTAs render in detail mode.
+  expect(queryByText(RESULT_AGAIN_CTA)).toBeNull();
+  expect(queryByText(RESULT_SAVE_CTA)).toBeNull();
+  expect(queryByText(RESULT_HISTORY_CTA)).toBeNull();
+});
+
+test("detail mode shows a soft loading line while the immutable reading is in flight", () => {
+  mockUseReadingDetail.mockReturnValue({ data: undefined });
+  mockUseReadingsList.mockReturnValue({ data: [DETAIL_ITEM] });
+  useSelection.setState({
+    step: "readingDetail",
+    history: ["history"],
+    reading: null,
+    detailReadingId: "past-1",
+  });
+
+  const { getByText, getByLabelText } = renderResult();
+  // Loading line + back affordance (no card content yet).
+  expect(getByText("Колода листает страницы памяти…")).toBeTruthy();
+  expect(getByLabelText(NAV_BACK)).toBeTruthy();
+});
+
+test("the detail-mode rendered copy contains no banned brand-voice token (SAFE-06)", () => {
+  enterDetailMode();
   const { container } = renderResult();
   expect(containsBannedBrandToken(container.textContent ?? "")).toBe(false);
 });

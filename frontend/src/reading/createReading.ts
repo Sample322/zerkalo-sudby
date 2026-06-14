@@ -44,6 +44,20 @@ interface ReadingCreateBody {
   reversals_enabled: boolean;
 }
 
+/**
+ * The non-content meta fields a `MockReading` carries that the §14.5 `ReadingOut` body does
+ * NOT (question / topic / deckSlug / spreadSlug / createdAt). The live-flow seam sources them
+ * from the request params; the history-detail seam (05-06) sources them from the tapped list
+ * item — both feed them into the ONE shared mapper below (DRY).
+ */
+export interface ReadingMeta {
+  question: string | null;
+  topic: string;
+  deckSlug: string;
+  spreadSlug: string;
+  createdAt: string;
+}
+
 /** Narrow the server-sent orientation string to the closed Orientation union. */
 function toOrientation(value: string): Orientation {
   return value === "reversed" ? "reversed" : "upright";
@@ -79,6 +93,34 @@ function mapSummary(
     attention: summary.attention,
     softAdvice: summary.soft_advice,
     closingPhrase: summary.closing_phrase,
+  };
+}
+
+/**
+ * THE single `ReadingOut` → `MockReading` transform (DRY). Both the live-flow `createReading`
+ * seam and the history-detail fetcher (05-06) map through this one function so the
+ * snake→camel per-card + summary mapping exists in exactly one place. The content (cards +
+ * summary) comes from the immutable §14.5 body; the `meta` (question/topic/deck/spread/date)
+ * is passed in by the caller because §14.5 `ReadingOut` does not carry those fields.
+ *
+ * @throws if `data.summary` is null — callers must guard non-completed bodies first
+ *   (createReading rejects them; the detail endpoint only ever returns completed readings).
+ */
+export function mapReadingOutToMock(
+  data: ReadingOutResponse,
+  meta: ReadingMeta,
+): MockReading {
+  if (data.summary === null) {
+    throw new Error("mapReadingOutToMock: summary is null (non-completed reading)");
+  }
+  return {
+    question: meta.question,
+    topic: meta.topic,
+    deckSlug: meta.deckSlug,
+    spreadSlug: meta.spreadSlug,
+    createdAt: meta.createdAt,
+    cards: data.cards.map(mapCard),
+    summary: mapSummary(data.summary),
   };
 }
 
@@ -125,13 +167,13 @@ export async function createReading(
     throw new Error(`createReading not completed: status=${data.status}`);
   }
 
-  return {
+  // Map through the ONE shared transform (DRY) — the live-flow meta comes from the params,
+  // createdAt is "now" (the reading was just generated).
+  return mapReadingOutToMock(data, {
     question,
     topic,
     deckSlug,
     spreadSlug,
     createdAt: new Date().toISOString(),
-    cards: data.cards.map(mapCard),
-    summary: mapSummary(data.summary),
-  };
+  });
 }

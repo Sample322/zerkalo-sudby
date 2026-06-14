@@ -8,6 +8,7 @@
 // (GET /api/readings/{id}, wired in 05-06). No `any` (TS rule).
 
 import { apiFetch } from "./client";
+import type { ReadingOutResponse } from "../reading/types";
 
 /** Free-tier history cap (HIST-06 / D-04) — the server bounds the window to the last 10. */
 export const HISTORY_LIMIT = 10;
@@ -50,4 +51,16 @@ export async function fetchReadings(): Promise<ReadingListItem[]> {
   const res = await apiFetch(`/api/readings?limit=${HISTORY_LIMIT}`);
   if (!res.ok) throw new HistoryError(res.status);
   return (await res.json()) as ReadingListItem[];
+}
+
+/**
+ * Fetch a single immutable reading (HIST-03) via `GET /api/readings/{id}` through the Bearer
+ * seam. The server scopes by the JWT user and returns the same heavy `ReadingOut` (§14.5) the
+ * create endpoint does — re-reading NEVER regenerates (05-04), so two GETs are byte-identical.
+ * A non-owned / deleted id 404s server-side (closes T-05 IDOR) → thrown as `HistoryError`.
+ */
+export async function fetchReadingDetail(id: string): Promise<ReadingOutResponse> {
+  const res = await apiFetch(`/api/readings/${id}`);
+  if (!res.ok) throw new HistoryError(res.status);
+  return (await res.json()) as ReadingOutResponse;
 }
