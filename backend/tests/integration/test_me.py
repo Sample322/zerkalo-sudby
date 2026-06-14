@@ -71,3 +71,43 @@ async def test_me_rejects_expired_bearer(auth_client) -> None:
         "/api/me", headers={"Authorization": f"Bearer {expired}"}
     )
     assert resp.status_code == 401
+
+
+async def test_me_returns_settings_block(auth_client) -> None:
+    """PROF-01: ``GET /api/me`` already returns ``{user, limits, settings}`` — no schema change.
+
+    NOT xfail: this passes against the live endpoint today (the settings block + the user name/photo
+    fields already exist on the auth/me projection — Phase 5 surfaces them, it does not add them).
+    Locks that the history/profile slice can rely on the existing shape without a migration.
+    """
+    token, _user = await _auth_and_get_token(auth_client)
+
+    resp = await auth_client.get(
+        "/api/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    # The settings block carries all three flags (booleans) — no new field required.
+    settings = body["settings"]
+    assert set(settings) >= {
+        "reversals_enabled",
+        "allow_history_personalization",
+        "onboarding_completed",
+    }
+    assert all(
+        isinstance(settings[flag], bool)
+        for flag in (
+            "reversals_enabled",
+            "allow_history_personalization",
+            "onboarding_completed",
+        )
+    )
+
+    # The user block carries the name/photo fields the profile screen renders.
+    user_block = body["user"]
+    assert "first_name" in user_block
+    assert "last_name" in user_block
+    assert "username" in user_block
+    assert "photo_url" in user_block
+    assert user_block["first_name"] == _TG_USER["first_name"]
