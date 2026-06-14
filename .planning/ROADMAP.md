@@ -189,7 +189,7 @@ Plans:
 
 **Wave 4** *(parallel — zero file overlap; depend on 05-05 + their backend)*
 
-- [ ] 05-06-PLAN.md — FE reopen + delete/undo: `ResultScreen` detail mode (immutable, fade-in) + swipe-to-delete + `UndoSnackbar` (optimistic delete/restore) (HIST-03/04)
+- [x] 05-06-PLAN.md — FE reopen + delete/undo: `ResultScreen` detail mode (immutable, fade-in) + swipe-to-delete + `UndoSnackbar` (optimistic delete/restore) (HIST-03/04)
 - [ ] 05-07-PLAN.md — FE Profile/Settings: identity + toggles (optimistic `PATCH`, count hidden D-08) + onboarding localStorage→server migration + reversals-source (PROF-01/02)
 
 **UI hint**: yes
