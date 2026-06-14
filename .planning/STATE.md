@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-14T14:56:41.749Z"
+last_updated: "2026-06-14T15:09:29.000Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 27
-  completed_plans: 24
-  percent: 50
+  completed_plans: 25
+  percent: 52
 ---
 
 # Project State
@@ -25,17 +25,17 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 05 (History & Profile) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-06-14
 
-Progress: [█████████░] 89%
+Progress: [███████░░░] 71% (Phase 5: 5 of 7 plans done; 06–07 remain in Wave 3)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 16
+- Total plans completed: 17
 - Average duration: — min
 - Total execution time: 0.0 hours
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 89%
 | Phase 05 P02 | 10min | 2 tasks | 3 files |
 | Phase 05 P03 | 5min | 2 tasks | 3 files |
 | Phase 05 P04 | 12min | 2 tasks | 2 files |
+| Phase 05 P05 | 10min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -114,7 +115,7 @@ Recent decisions affecting current work:
 - [Phase 05]: Phase 5 (Plan 01): HIST-05 consent gate locked "by absence" — test_build_has_no_history_parameter (signature introspection, passes today, no DB) is the regression fence so a v2 author cannot wire prior-reading content into PromptEngine.build silently; the 4 load-bearing invariants + cross-user IDOR-404 each exist as named tests; quota-sensitive + IDOR tests mint a Bearer via encode_jwt(sub,telegram_id) for a make_user_with_limits user so the seeded readings match the JWT identity / a distinct victim.
 - [Phase 05]: Phase 5 (Plan 02): history list = GET /api/readings -> light ReadingListItemOut (7 §9.6 fields, NO interpretation, distinct from heavy ReadingOut) via ReadingService.list_readings — two-query no-lazy-load page (select(Reading) join Deck/SpreadType titles + ONE explicit select(ReadingCard) join DeckCard thumbnails grouped by position_index; NO Reading.cards relationship, Pitfall 1); COMPLETED-only + deleted_at IS NULL + user_id from JWT (IDOR T-05-01); FREE_HISTORY_CAP=10 display-cap (effective window min(limit, CAP-offset), offset>=cap->[], older rows RETAINED not pruned, exported in __all__ as the Phase-6/7 tier-limit seam); thin GET router mirrors POST (limit ge=1 le=10 / offset ge=0). Turns 05-01 list red tests green (clean-skip without PG).
 - [Phase 05]: Phase 5 (Plan 04): backend history CRUD complete — GET /api/readings/{id} (immutable detail) reuses ReadingService._build_response (reads summary_full JSON + persisted reading_cards, rebuilds transient _card_title/_position_title from explicit select(Card.title)/select(SpreadPosition.title), remaining=None, NO regeneration → two GETs byte-identical); DELETE /api/readings/{id} soft-deletes (deleted_at=now(), retain-data D-04); POST /api/readings/{id}/restore nulls deleted_at (D-03 undo, dedicated explicit route — no deleted_at column leaked over the API, RESEARCH OQ1). Every detail/delete/restore is user-scoped where(id, user_id==user.id[, deleted_at IS NULL]); a non-owned OR deleted id → ReadingInputError → 404 (NOT 403 — no existence leak; closes T-05 HIGH IDOR). uuid.UUID path → 422 on malformed (V5). D-09 reversals source: create_reading resolves reversals_enabled=user.reversals_enabled and threads it into BOTH CardDrawService.draw AND _persist_pending (sig extended to record onto readings.reversals_enabled); the crisis/abusive short-circuit FAILED row records the user flag too; ReadingCreate.reversals_enabled stays accepted but the persisted flag wins. No Reading.cards relationship (Pitfall 1). Zero new deps. Turns 05-01 detail/delete/restore + cross-user-IDOR + reversals_source red tests green (clean-skip without PG; full suite 83 pass/65 skip). Pre-existing ruff UP037 in models/spread.py logged to deferred-items.md (out of scope).
-- [Phase 05]: Phase 5 (Plan 03): settings write path = PATCH /api/me/settings -> SettingsPatch (all-optional 3 booleans, NO user_id) + handler applies only model_dump(exclude_unset=True) keys to current_user, commit, return SettingsOut (PROF-02/D-09). Partial-update invariant (omitted flag untouched); JWT-scoped — forged body user_id dropped by closed schema, mutated row is always the JWT sub (T-05-SPOOF); empty body = 200 no-op. GET /api/me / MeResponse UNCHANGED (PROF-01 already satisfied, count/sub hidden by UI D-08) — only a request schema added. HIST-05/D-06 closed BY ABSENCE: lock comment above PromptEngine.build (no history param/fetch/branch added) + test_build_has_no_history_parameter introspection fence; consent flag persisted but history NEVER assembled into §18 prompt — the personalization feature stays v2/ENG-02. Turns 05-01 settings + gate red tests green (clean-skip without PG).
+- [Phase 05]: Phase 5 (Plan 05): FE history/profile navigation foundation + History list slice — Step union extended with OFF-FLOW history|profile|readingDetail (goTo/back only, excluded from STEP_ORDER so next('result') stays terminal; NO react-router — extends the Phase-3 D-02 Zustand step-machine); selection store gains detailReadingId + setDetailReadingId (the History→detail writer seam 05-06 reads); FlowRoot registers all three (readingDetail REUSES ResultScreen, D-02). This foundation plan owns ALL shared FE seams (step union, FlowRoot registry, api/readings.ts, useReadings.ts, ALL new copy) so 05-06/07 replace ONLY their own screen file (Phase-3 FlowRoot-stub pattern, no multi-writer conflict). HistoryScreen = reverse-chrono list via useReadingsList against GET /api/readings (server state, stable key ['readings','list'] — no filters D-01, the Pitfall-5 delete-mutation seam), §9.6 empty state, thumbnails reuse CardArtFallback down-scaled into a 44×70 box (empty→CSS fallback A2), back→Home (D-11), tap→setDetailReadingId+goTo(readingDetail). CatalogScreen header icons → goTo(history)/goTo(profile) (D-10, NO bottom tab bar — ritual/reveal/result stay chrome-free); ResultScreen «история» un-stubbed → goTo(history) (D-10 supersedes Phase-3 D-12 inert stub; «сохранить карточку» stays «скоро» Phase 8). Personalization explainer copy (consumed by 05-07) = «история раскладов»/«колода помнит» + privacy note, NEVER the mechanism (SAFE-06/Pitfall 6). Zero new deps. Full FE suite 87 green (baseline 80 +7), tsc 0, vite build ok. -> SettingsPatch (all-optional 3 booleans, NO user_id) + handler applies only model_dump(exclude_unset=True) keys to current_user, commit, return SettingsOut (PROF-02/D-09). Partial-update invariant (omitted flag untouched); JWT-scoped — forged body user_id dropped by closed schema, mutated row is always the JWT sub (T-05-SPOOF); empty body = 200 no-op. GET /api/me / MeResponse UNCHANGED (PROF-01 already satisfied, count/sub hidden by UI D-08) — only a request schema added. HIST-05/D-06 closed BY ABSENCE: lock comment above PromptEngine.build (no history param/fetch/branch added) + test_build_has_no_history_parameter introspection fence; consent flag persisted but history NEVER assembled into §18 prompt — the personalization feature stays v2/ENG-02. Turns 05-01 settings + gate red tests green (clean-skip without PG).
 
 ### Pending Todos
 
@@ -140,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T14:56:41Z
-Stopped at: Completed 05-04-PLAN.md (immutable detail + soft-delete + restore + D-09 reversals source — backend history CRUD complete)
+Last session: 2026-06-14T15:09:29Z
+Stopped at: Completed 05-05-PLAN.md (FE history/profile navigation foundation + History list slice — step union extended, FlowRoot registers history/profile/readingDetail, HistoryScreen live via GET /api/readings, Home header icons + result «история» un-stubbed, all new copy SAFE-06-clean)
 Resume file: None
