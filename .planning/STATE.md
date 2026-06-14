@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-14T14:42:24.728Z"
+last_updated: "2026-06-14T14:56:41.749Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 27
-  completed_plans: 23
+  completed_plans: 24
   percent: 50
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 05 (History & Profile) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-06-14
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 85%
 | Phase 05 P01 | 8min | 3 tasks | 8 files |
 | Phase 05 P02 | 10min | 2 tasks | 3 files |
 | Phase 05 P03 | 5min | 2 tasks | 3 files |
+| Phase 05 P04 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,7 @@ Recent decisions affecting current work:
 - [Phase 05]: Phase 5 (Plan 01): Wave-0 red substrate — create_completed_reading/make_user_with_limits helpers (FakeSafety+FakeLLM, no Anthropic) drive the real ReadingService keystone so list/detail/delete tests never re-drive POST; every later endpoint slice has an xfail(strict=False)->xpass target; DB-touching tests skip cleanly without Postgres (83 pass/65 skip baseline+1 from the gate-signature lock).
 - [Phase 05]: Phase 5 (Plan 01): HIST-05 consent gate locked "by absence" — test_build_has_no_history_parameter (signature introspection, passes today, no DB) is the regression fence so a v2 author cannot wire prior-reading content into PromptEngine.build silently; the 4 load-bearing invariants + cross-user IDOR-404 each exist as named tests; quota-sensitive + IDOR tests mint a Bearer via encode_jwt(sub,telegram_id) for a make_user_with_limits user so the seeded readings match the JWT identity / a distinct victim.
 - [Phase 05]: Phase 5 (Plan 02): history list = GET /api/readings -> light ReadingListItemOut (7 §9.6 fields, NO interpretation, distinct from heavy ReadingOut) via ReadingService.list_readings — two-query no-lazy-load page (select(Reading) join Deck/SpreadType titles + ONE explicit select(ReadingCard) join DeckCard thumbnails grouped by position_index; NO Reading.cards relationship, Pitfall 1); COMPLETED-only + deleted_at IS NULL + user_id from JWT (IDOR T-05-01); FREE_HISTORY_CAP=10 display-cap (effective window min(limit, CAP-offset), offset>=cap->[], older rows RETAINED not pruned, exported in __all__ as the Phase-6/7 tier-limit seam); thin GET router mirrors POST (limit ge=1 le=10 / offset ge=0). Turns 05-01 list red tests green (clean-skip without PG).
+- [Phase 05]: Phase 5 (Plan 04): backend history CRUD complete — GET /api/readings/{id} (immutable detail) reuses ReadingService._build_response (reads summary_full JSON + persisted reading_cards, rebuilds transient _card_title/_position_title from explicit select(Card.title)/select(SpreadPosition.title), remaining=None, NO regeneration → two GETs byte-identical); DELETE /api/readings/{id} soft-deletes (deleted_at=now(), retain-data D-04); POST /api/readings/{id}/restore nulls deleted_at (D-03 undo, dedicated explicit route — no deleted_at column leaked over the API, RESEARCH OQ1). Every detail/delete/restore is user-scoped where(id, user_id==user.id[, deleted_at IS NULL]); a non-owned OR deleted id → ReadingInputError → 404 (NOT 403 — no existence leak; closes T-05 HIGH IDOR). uuid.UUID path → 422 on malformed (V5). D-09 reversals source: create_reading resolves reversals_enabled=user.reversals_enabled and threads it into BOTH CardDrawService.draw AND _persist_pending (sig extended to record onto readings.reversals_enabled); the crisis/abusive short-circuit FAILED row records the user flag too; ReadingCreate.reversals_enabled stays accepted but the persisted flag wins. No Reading.cards relationship (Pitfall 1). Zero new deps. Turns 05-01 detail/delete/restore + cross-user-IDOR + reversals_source red tests green (clean-skip without PG; full suite 83 pass/65 skip). Pre-existing ruff UP037 in models/spread.py logged to deferred-items.md (out of scope).
 - [Phase 05]: Phase 5 (Plan 03): settings write path = PATCH /api/me/settings -> SettingsPatch (all-optional 3 booleans, NO user_id) + handler applies only model_dump(exclude_unset=True) keys to current_user, commit, return SettingsOut (PROF-02/D-09). Partial-update invariant (omitted flag untouched); JWT-scoped — forged body user_id dropped by closed schema, mutated row is always the JWT sub (T-05-SPOOF); empty body = 200 no-op. GET /api/me / MeResponse UNCHANGED (PROF-01 already satisfied, count/sub hidden by UI D-08) — only a request schema added. HIST-05/D-06 closed BY ABSENCE: lock comment above PromptEngine.build (no history param/fetch/branch added) + test_build_has_no_history_parameter introspection fence; consent flag persisted but history NEVER assembled into §18 prompt — the personalization feature stays v2/ENG-02. Turns 05-01 settings + gate red tests green (clean-skip without PG).
 
 ### Pending Todos
@@ -138,6 +140,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T14:41:05Z
-Stopped at: Completed 05-03-PLAN.md (settings PATCH write path + HIST-05 gate lock)
+Last session: 2026-06-14T14:56:41Z
+Stopped at: Completed 05-04-PLAN.md (immutable detail + soft-delete + restore + D-09 reversals source — backend history CRUD complete)
 Resume file: None
