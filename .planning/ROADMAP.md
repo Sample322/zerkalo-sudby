@@ -172,7 +172,7 @@ Plans:
 
 **Wave 0**
 
-- [ ] 05-01-PLAN.md — Wave-0 test substrate: shared `create_completed_reading` helper + 5 new red test files + cross-user(IDOR)/`/me` extensions (HIST-01..06, PROF-01/02)
+- [x] 05-01-PLAN.md — Wave-0 test substrate: shared `create_completed_reading` helper + 5 new red test files + cross-user(IDOR)/`/me` extensions (HIST-01..06, PROF-01/02)
 
 **Wave 1** *(parallel — zero file overlap; all depend on 05-01)*
 
@@ -256,7 +256,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
 | 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete    | 2026-06-13 |
-| 5. History & Profile | 0/7 | Not started | - |
+| 5. History & Profile | 1/7 | In Progress|  |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
 | 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |

@@ -73,12 +73,12 @@
 
 ### History (HIST)
 
-- [ ] **HIST-01**: Расклад автоматически сохраняется в историю
-- [ ] **HIST-02**: История показывает дату, вопрос, колоду, расклад, миниатюры карт, короткий итог (GET /api/readings с пагинацией/фильтрами)
-- [ ] **HIST-03**: Пользователь открывает расклад повторно (GET /api/readings/{id})
-- [ ] **HIST-04**: Пользователь удаляет расклад (DELETE, мягкое удаление `deleted_at`)
-- [ ] **HIST-05**: История не используется для персонализации без отдельного согласия (`allow_history_personalization`)
-- [ ] **HIST-06**: Бесплатно хранится история последних 10 раскладов (расширенная — в подписке)
+- [x] **HIST-01**: Расклад автоматически сохраняется в историю
+- [x] **HIST-02**: История показывает дату, вопрос, колоду, расклад, миниатюры карт, короткий итог (GET /api/readings с пагинацией/фильтрами)
+- [x] **HIST-03**: Пользователь открывает расклад повторно (GET /api/readings/{id})
+- [x] **HIST-04**: Пользователь удаляет расклад (DELETE, мягкое удаление `deleted_at`)
+- [x] **HIST-05**: История не используется для персонализации без отдельного согласия (`allow_history_personalization`)
+- [x] **HIST-06**: Бесплатно хранится история последних 10 раскладов (расширенная — в подписке)
 
 ### Limits (LIMIT)
 
@@ -110,8 +110,8 @@
 
 ### Profile & Settings (PROF)
 
-- [ ] **PROF-01**: Профиль (GET /api/me): имя из Telegram, кол-во доступных раскладов, подписка, настройки
-- [ ] **PROF-02**: Настройки (PATCH /api/me/settings): `reversals_enabled`, `allow_history_personalization`, `onboarding_completed`
+- [x] **PROF-01**: Профиль (GET /api/me): имя из Telegram, кол-во доступных раскладов, подписка, настройки
+- [x] **PROF-02**: Настройки (PATCH /api/me/settings): `reversals_enabled`, `allow_history_personalization`, `onboarding_completed`
 
 ### Admin Panel (ADMIN)
 
@@ -226,12 +226,12 @@
 | READ-09 | Phase 3 — The Ritual (mock) | Complete |
 | READ-10 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | READ-11 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
-| HIST-01 | Phase 5 — History & Profile | Pending |
-| HIST-02 | Phase 5 — History & Profile | Pending |
-| HIST-03 | Phase 5 — History & Profile | Pending |
-| HIST-04 | Phase 5 — History & Profile | Pending |
-| HIST-05 | Phase 5 — History & Profile | Pending |
-| HIST-06 | Phase 5 — History & Profile | Pending |
+| HIST-01 | Phase 5 — History & Profile | Complete |
+| HIST-02 | Phase 5 — History & Profile | Complete |
+| HIST-03 | Phase 5 — History & Profile | Complete |
+| HIST-04 | Phase 5 — History & Profile | Complete |
+| HIST-05 | Phase 5 — History & Profile | Complete |
+| HIST-06 | Phase 5 — History & Profile | Complete |
 | LIMIT-01 | Phase 6 — Free Limits & Soft Paywall | Pending |
 | LIMIT-02 | Phase 6 — Free Limits & Soft Paywall | Pending |
 | LIMIT-03 | Phase 6 — Free Limits & Soft Paywall | Pending |
@@ -251,8 +251,8 @@
 | SAFE-04 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-05 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |
 | SAFE-06 | Phase 3 — The Ritual (mock) | Complete |
-| PROF-01 | Phase 5 — History & Profile | Pending |
-| PROF-02 | Phase 5 — History & Profile | Pending |
+| PROF-01 | Phase 5 — History & Profile | Complete |
+| PROF-02 | Phase 5 — History & Profile | Complete |
 | ADMIN-01 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 | ADMIN-02 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
 | ADMIN-03 | Phase 8 — Admin, Analytics, Polish & Deploy | Pending |
