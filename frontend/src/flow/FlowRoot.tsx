@@ -24,16 +24,25 @@ import { OnboardingFlow } from "../components/onboarding/OnboardingFlow";
 import { RitualScreen } from "../components/ritual/RitualScreen";
 import { RevealScreen } from "../components/reveal/RevealScreen";
 import { ResultScreen } from "../components/result/ResultScreen";
+import { HistoryScreen } from "../components/history/HistoryScreen";
+import { ProfileScreen } from "../components/profile/ProfileScreen";
 import type { Step } from "./steps";
 
-// Map each step token to its screen component. `selection` reuses the existing
-// CatalogScreen (extended by plan 03-03); the other four are the Wave-2 stubs above.
+// Map each step token to its screen component. `selection` reuses the existing CatalogScreen
+// (extended by plan 03-03). The Phase-5 off-flow destinations (D-10/D-11): `history` →
+// HistoryScreen, `profile` → ProfileScreen (its body lands in 05-07), and `readingDetail`
+// REUSES ResultScreen (D-02 — reopening a past reading goes straight to the result view; 05-06
+// extends ResultScreen to read `detailReadingId`). Each Wave-3 plan replaces ONLY its own
+// screen file, never this registry beyond these stubs.
 const SCREENS: Record<Step, () => React.JSX.Element> = {
   onboarding: OnboardingFlow,
   selection: CatalogScreen,
   ritual: RitualScreen,
   reveal: RevealScreen,
   result: ResultScreen,
+  history: HistoryScreen,
+  profile: ProfileScreen,
+  readingDetail: ResultScreen,
 };
 
 export function FlowRoot() {

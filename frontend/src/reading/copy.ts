@@ -131,6 +131,36 @@ export const SUMMARY_LABELS = {
 } as const;
 
 // ---------------------------------------------------------------------------------------
+// History & Profile (Phase 5 — HIST-01/02/06, PROF-01/02). Centralized here so 05-06/07
+// import without re-editing copy.ts; the personalization explainer is described as «история
+// раскладов»/«колода помнит» — NEVER the mechanism (no AI/нейросеть/модель/ИИ — Pitfall 6).
+
+// History list (HIST-02 / §9.6).
+export const HISTORY_HEADER = "История раскладов";
+// §9.6 empty-state copy — soft, inviting, non-fatalistic (Claude's discretion per D-01/§9.6).
+export const HISTORY_EMPTY =
+  "Пока здесь тихо. Первый расклад появится в истории, когда колода даст ответ.";
+// D-04 «последние 10» note — quiet, brand-safe (the subscription upsell is Phase 6/7).
+export const HISTORY_LAST_TEN_NOTE = "Здесь хранятся последние десять раскладов.";
+// Label for a list-item that has no question (HOME-02 / D-13 — mirrors RESULT_GENERAL).
+export const HISTORY_GENERAL = "Общий расклад";
+// In-character loading / error lines for the list (TanStack Query states).
+export const HISTORY_LOADING = "Колода листает страницы памяти…";
+export const HISTORY_ERROR = "История сейчас молчит. Загляни чуть позже.";
+// Consumed by 05-06's delete + undo snackbar (centralized now so that plan adds no copy).
+export const HISTORY_DELETED_NOTICE = "Расклад убран из истории.";
+export const HISTORY_DELETE_UNDO = "Вернуть";
+
+// Profile & settings (PROF-01/02 — body lands in 05-07; strings centralized here).
+export const PROFILE_HEADER = "Профиль";
+export const SETTINGS_REVERSALS_LABEL = "Перевёрнутые карты";
+export const SETTINGS_PERSONALIZATION_LABEL = "Колода помнит мои расклады";
+// Plain-language explainer + privacy note — describes the felt feature («история раскладов»/
+// «колода помнит»), never the mechanism. Brand-safe (SAFE-06 / Pitfall 6).
+export const SETTINGS_PERSONALIZATION_EXPLAINER =
+  "Если включить, колода сможет опираться на твою историю раскладов, чтобы ответы со временем звучали ближе к тебе. История остаётся только твоей и никуда не передаётся.";
+
+// ---------------------------------------------------------------------------------------
 // Error state (TZ §9.8) — the generation-failure copy + the D-08 recovery affordances.
 // On a failed reading the selection screen shows READING_ERROR plus two buttons: Повторить
 // (re-run the same reading — the limit was NOT consumed, so the retry is free) and Сменить

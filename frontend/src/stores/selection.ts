@@ -43,6 +43,13 @@ export interface SelectionState {
    * Phase-4 backend reading swaps in here unchanged (createReading return type).
    */
   reading: MockReading | null;
+  /**
+   * Which past reading the detail view (`readingDetail` step) renders (Phase 5, D-02/D-10).
+   * Set by the History list when a list-item card is tapped, then `goTo("readingDetail")`.
+   * `null` when no detail is open. 05-06 reads this to fetch + render the immutable reading
+   * via the reused ResultScreen; this plan only owns the slot + setter (the writer seam).
+   */
+  detailReadingId: string | null;
 
   setQuestion: (q: string) => void;
   toggleReversals: () => void;
@@ -54,6 +61,8 @@ export interface SelectionState {
   startReadingAgain: () => void;
   /** Deposit (or clear) the freshly-built mock reading; touches ONLY `reading`. */
   setReading: (reading: MockReading | null) => void;
+  /** Set which past reading the detail view renders (Phase 5); touches ONLY `detailReadingId`. */
+  setDetailReadingId: (id: string | null) => void;
 }
 
 /**
@@ -95,6 +104,7 @@ export const useSelection = create<SelectionState>((set) => ({
   step: "onboarding",
   history: [],
   reading: null,
+  detailReadingId: null,
 
   // Clamp at the upper bound so stored text never exceeds QUESTION_MAX (HOME-01).
   setQuestion: (q) => set({ question: q.slice(0, QUESTION_MAX) }),
@@ -123,4 +133,8 @@ export const useSelection = create<SelectionState>((set) => ({
 
   // Cross-plan writer/reader seam — mutates ONLY `reading`.
   setReading: (reading) => set({ reading }),
+
+  // Phase-5 writer/reader seam — mutates ONLY `detailReadingId` (which past reading the
+  // detail view renders). HistoryScreen writes it before goTo("readingDetail"); 05-06 reads it.
+  setDetailReadingId: (id) => set({ detailReadingId: id }),
 }));

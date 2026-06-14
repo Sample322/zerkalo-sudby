@@ -19,6 +19,7 @@ beforeEach(() => {
     step: "onboarding",
     history: [],
     reading: null,
+    detailReadingId: null,
   });
 });
 
@@ -201,5 +202,51 @@ describe("reading slot — the 03-03 writer → 03-04/05/06 reader contract", ()
     expect(s.spreadSlug).toBe("three_card");
     expect(s.question).toBe("вопрос");
     expect(s.step).toBe("ritual");
+  });
+});
+
+describe("Phase-5 off-flow destinations + detailReadingId seam (D-02 / D-10 / D-11)", () => {
+  test("goTo reaches history/profile/readingDetail and back returns to the prior step (Home)", () => {
+    // From Home (selection) → History, then back → Home (D-11).
+    useSelection.setState({ step: "selection", history: [] });
+    useSelection.getState().goTo("history");
+    expect(useSelection.getState().step).toBe("history");
+    expect(useSelection.getState().history).toEqual(["selection"]);
+    useSelection.getState().back();
+    expect(useSelection.getState().step).toBe("selection");
+
+    // Home → Profile is reachable too.
+    useSelection.getState().goTo("profile");
+    expect(useSelection.getState().step).toBe("profile");
+
+    // History → readingDetail (reopen) is reachable.
+    useSelection.setState({ step: "history", history: ["selection"] });
+    useSelection.getState().goTo("readingDetail");
+    expect(useSelection.getState().step).toBe("readingDetail");
+    expect(useSelection.getState().history).toEqual(["selection", "history"]);
+  });
+
+  test("detailReadingId defaults to null and setDetailReadingId sets/clears it", () => {
+    expect(useSelection.getState().detailReadingId).toBeNull();
+    useSelection.getState().setDetailReadingId("reading-123");
+    expect(useSelection.getState().detailReadingId).toBe("reading-123");
+    useSelection.getState().setDetailReadingId(null);
+    expect(useSelection.getState().detailReadingId).toBeNull();
+  });
+
+  test("setDetailReadingId mutates ONLY detailReadingId (no cross-field mutation)", () => {
+    useSelection.setState({
+      step: "history",
+      topic: "love",
+      question: "вопрос",
+      reading: makeReading(),
+    });
+    useSelection.getState().setDetailReadingId("reading-abc");
+    const s = useSelection.getState();
+    expect(s.detailReadingId).toBe("reading-abc");
+    expect(s.step).toBe("history");
+    expect(s.topic).toBe("love");
+    expect(s.question).toBe("вопрос");
+    expect(s.reading).not.toBeNull();
   });
 });
