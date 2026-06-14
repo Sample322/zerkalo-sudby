@@ -23,12 +23,12 @@ and the 200 path never reaches Anthropic.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_session
 from app.models.user import User
-from app.schemas.reading import ReadingCreate, ReadingOut
+from app.schemas.reading import ReadingCreate, ReadingListItemOut, ReadingOut
 from app.services.reading import ReadingInputError, ReadingService
 
 router = APIRouter(tags=["readings"])
@@ -60,6 +60,27 @@ async def create_reading(
         return await service.create_reading(session, user, body)
     except ReadingInputError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.get("/readings", response_model=list[ReadingListItemOut])
+async def list_readings(
+    limit: int = Query(10, ge=1, le=10),
+    offset: int = Query(0, ge=0),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    service: ReadingService = Depends(get_reading_service),
+) -> list[ReadingListItemOut]:
+    """List the authenticated user's reading history (HIST-01/02/06) — light, newest-first.
+
+    Thin router: delegates ALL query logic to ``ReadingService.list_readings``. The user is the
+    JWT identity (``get_current_user``) — never a body or query ``user_id`` (T-05-01). ``limit`` is
+    bounded ``ge=1,le=10`` (the free-tier cap, HIST-06/T-05-05) and ``offset`` ``ge=0`` for D-01
+    load-more; the service additionally bounds the effective window by ``FREE_HISTORY_CAP``.
+
+    D-01 seam: the API may later carry optional ``topic`` / ``deck_slug`` filter params, but the
+    MVP free list is ≤10 items so they are intentionally NOT surfaced here (no filters in MVP).
+    """
+    return await service.list_readings(session, user, limit=limit, offset=offset)
 
 
 __all__ = ["router", "get_reading_service"]
