@@ -23,9 +23,14 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.readings import get_reading_service
+from app.core.security import encode_jwt
 from app.main import app
 from app.services.reading import ReadingService
 from tests.conftest import TEST_BOT_TOKEN, make_init_data
+from tests.integration._history_helpers import (
+    create_completed_reading,
+    make_user_with_limits,
+)
 from tests.integration.conftest import FakeLLM, FakeSafety
 from tests.integration.test_readings_flow import (
     _output_for_indices,
@@ -137,3 +142,36 @@ async def test_post_readings_user_from_jwt_not_body(
     assert body["status"] == "completed"
     # The reading was created (for the JWT user) and the forged id changed nothing.
     assert body["reading_id"]
+
+
+@pytest.mark.xfail(
+    reason="GET/DELETE /api/readings/{id} pending 05-02/05-04",
+    strict=False,
+)
+async def test_cross_user_detail_and_delete_404(
+    auth_client, auth_session: AsyncSession, seeded_catalog: dict
+) -> None:
+    """T-05-IDOR: user B requesting user A's reading id → 404 on BOTH detail and delete.
+
+    A non-owned reading must be indistinguishable from a non-existent one — 404, never 403 (which
+    would confirm the id exists) and never 200 (which would leak another user's reading). User A's
+    reading is seeded via the shared helper; user B gets a Bearer minted directly for a different
+    user. This is the executable lock the 05-02 (detail) + 05-04 (delete) endpoints must satisfy.
+    """
+    # User A owns a real completed reading.
+    user_a = await make_user_with_limits(auth_session)
+    reading_a = await create_completed_reading(auth_session, user_a)
+    assert reading_a.reading_id
+
+    # User B is a different account with its own Bearer.
+    user_b = await make_user_with_limits(auth_session)
+    token_b = encode_jwt(sub=str(user_b.id), telegram_id=user_b.telegram_id)
+    auth_b = {"Authorization": f"Bearer {token_b}"}
+
+    # Detail: a non-owned id is a 404 (not 403, not 200).
+    detail = await auth_client.get(f"/api/readings/{reading_a.reading_id}", headers=auth_b)
+    assert detail.status_code == 404, detail.text
+
+    # Delete: a non-owned id is a 404 (not 403, not 200) — and must NOT have deleted A's reading.
+    deleted = await auth_client.delete(f"/api/readings/{reading_a.reading_id}", headers=auth_b)
+    assert deleted.status_code == 404, deleted.text
