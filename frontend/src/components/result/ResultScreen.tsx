@@ -49,6 +49,7 @@ const summaryItem = {
 export function ResultScreen() {
   const reading = useSelection((s) => s.reading);
   const startReadingAgain = useSelection((s) => s.startReadingAgain);
+  const goTo = useSelection((s) => s.goTo);
   const insets = getSafeAreaInsets();
 
   // Reachable only after a reading is built; guard defensively with an element (FlowRoot
@@ -170,15 +171,22 @@ export function ResultScreen() {
           <span>{RESULT_SAVE_CTA}</span>
           <span className="text-[10px] uppercase tracking-wide">{RESULT_SOON_BADGE}</span>
         </button>
-        <button
+        {/* «История» un-stubbed (D-10) → routes to the History list. «Сохранить карточку»
+            stays a «скоро» stub (Phase 8). */}
+        <m.button
           type="button"
-          disabled
-          className="flex flex-col items-center rounded-full px-4 py-2 text-xs opacity-50"
-          style={{ background: "transparent", border: "1px solid var(--deck-soft)", color: "inherit" }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => goTo("history")}
+          className="flex flex-col items-center rounded-full px-4 py-2 text-xs outline-none focus-visible:ring-2"
+          style={{
+            background: "transparent",
+            border: "1px solid var(--deck-soft)",
+            color: "inherit",
+            cursor: "pointer",
+          }}
         >
           <span>{RESULT_HISTORY_CTA}</span>
-          <span className="text-[10px] uppercase tracking-wide">{RESULT_SOON_BADGE}</span>
-        </button>
+        </m.button>
       </div>
     </main>
   );

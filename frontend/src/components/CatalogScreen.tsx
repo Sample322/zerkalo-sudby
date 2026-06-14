@@ -6,6 +6,8 @@ import { useRecommendation, useSpreads } from "../hooks/useSpreads";
 import { getContentSafeAreaInsets, getSafeAreaInsets } from "../lib/telegram";
 import { createReading } from "../reading/createReading";
 import {
+  HISTORY_HEADER,
+  PROFILE_HEADER,
   QUESTION_EMPTY_HELPER,
   QUESTION_PLACEHOLDER,
   QUESTION_TOO_SHORT_HINT,
@@ -121,6 +123,50 @@ export function CatalogScreen() {
       className="flex flex-1 flex-col gap-6 px-4 pb-24"
       style={{ background: "var(--deck-bg)" }}
     >
+      {/*
+        Atmospheric header row (D-10 / TZ §9.2) — the ONLY navigation chrome. History + Profile
+        icon entry points, small + accent-tinted so the immersive feel is preserved. The
+        ritual/reveal/result screens stay chrome-free (NO bottom tab bar). The result-screen
+        «история» action (un-stubbed below) also routes to History.
+      */}
+      <nav
+        aria-label="Навигация"
+        className="flex items-center justify-end gap-2 pt-2"
+      >
+        <m.button
+          type="button"
+          whileTap={{ scale: 0.92 }}
+          onClick={() => goTo("history")}
+          aria-label={HISTORY_HEADER}
+          title={HISTORY_HEADER}
+          className="grid h-10 w-10 place-items-center rounded-full text-lg outline-none focus-visible:ring-2"
+          style={{
+            background: "color-mix(in srgb, var(--deck-deep) 55%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--deck-accent) 24%, transparent)",
+            color: "var(--deck-accent)",
+            cursor: "pointer",
+          }}
+        >
+          <span aria-hidden="true">🕮</span>
+        </m.button>
+        <m.button
+          type="button"
+          whileTap={{ scale: 0.92 }}
+          onClick={() => goTo("profile")}
+          aria-label={PROFILE_HEADER}
+          title={PROFILE_HEADER}
+          className="grid h-10 w-10 place-items-center rounded-full text-lg outline-none focus-visible:ring-2"
+          style={{
+            background: "color-mix(in srgb, var(--deck-deep) 55%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--deck-accent) 24%, transparent)",
+            color: "var(--deck-accent)",
+            cursor: "pointer",
+          }}
+        >
+          <span aria-hidden="true">☾</span>
+        </m.button>
+      </nav>
+
       <section aria-label="Вопрос" className="flex flex-col gap-2">
         <label
           htmlFor="reading-question"

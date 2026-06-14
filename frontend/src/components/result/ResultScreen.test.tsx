@@ -134,20 +134,27 @@ test("«Ещё расклад» returns to selection preserving question + topic
   expect(state.topic).toBe("work");
 });
 
-test("«Сохранить карточку» and «История» are present, disabled, and inert (D-12)", () => {
+test("«Сохранить карточку» stays a disabled, inert «скоро» stub (Phase 8)", () => {
   const { getByText } = renderResult();
 
   const saveBtn = getByText(RESULT_SAVE_CTA).closest("button");
-  const histBtn = getByText(RESULT_HISTORY_CTA).closest("button");
   expect(saveBtn).toBeTruthy();
-  expect(histBtn).toBeTruthy();
   expect((saveBtn as HTMLButtonElement).disabled).toBe(true);
-  expect((histBtn as HTMLButtonElement).disabled).toBe(true);
 
-  // Tapping a disabled stub does nothing — the flow does not advance.
+  // Tapping the disabled stub does nothing — the flow does not advance.
   fireEvent.click(saveBtn as HTMLButtonElement);
-  fireEvent.click(histBtn as HTMLButtonElement);
   expect(useSelection.getState().step).toBe("result");
+});
+
+test("«История» is un-stubbed (D-10) — enabled and routes to the History step", () => {
+  const { getByText } = renderResult();
+
+  const histBtn = getByText(RESULT_HISTORY_CTA).closest("button");
+  expect(histBtn).toBeTruthy();
+  expect((histBtn as HTMLButtonElement).disabled).toBe(false);
+
+  fireEvent.click(histBtn as HTMLButtonElement);
+  expect(useSelection.getState().step).toBe("history");
 });
 
 test("the full rendered result copy contains no banned brand-voice token (SAFE-06)", () => {
