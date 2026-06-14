@@ -67,6 +67,29 @@ class SettingsOut(BaseModel):
     onboarding_completed: bool
 
 
+class SettingsPatch(BaseModel):
+    """Partial-update request for ``PATCH /api/me/settings`` (PROF-02, D-09).
+
+    Every field is optional so any subset can be patched: only the keys actually present in the
+    request body are written (``model_dump(exclude_unset=True)`` in the handler), leaving the
+    omitted flags untouched — the partial-update invariant. There is deliberately NO ``user_id``
+    field: the target row is always the authenticated (JWT ``sub``) user, never the body
+    (threat T-05-SPOOF). ``allow_history_personalization`` is the D-05/D-06 consent toggle
+    (default OFF on the model); persisting it is Phase 5's entire HIST-05 obligation on the write
+    side — the history-personalization feature itself is v2/ENG-02 and is NOT built here.
+    """
+
+    reversals_enabled: bool | None = Field(
+        default=None, description="Учитывать перевёрнутые карты при раскладе."
+    )
+    allow_history_personalization: bool | None = Field(
+        default=None, description="Согласие на персонализацию по истории раскладов."
+    )
+    onboarding_completed: bool | None = Field(
+        default=None, description="Онбординг пройден."
+    )
+
+
 class AuthResponse(BaseModel):
     """Response for ``POST /api/auth/telegram`` (TZ §14.1)."""
 
@@ -89,6 +112,7 @@ __all__ = [
     "UserOut",
     "LimitsOut",
     "SettingsOut",
+    "SettingsPatch",
     "AuthResponse",
     "MeResponse",
 ]
