@@ -23,6 +23,8 @@ and the 200 path never reaches Anthropic.
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,6 +83,70 @@ async def list_readings(
     MVP free list is ≤10 items so they are intentionally NOT surfaced here (no filters in MVP).
     """
     return await service.list_readings(session, user, limit=limit, offset=offset)
+
+
+# NOTE: the literal ``GET /readings`` list is declared ABOVE these ``/{reading_id}`` routes so
+# FastAPI matches the static path first and the parametrized routes never shadow it. The
+# ``{reading_id}`` path is typed ``uuid.UUID`` so a malformed (non-UUID) id is a 422 from path
+# validation (Security Domain V5) before the service runs.
+
+
+@router.get("/readings/{reading_id}", response_model=ReadingOut)
+async def get_reading(
+    reading_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    service: ReadingService = Depends(get_reading_service),
+) -> ReadingOut:
+    """Return the immutable stored reading by id (HIST-03) — reused, never regenerated.
+
+    Thin router: delegates to ``ReadingService.get_reading_detail`` and maps ``ReadingInputError``
+    → 404 exactly like the POST handler. The user is the JWT identity (``get_current_user``), so a
+    non-owned OR soft-deleted id is a clean 404 (not 403, not 200 — T-05-IDOR / no existence leak).
+    """
+    try:
+        return await service.get_reading_detail(session, user, reading_id)
+    except ReadingInputError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.delete("/readings/{reading_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_reading(
+    reading_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    service: ReadingService = Depends(get_reading_service),
+) -> None:
+    """Soft-delete the authenticated user's reading (HIST-04) — 204 on success.
+
+    Thin router: delegates to ``ReadingService.soft_delete`` (sets ``deleted_at``, never a hard
+    delete) and maps ``ReadingInputError`` → 404. User-scoped via the JWT: a non-owned id is a 404
+    and cannot delete another user's reading (T-05-IDOR).
+    """
+    try:
+        await service.soft_delete(session, user, reading_id)
+    except ReadingInputError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.post("/readings/{reading_id}/restore", status_code=status.HTTP_204_NO_CONTENT)
+async def restore_reading(
+    reading_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    service: ReadingService = Depends(get_reading_service),
+) -> None:
+    """Restore a soft-deleted reading (D-03 undo) — 204 on success.
+
+    Thin router: delegates to ``ReadingService.restore`` (nulls ``deleted_at``) and maps
+    ``ReadingInputError`` → 404. A dedicated, explicit ``POST .../restore`` (RESEARCH Open
+    Question 1) keeps the undo intent clear and never leaks the ``deleted_at`` column over the API.
+    User-scoped via the JWT: a non-owned id is a 404 (T-05-IDOR).
+    """
+    try:
+        await service.restore(session, user, reading_id)
+    except ReadingInputError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
 
 
 __all__ = ["router", "get_reading_service"]
