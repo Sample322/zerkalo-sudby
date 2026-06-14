@@ -8,7 +8,7 @@
 //   - <LazyMotion features={domAnimation}>  — ship ~4.6kb, not ~34kb (D-01 bundle budget)
 //   - m.* from "motion/react-m"             — NEVER a stray full `motion.*` inside LazyMotion (Pitfall 5)
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   AnimatePresence,
   domAnimation,
@@ -18,6 +18,7 @@ import {
 import * as m from "motion/react-m";
 
 import { hasSeenOnboarding } from "../hooks/useOnboardingSeen";
+import { useMe, usePatchSettings } from "../hooks/useMe";
 import { useSelection } from "../stores/selection";
 import { CatalogScreen } from "../components/CatalogScreen";
 import { OnboardingFlow } from "../components/onboarding/OnboardingFlow";
@@ -48,15 +49,48 @@ const SCREENS: Record<Step, () => React.JSX.Element> = {
 export function FlowRoot() {
   const step = useSelection((s) => s.step);
 
-  // Initial-step gate (ONB-04): only when the store is still at its default `onboarding`
-  // do we skip ahead to `selection` for returning users. Done as a direct setState (not
-  // goTo) so the mount correction never leaves a phantom "onboarding" on the back history.
+  // Onboarding gate is now SERVER-PRIMARY (D-09 / RESEARCH OQ3): `GET /api/me`
+  // `settings.onboarding_completed` is the truth; localStorage is only a boot fallback so the
+  // first paint doesn't flash onboarding for a known returning user while the query is in flight.
+  const { data: me } = useMe();
+  const patchSettings = usePatchSettings();
+  // The reconcile PATCH must fire AT MOST once per mount (a returning user whose server flag is
+  // still stale-`false` but whose localStorage says seen).
+  const reconciledRef = useRef(false);
+
+  // Boot fallback: only while `useMe` is still resolving, fall back to the localStorage flag so
+  // a known returning user is skipped past onboarding on the first paint (no flash). Server takes
+  // over below once it resolves. Direct setState (not goTo) so the correction leaves no phantom
+  // "onboarding" on the back history. Acts ONLY on the default onboarding + empty-history window.
   useEffect(() => {
+    if (me) return; // server has resolved → the server-primary effect owns the decision
     const current = useSelection.getState();
     if (current.step === "onboarding" && current.history.length === 0 && hasSeenOnboarding()) {
       useSelection.setState({ step: "selection" });
     }
-  }, []);
+  }, [me]);
+
+  // Server-primary decision (D-09): once `GET /api/me` resolves, skip onboarding when the server
+  // records it complete, and reconcile a stale-`false` server flag for a returning user (one PATCH).
+  useEffect(() => {
+    if (!me) return;
+    const current = useSelection.getState();
+    const onlyAtMount = current.step === "onboarding" && current.history.length === 0;
+
+    if (me.settings.onboarding_completed) {
+      // Server says complete → skip ahead (only during the mount-correction window).
+      if (onlyAtMount) useSelection.setState({ step: "selection" });
+      return;
+    }
+
+    // Server says NOT complete but localStorage says seen → a returning user from before this
+    // phase. Reconcile the server once, then skip onboarding for them too.
+    if (hasSeenOnboarding() && !reconciledRef.current) {
+      reconciledRef.current = true;
+      patchSettings.mutate({ onboarding_completed: true });
+      if (onlyAtMount) useSelection.setState({ step: "selection" });
+    }
+  }, [me, patchSettings]);
 
   const Screen = SCREENS[step];
 

@@ -18,6 +18,7 @@ import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 
 import { markOnboardingSeen } from "../../hooks/useOnboardingSeen";
+import { usePatchSettings } from "../../hooks/useMe";
 import { useSelection } from "../../stores/selection";
 import {
   ONBOARDING_CTA,
@@ -46,15 +47,22 @@ const SLIDE_TRANSITION = { duration: 0.28, ease: [0.16, 1, 0.3, 1] as const };
 
 export function OnboardingFlow() {
   const goTo = useSelection((s) => s.goTo);
+  const patchSettings = usePatchSettings();
   const [index, setIndex] = useState(0);
 
   const isLast = index === SLIDES.length - 1;
   const slide = SLIDES[index];
 
-  // ONB-04 / D-11: both the final CTA and «Пропустить» persist the flag, then advance the
-  // flow to selection. The localStorage write is the single source of "seen" FlowRoot reads.
+  // ONB-04 / D-09 / D-11: both the final CTA and «Пропустить» complete onboarding, then advance
+  // the flow to selection. The onboarding flag is now SERVER-PRIMARY (D-09): completion fires a
+  // `PATCH /api/me/settings { onboarding_completed: true }` so the server records it (FlowRoot's
+  // gate reads `GET /api/me` as the truth). `markOnboardingSeen()` keeps the localStorage write
+  // as the BOOT FALLBACK only, so a returning user is skipped past onboarding on the first paint
+  // before `useMe` resolves. The optimistic PATCH never blocks navigation (fire-and-forget; its
+  // own rollback handles a failed write — worst case onboarding cosmetically re-shows next boot).
   function finishOnboarding(): void {
     markOnboardingSeen();
+    patchSettings.mutate({ onboarding_completed: true });
     goTo("selection");
   }
 

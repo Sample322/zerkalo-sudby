@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
@@ -6,7 +7,7 @@ import {
   type RenderResult,
 } from "@testing-library/react";
 import { domAnimation, LazyMotion } from "motion/react";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { hasSeenOnboarding } from "../../hooks/useOnboardingSeen";
 import { useSelection } from "../../stores/selection";
@@ -20,12 +21,19 @@ import {
 import { OnboardingFlow } from "./OnboardingFlow";
 
 // OnboardingFlow renders inside FlowRoot's <LazyMotion features={domAnimation}> in production,
-// so its `m.*` (motion/react-m) elements require a LazyMotion provider here too. Wrap render.
+// so its `m.*` (motion/react-m) elements require a LazyMotion provider here too. It also fires
+// `usePatchSettings()` on completion (D-09 server-primary onboarding flag), which uses
+// `useQueryClient`, so it must render under a fresh QueryClientProvider as well.
 function renderOnboarding(): RenderResult {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
-    <LazyMotion features={domAnimation}>
-      <OnboardingFlow />
-    </LazyMotion>,
+    <QueryClientProvider client={client}>
+      <LazyMotion features={domAnimation}>
+        <OnboardingFlow />
+      </LazyMotion>
+    </QueryClientProvider>,
   );
 }
 
@@ -37,6 +45,25 @@ beforeEach(() => {
   } catch {
     /* private-mode safe — the hook itself never throws */
   }
+  // Stub fetch so the completion PATCH (D-09) has a deterministic mock. The settings endpoint
+  // echoes the patched flag (the §14 SettingsOut shape); anything else 404s.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string | URL) => {
+      const u = String(url);
+      if (u.includes("/api/me/settings")) {
+        return new Response(
+          JSON.stringify({
+            reversals_enabled: false,
+            allow_history_personalization: false,
+            onboarding_completed: true,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }),
+  );
 });
 
 // The vitest config registers no global RTL auto-cleanup (no setupFiles), so each render()
@@ -44,6 +71,7 @@ beforeEach(() => {
 // document.body → "Found multiple elements"). Unmount explicitly after every test.
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 test("tapping «Пропустить» persists the seen flag and advances to selection (ONB-02/ONB-04)", () => {
@@ -56,6 +84,25 @@ test("tapping «Пропустить» persists the seen flag and advances to se
 
   expect(hasSeenOnboarding()).toBe(true);
   expect(useSelection.getState().step).toBe("selection");
+});
+
+test("completing onboarding fires PATCH /api/me/settings { onboarding_completed: true } (D-09 server-primary)", async () => {
+  const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+  const { getByText } = renderOnboarding();
+
+  fireEvent.click(getByText(ONBOARDING_SKIP));
+
+  // localStorage stays the boot fallback (written synchronously), AND the server records it.
+  expect(hasSeenOnboarding()).toBe(true);
+  await waitFor(() => {
+    const patchCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/me/settings"),
+    );
+    expect(patchCall).toBeTruthy();
+    const init = patchCall?.[1] as RequestInit | undefined;
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(String(init?.body))).toEqual({ onboarding_completed: true });
+  });
 });
 
 test("advancing through all slides reaches the final CTA, which persists + advances (ONB-01/ONB-04)", () => {

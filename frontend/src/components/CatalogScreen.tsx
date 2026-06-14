@@ -2,6 +2,7 @@ import { useState } from "react";
 import * as m from "motion/react-m";
 
 import { useDecks } from "../hooks/useDecks";
+import { useMe } from "../hooks/useMe";
 import { useRecommendation, useSpreads } from "../hooks/useSpreads";
 import { getContentSafeAreaInsets, getSafeAreaInsets } from "../lib/telegram";
 import { createReading } from "../reading/createReading";
@@ -44,7 +45,13 @@ export function CatalogScreen() {
   const deckSlug = useSelection((s) => s.deckSlug);
   const spreadSlug = useSelection((s) => s.spreadSlug);
   const question = useSelection((s) => s.question);
-  const reversalsEnabled = useSelection((s) => s.reversalsEnabled);
+  // D-09: a new reading's reversals are sourced from the PERSISTED user setting
+  // (`GET /api/me` settings.reversals_enabled), not the Phase-3 local Zustand toggle. The
+  // backend also enforces this (05-04 overrides the request flag from the persisted value), but
+  // the client sends the persisted value for consistency. Until `useMe` resolves, fall back to
+  // the local toggle so the CTA never blocks. The local toggle stays in the store (harmless now
+  // that the persisted flag is authoritative).
+  const localReversals = useSelection((s) => s.reversalsEnabled);
   const setTopic = useSelection((s) => s.setTopic);
   const setDeck = useSelection((s) => s.setDeck);
   const setSpread = useSelection((s) => s.setSpread);
@@ -55,6 +62,12 @@ export function CatalogScreen() {
   const decksQuery = useDecks();
   const spreadsQuery = useSpreads(topic, deckSlug);
   const recommendation = useRecommendation(topic, deckSlug);
+
+  // D-09 reversals source: prefer the persisted `GET /api/me` flag; fall back to the local
+  // toggle only until the profile query resolves (so the CTA is never blocked on the network).
+  const meQuery = useMe();
+  const reversalsEnabled =
+    meQuery.data?.settings.reversals_enabled ?? localReversals;
 
   // HOME-07 start gate (topic + deck + spread all chosen) — the pure store helper, never
   // re-implemented here. A pending flag debounces double-taps while the seam resolves; an

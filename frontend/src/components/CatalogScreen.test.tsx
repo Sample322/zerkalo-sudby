@@ -37,6 +37,36 @@ const SPREADS = Array.from({ length: 7 }, (_, i) => ({
 const REASON = "Для темы «любовь» этот расклад открывает вопрос мягко и по существу.";
 const RECOMMENDATION = { recommended_spread: SPREADS[0], reason: REASON };
 
+// GET /api/me — the persisted profile (D-09). `reversals_enabled: true` here proves the
+// CatalogScreen sources a new reading's reversals from the persisted flag, NOT the local
+// Zustand toggle (which the store reset leaves `false`).
+const ME = {
+  access_token: "tok",
+  user: {
+    id: "u1",
+    telegram_id: 1,
+    username: null,
+    first_name: "Иван",
+    last_name: null,
+    language_code: "ru",
+    photo_url: null,
+    is_premium_telegram: false,
+    onboarding_completed: true,
+  },
+  limits: {
+    free_weekly_limit: 3,
+    free_used_this_week: 0,
+    paid_spreads_balance: 0,
+    subscription_spreads_limit: 0,
+    subscription_spreads_used: 0,
+  },
+  settings: {
+    reversals_enabled: true,
+    allow_history_personalization: false,
+    onboarding_completed: true,
+  },
+};
+
 // A completed POST /api/readings response (the §14.5 ReadingOut the seam now maps onto
 // MockReading). One card, matching the single stubbed spread position ("Суть").
 const COMPLETED_READING_OUT = {
@@ -91,6 +121,8 @@ beforeEach(() => {
       if (u.includes("/api/spreads/recommend")) return json(RECOMMENDATION);
       if (u.includes("/api/spreads")) return json(SPREADS);
       if (u.includes("/api/decks")) return json(DECKS);
+      // GET /api/me — the persisted profile (D-09 reversals source).
+      if (u.includes("/api/me")) return json(ME);
       return new Response("not found", { status: 404 });
     }),
   );
@@ -190,6 +222,42 @@ test("HOME-07/D-05: with topic+deck+spread set, tapping the CTA builds the readi
   expect(ritualEntrySnapshot[0].readingWasSet).toBe(true);
 
   unsubscribe();
+});
+
+test("D-09: a new reading's reversals_enabled is sourced from the persisted GET /api/me flag, not the local toggle", async () => {
+  // The store reset leaves the LOCAL toggle `false`; the mocked `GET /api/me` says
+  // reversals_enabled === true. The POST /api/readings body must carry the PERSISTED value.
+  const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+  useSelection.setState({
+    topic: "love",
+    deckSlug: "deck_0",
+    spreadSlug: "spread_0",
+    question: "Что меня ждёт в отношениях этой осенью?",
+    reversalsEnabled: false, // local toggle OFF — must NOT win over the persisted flag
+  });
+
+  const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
+  await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
+  // Let the profile query resolve so the persisted flag (not the local fallback) is in effect.
+  await waitFor(() =>
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes("/api/me")),
+    ).toBe(true),
+  );
+
+  const cta = getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
+  fireEvent.click(cta);
+
+  await waitFor(() => expect(useSelection.getState().step).toBe("ritual"));
+
+  const postCall = fetchMock.mock.calls.find(
+    ([url, init]) =>
+      String(url).includes("/api/readings") &&
+      (init as RequestInit | undefined)?.method === "POST",
+  );
+  expect(postCall).toBeTruthy();
+  const body = JSON.parse(String((postCall?.[1] as RequestInit).body));
+  expect(body.reversals_enabled).toBe(true); // the PERSISTED flag, not the local `false`
 });
 
 test("HOME-01/02/D-13: an empty question shows no error and a 1–9-char question shows the gentle too-short hint", async () => {
