@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-06-14T20:18:56.000Z"
+status: verifying
+last_updated: "2026-06-14T21:21:49.458Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 27
-  completed_plans: 26
-  percent: 54
+  completed_plans: 27
+  percent: 63
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 Phase: 05 (History & Profile) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-14
 
-Progress: [████████░] 86% (Phase 5: 6 of 7 plans done; only 05-07 remains in Wave 4)
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [████████░] 86% (Phase 5: 6 of 7 plans done; only 05
 | Phase 05 P04 | 12min | 2 tasks | 2 files |
 | Phase 05 P05 | 10min | 2 tasks | 13 files |
 | Phase 05 P06 | 40min | 2 tasks | 8 files |
+| Phase 05 P07 | 60min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Phase 5 (Plan 06): FE reopen + swipe-to-delete/undo — completes the history experience (browse→reopen→delete/undo). REOPEN (HIST-03): useReadingDetail keyed ["readings","detail",id] staleTime:Infinity (immutable, server never regenerates 05-04); ResultScreen detail mode renders the fetched reading via the SINGLE shared mapReadingOutToMock (createReading imports it, no duplicate mapper) with the opacity fade-in + back→History and NONE of the live CTAs (D-11); per-card+summary content from the immutable GET body, meta (question/deck/spread/date) sourced from the tapped ["readings","list"] cache item. DELETE/UNDO (HIST-04/D-03): deleteReading (DELETE /api/readings/{id}) + restoreReading (POST /{id}/restore) apiFetch wrappers; useDeleteReading = canonical TanStack v5 optimistic mutation (onMutate cancel+snapshot+setQueryData-remove-by-reading_id keeping item+index, onError snapshot rollback) on the SINGLE stable key ["readings","list"] (Pitfall 5 / T-05-STALE); useRestoreReading re-inserts the removed item at its ORIGINAL index in the same key then invalidates to reconcile. UndoSnackbar = motion AnimatePresence + self-contained 5s setTimeout (cleared on unmount/undo via open-keyed effect) — NO toast library. HistoryScreen card = motion drag="x"+dragSnapToOrigin, onDragEnd past 96px leftward threshold commits delete; tap-to-open preserved; an accessible delete-button TWIN calls the same handler (swipe stays accessible + gives the headless test a deterministic trigger — assert cache/DOM outcome not drag physics). delete-button aria-label is a local non-visible const (copy.ts locked this plan; snackbar strings already centralized 05-05; brand-safe). AnimatePresence-exit transient UI → assert dismissal with waitFor (let exit drain the DOM), not a sync query. Zero new deps. Full FE suite 95 green (baseline 92 +3 delete/undo), tsc 0, vite build ok (518 modules). 05-07 (Profile/Settings) is the only remaining Wave-4 plan — sibling, zero overlap.
 - [Phase 05]: Phase 5 (Plan 05): FE history/profile navigation foundation + History list slice — Step union extended with OFF-FLOW history|profile|readingDetail (goTo/back only, excluded from STEP_ORDER so next('result') stays terminal; NO react-router — extends the Phase-3 D-02 Zustand step-machine); selection store gains detailReadingId + setDetailReadingId (the History→detail writer seam 05-06 reads); FlowRoot registers all three (readingDetail REUSES ResultScreen, D-02). This foundation plan owns ALL shared FE seams (step union, FlowRoot registry, api/readings.ts, useReadings.ts, ALL new copy) so 05-06/07 replace ONLY their own screen file (Phase-3 FlowRoot-stub pattern, no multi-writer conflict). HistoryScreen = reverse-chrono list via useReadingsList against GET /api/readings (server state, stable key ['readings','list'] — no filters D-01, the Pitfall-5 delete-mutation seam), §9.6 empty state, thumbnails reuse CardArtFallback down-scaled into a 44×70 box (empty→CSS fallback A2), back→Home (D-11), tap→setDetailReadingId+goTo(readingDetail). CatalogScreen header icons → goTo(history)/goTo(profile) (D-10, NO bottom tab bar — ritual/reveal/result stay chrome-free); ResultScreen «история» un-stubbed → goTo(history) (D-10 supersedes Phase-3 D-12 inert stub; «сохранить карточку» stays «скоро» Phase 8). Personalization explainer copy (consumed by 05-07) = «история раскладов»/«колода помнит» + privacy note, NEVER the mechanism (SAFE-06/Pitfall 6). Zero new deps. Full FE suite 87 green (baseline 80 +7), tsc 0, vite build ok. -> SettingsPatch (all-optional 3 booleans, NO user_id) + handler applies only model_dump(exclude_unset=True) keys to current_user, commit, return SettingsOut (PROF-02/D-09). Partial-update invariant (omitted flag untouched); JWT-scoped — forged body user_id dropped by closed schema, mutated row is always the JWT sub (T-05-SPOOF); empty body = 200 no-op. GET /api/me / MeResponse UNCHANGED (PROF-01 already satisfied, count/sub hidden by UI D-08) — only a request schema added. HIST-05/D-06 closed BY ABSENCE: lock comment above PromptEngine.build (no history param/fetch/branch added) + test_build_has_no_history_parameter introspection fence; consent flag persisted but history NEVER assembled into §18 prompt — the personalization feature stays v2/ENG-02. Turns 05-01 settings + gate red tests green (clean-skip without PG).
 
+- [Phase 05]: Phase 5 (Plan 07): FE Profile/Settings + onboarding server-migration — COMPLETES Phase 5 (7/7). me.ts (fetchMe GET /api/me + patchSettings PATCH /api/me/settings over apiFetch, types reused from api/auth.ts); useMe (queryKey ['me'], 60s staleTime) + usePatchSettings = canonical TanStack v5 optimistic mutation on the SINGLE ['me'] key (onMutate cancel+snapshot+merge-patch-into-settings, onError rollback, onSettled invalidate — mirrors the 05-06 delete recipe). ProfileScreen renders the Telegram identity (name+photo, graceful fallback) + reversals/personalization toggles wired to usePatchSettings (only the changed flag PATCHed, optimistic); back→Home (D-11); the readings-count/subscription block is DELIBERATELY omitted even though GET /api/me returns limits (D-08, the component test asserts the count value is absent); personalization explainer brand-safe (SAFE-06, copy from copy.ts, NOT edited). ONBOARDING SERVER-PRIMARY (D-09): FlowRoot gate reads GET /api/me settings.onboarding_completed as the truth, hasSeenOnboarding() localStorage is a BOOT FALLBACK only (no first-paint flash while useMe resolves, direct setState = no phantom back-history), a returning user with a stale-false server flag + localStorage seen triggers EXACTLY ONE reconciling PATCH onboarding_completed=true (reconciledRef-guarded); OnboardingFlow completion (CTA + skip) fires PATCH onboarding_completed=true while keeping markOnboardingSeen() as the boot fallback. REVERSALS SOURCE (D-09): CatalogScreen sources a new reading's reversals_enabled from the persisted GET /api/me flag (useMe), falling back to the local Zustand toggle only until useMe resolves (CTA never network-blocked); backend already enforces this (05-04), client now sends the persisted value for consistency; local toggle retained as a harmless transient fallback. FlowRoot SCREENS registry + CatalogScreen header-icon region (05-05) untouched (disjoint edits, boundary_note honored). Zero new deps. Full FE suite 101 green (baseline 99 +2: onboarding-completion-PATCH + persisted-reversals-source), tsc 0, vite build ok (520 modules). PROF-01/02 already complete (05-03 backend). /gsd-code-review 5 + /gsd-secure-phase 5 remain before phase close (Phase-4 deferral pattern).
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -143,7 +146,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T20:18:56Z
+Last session: 2026-06-14T21:21:49.449Z
 Stopped at: Completed 05-06-PLAN.md (FE reopen + swipe-to-delete/undo — ResultScreen detail mode renders the immutable GET /api/readings/{id} via the shared mapReadingOutToMock with an opacity fade-in + back→History; swipe-to-delete on the list card → optimistic remove on ["readings","list"] + a motion AnimatePresence UndoSnackbar (~5s, no toast lib) → DELETE; undo → POST /{id}/restore + re-insert the cached item at its original index. Full FE suite 95 green, tsc 0, vite build ok)
 Resume file: None
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)

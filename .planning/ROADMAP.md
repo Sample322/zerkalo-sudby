@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: The Ritual (mock)** - User runs the entire flow — onboarding → question/topic/deck/spread → ritual → reveal — against a mock reading (completed 2026-06-12)
 - [x] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated
  (completed 2026-06-13)
-- [ ] **Phase 5: History & Profile** - User revisits, reopens, and soft-deletes past readings, and manages profile/settings
+- [x] **Phase 5: History & Profile** - User revisits, reopens, and soft-deletes past readings, and manages profile/settings (completed 2026-06-14)
 - [ ] **Phase 6: Free Limits & Soft Paywall** - User is bounded to 3 free readings/week with a deterministic reset and an honest paywall
 - [ ] **Phase 7: Telegram Stars Payments** - User buys reading packs or a recurring subscription via Stars to unlock more readings
 - [ ] **Phase 8: Admin, Analytics, Polish & Deploy** - Operators run the product without code; the app ships polished and legally cleared on timeweb.cloud
@@ -190,7 +190,7 @@ Plans:
 **Wave 4** *(parallel — zero file overlap; depend on 05-05 + their backend)*
 
 - [x] 05-06-PLAN.md — FE reopen + delete/undo: `ResultScreen` detail mode (immutable, fade-in) + swipe-to-delete + `UndoSnackbar` (optimistic delete/restore) (HIST-03/04)
-- [ ] 05-07-PLAN.md — FE Profile/Settings: identity + toggles (optimistic `PATCH`, count hidden D-08) + onboarding localStorage→server migration + reversals-source (PROF-01/02)
+- [x] 05-07-PLAN.md — FE Profile/Settings: identity + toggles (optimistic `PATCH`, count hidden D-08) + onboarding localStorage→server migration + reversals-source (PROF-01/02)
 
 **UI hint**: yes
 
@@ -256,7 +256,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Deck & Spread Catalog | 3/3 | Complete    | 2026-06-11 |
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
 | 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete    | 2026-06-13 |
-| 5. History & Profile | 5/7 | In Progress|  |
+| 5. History & Profile | 7/7 | Complete   | 2026-06-14 |
 | 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
 | 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |
