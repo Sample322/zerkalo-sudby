@@ -64,3 +64,25 @@ export async function fetchReadingDetail(id: string): Promise<ReadingOutResponse
   if (!res.ok) throw new HistoryError(res.status);
   return (await res.json()) as ReadingOutResponse;
 }
+
+/**
+ * Soft-delete a reading (HIST-04 / D-03) via `DELETE /api/readings/{id}` through the Bearer
+ * seam. The server sets `deleted_at` (retain-data, 05-04) and scopes by the JWT user; a
+ * non-owned / already-deleted id 404s (no existence leak — T-05 IDOR). Throws on non-2xx so
+ * the optimistic mutation can roll its cache back (Pattern 3 `onError`).
+ */
+export async function deleteReading(id: string): Promise<void> {
+  const res = await apiFetch(`/api/readings/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new HistoryError(res.status);
+}
+
+/**
+ * Restore a soft-deleted reading (HIST-04 undo / D-03) via `POST /api/readings/{id}/restore`
+ * through the Bearer seam — the dedicated route that nulls `deleted_at` (05-04, RESEARCH OQ1;
+ * no `deleted_at` column is ever leaked over the API). User-scoped server-side. Throws on
+ * non-2xx so the undo surfaces failure rather than silently dropping the reading.
+ */
+export async function restoreReading(id: string): Promise<void> {
+  const res = await apiFetch(`/api/readings/${id}/restore`, { method: "POST" });
+  if (!res.ok) throw new HistoryError(res.status);
+}
