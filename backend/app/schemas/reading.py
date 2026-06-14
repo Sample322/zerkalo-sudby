@@ -29,6 +29,7 @@ Three contract families live here:
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -281,6 +282,43 @@ class ReadingOut(BaseModel):
     )
 
 
+class ReadingListItemOut(BaseModel):
+    """A LIGHT history list item (TZ §9.6 / HIST-02) — NOT the heavy ``ReadingOut``.
+
+    ``GET /api/readings`` returns these: just enough to render a history card (дата / вопрос /
+    колода / расклад / миниатюры / короткий итог). It deliberately omits the full per-card
+    ``interpretation`` and the ``cards`` array (those belong to the detail endpoint ``GET
+    /readings/{id}``, HIST-03) — sending the whole reading for every row would waste bandwidth and
+    conflate list with detail. The §9.6 wording is "короткий итог", so only ``summary_short`` rides
+    in the list, never the per-card text (RESEARCH anti-pattern: do not reuse ``ReadingOut`` here).
+
+    ``card_thumbnails`` come from ``deck_cards.thumbnail_url`` for the reading's drawn cards (in
+    position order); an empty list is fine (the frontend ``CardArtFallback`` covers missing art,
+    A2). ``deck_name`` / ``spread_name`` are the human ``Deck.title`` / ``SpreadType.title``.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    reading_id: str = Field(description="UUID расклада (§9.6 — для повторного открытия)")
+    created_at: datetime = Field(description="§9.6 дата создания расклада (newest-first)")
+    question: str | None = Field(
+        default=None,
+        description="§9.6 вопрос пользователя; пусто/None → общий расклад",
+    )
+    deck_name: str = Field(description="§9.6 колода — человекочитаемое название (Deck.title)")
+    spread_name: str = Field(
+        description="§9.6 расклад — человекочитаемое название (SpreadType.title)"
+    )
+    card_thumbnails: list[str] = Field(
+        default_factory=list,
+        description="§9.6 миниатюры выпавших карт (deck_cards.thumbnail_url), по позициям",
+    )
+    summary_short: str | None = Field(
+        default=None,
+        description="§9.6 короткий итог расклада (readings.summary_short — НЕ полная интерпретация)",
+    )
+
+
 __all__ = [
     "QUESTION_MIN_LEN",
     "QUESTION_MAX_LEN",
@@ -295,4 +333,5 @@ __all__ = [
     "ReadingCardOut",
     "ReadingSummaryOut",
     "ReadingOut",
+    "ReadingListItemOut",
 ]

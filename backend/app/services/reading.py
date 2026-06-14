@@ -58,6 +58,7 @@ from sqlalchemy.orm import selectinload
 from app.core.brand_guard import contains_banned_brand_token
 from app.models import (
     Deck,
+    DeckCard,
     GenerationLog,
     Reading,
     ReadingCard,
@@ -70,6 +71,7 @@ from app.schemas.reading import (
     ClassifyResult,
     ReadingCardOut,
     ReadingCreate,
+    ReadingListItemOut,
     ReadingOut,
     ReadingOutput,
     ReadingSummary,
@@ -104,6 +106,13 @@ LOG_STATUS_FAILED = "failed"
 
 # Server-side cap for the stored generation_error detail (never leaked to the client).
 GENERATION_ERROR_MAX_CHARS = 500
+
+# HIST-06 history display-cap. The free tier surfaces at most the last 10 readings; this is a
+# DISPLAY bound on the list query, NOT a prune — older rows stay in the DB and remain fetchable by
+# id (D-04). Phase 6/7 swaps this single constant for a tier-derived limit (subscription reveals
+# the full history); no tier plumbing lives here. The effective page window is bounded by
+# ``min(limit, FREE_HISTORY_CAP - offset)`` so load-more (offset) can never page past the cap.
+FREE_HISTORY_CAP = 10
 
 
 class ReadingInputError(Exception):
@@ -254,6 +263,108 @@ class ReadingService:
         # 9. Commit + return the real reading (authoritative names/orientations from the rows).
         await session.commit()
         return self._build_response(reading, cards, remaining)
+
+    # ------------------------------------------------------------------ history (read-only)
+
+    async def list_readings(
+        self,
+        session: AsyncSession,
+        user: User,
+        *,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[ReadingListItemOut]:
+        """The user's reading history — light, newest-first, capped to the last 10 (HIST-01/02/06).
+
+        Pure read (no writes, no commit). Scoped to ``user.id`` (the JWT identity, NEVER a body or
+        query ``user_id`` — T-05-01), excluding soft-deleted rows (``deleted_at IS NULL`` — T-05-02)
+        and non-``COMPLETED`` rows (failed/crisis short-circuits have no cards/summary to show, A5),
+        ordered newest-first (D-01). The free tier sees at most ``FREE_HISTORY_CAP`` items: the
+        effective page is bounded by ``min(limit, FREE_HISTORY_CAP - offset)`` and ``offset`` past
+        the cap returns ``[]`` (T-05-05 / Pitfall 3) — the older rows are RETAINED in the DB, this
+        is a display bound only.
+
+        Two queries, no lazy loads: (1) the page of readings joined to ``Deck.title`` /
+        ``SpreadType.title`` for the human deck/spread names; (2) one explicit ``select(ReadingCard)``
+        joined to ``DeckCard`` to gather each reading's thumbnail URLs in ``position_index`` order
+        (the established explicit-select style — no ``Reading.cards`` relationship is added, Pitfall
+        1). Returns the light ``ReadingListItemOut`` items (no per-card interpretation).
+        """
+        # HIST-06 effective window: never page past the free cap (Pitfall 3). ``offset >= cap`` → [].
+        eff = min(limit, FREE_HISTORY_CAP - offset)
+        if eff <= 0:
+            return []
+
+        # (1) The page of readings + their human deck/spread names (one join query, no lazy load).
+        rows = (
+            await session.execute(
+                select(Reading, Deck.title, SpreadType.title)
+                .join(Deck, Deck.id == Reading.deck_id)
+                .join(SpreadType, SpreadType.id == Reading.spread_type_id)
+                .where(
+                    Reading.user_id == user.id,
+                    Reading.deleted_at.is_(None),
+                    Reading.status == ReadingStatus.COMPLETED,
+                )
+                .order_by(Reading.created_at.desc())
+                .offset(offset)
+                .limit(eff)
+            )
+        ).all()
+        if not rows:
+            return []
+
+        readings = [row[0] for row in rows]
+        deck_names = {row[0].id: row[1] for row in rows}
+        spread_names = {row[0].id: row[2] for row in rows}
+
+        # (2) Thumbnails for exactly this page, grouped per reading in position order. Explicit
+        # select(ReadingCard) joined to DeckCard — the codebase's established style (no relationship).
+        thumbnails = await self._thumbnails_by_reading(
+            session, [reading.id for reading in readings]
+        )
+
+        return [
+            ReadingListItemOut(
+                reading_id=str(reading.id),
+                created_at=reading.created_at,
+                question=reading.question or None,
+                deck_name=deck_names.get(reading.id, ""),
+                spread_name=spread_names.get(reading.id, ""),
+                card_thumbnails=thumbnails.get(reading.id, []),
+                summary_short=reading.summary_short,
+            )
+            for reading in readings
+        ]
+
+    @staticmethod
+    async def _thumbnails_by_reading(
+        session: AsyncSession, reading_ids: list[object]
+    ) -> dict[object, list[str]]:
+        """Map ``reading_id`` → its drawn-card thumbnail URLs in ``position_index`` order.
+
+        One explicit ``select(ReadingCard)`` joined to ``DeckCard`` for the whole page (no per-row
+        query, no lazy relationship — Pitfall 1). Rows are grouped in Python and each reading's
+        thumbnails are emitted in ``position_index`` order so the miniatures line up with the spread.
+        """
+        if not reading_ids:
+            return {}
+        card_rows = (
+            await session.execute(
+                select(
+                    ReadingCard.reading_id,
+                    ReadingCard.position_index,
+                    DeckCard.thumbnail_url,
+                )
+                .join(DeckCard, DeckCard.id == ReadingCard.deck_card_id)
+                .where(ReadingCard.reading_id.in_(reading_ids))
+                .order_by(ReadingCard.reading_id, ReadingCard.position_index)
+            )
+        ).all()
+        grouped: dict[object, list[str]] = {}
+        for reading_id, _position_index, thumbnail_url in card_rows:
+            grouped.setdefault(reading_id, []).append(thumbnail_url)
+        return grouped
 
     # ------------------------------------------------------------------ resolution / quota
 
@@ -723,6 +834,7 @@ class ReadingService:
 
 
 __all__ = [
+    "FREE_HISTORY_CAP",
     "SOFT_FAILURE_COPY",
     "SOFT_PAYWALL_COPY",
     "ReadingInputError",
