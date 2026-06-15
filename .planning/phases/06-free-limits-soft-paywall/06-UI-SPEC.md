@@ -1,10 +1,11 @@
 ---
 phase: 6
 slug: free-limits-soft-paywall
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-15
+reviewed_at: 2026-06-15
 ---
 
 # Phase 6 — UI Design Contract
