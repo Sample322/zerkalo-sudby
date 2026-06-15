@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-06-15T09:44:19.150Z"
-last_activity: 2026-06-14
+status: executing
+stopped_at: Phase 6 UI-SPEC approved
+last_updated: "2026-06-15T19:38:31.532Z"
+last_activity: 2026-06-15 -- Phase 06 planning complete
 progress:
   total_phases: 8
   completed_phases: 5
-  total_plans: 27
+  total_plans: 31
   completed_plans: 27
   percent: 63
 ---
@@ -26,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 Phase: 6
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-14
+Status: Ready to execute
+Last activity: 2026-06-15 -- Phase 06 planning complete
 
 Progress: [██████████] 100%
 
@@ -147,7 +148,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-15T09:44:19.141Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-free-limits-soft-paywall/06-CONTEXT.md
+Last session: 2026-06-15T10:06:56.844Z
+Stopped at: Phase 6 UI-SPEC approved
+Resume file: .planning/phases/06-free-limits-soft-paywall/06-UI-SPEC.md
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)
