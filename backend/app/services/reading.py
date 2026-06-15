@@ -52,7 +52,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
-from sqlalchemy import select
+from sqlalchemy import and_, case, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -603,6 +603,93 @@ class ReadingService:
         if limits is None:
             return None
         return max(0, (limits.free_weekly_limit or 0) - (limits.free_used_this_week or 0))
+
+    @staticmethod
+    async def _consume_free_atomic(
+        session: AsyncSession, user_id: object, now: datetime
+    ) -> tuple[int, int] | None:
+        """One indivisible reset+check+increment+re-anchor for the FREE bucket (LIMIT-02/03).
+
+        THE atomicity control for success-criterion 3 (RESEARCH Pattern 1). A single conditional
+        ``UPDATE user_limits … WHERE … RETURNING`` folds the lazy rolling-7d reset (Pattern 2) into
+        the same statement via ``case()`` — PostgreSQL holds a row lock for the statement, so two
+        concurrent calls at the boundary serialize: one increments to the limit, the other matches
+        zero rows. The four states collapse:
+
+          * **stale** (``week_start`` set and ``<= now - WINDOW``) → ``free_used=1`` + re-anchor
+            ``week_start=now`` (reset and immediately count this reading);
+          * **first_ever** (``week_start IS NULL``, D-02) → ``free_used=1`` + anchor ``week_start=now``;
+          * **fresh_has_room** (within window and ``free_used < limit``) → ``free_used += 1``,
+            ``week_start`` unchanged;
+          * **fresh, no room** → no WHERE arm matches → 0 rows → ``None`` (the paywall trigger).
+
+        Returns ``(used, limit)`` on a consumed slot, ``None`` when no row matched. "No slot" is
+        detected via the RETURNING row being absent (``.first() is None``), never via the cursor
+        row-count (unreliable with RETURNING on asyncpg — Pattern 1 caveat). No pessimistic
+        row-lock SELECT and no application lock: the conditional UPDATE's own row lock IS the
+        serialization across connections.
+
+        The ``stale`` / ``fresh_has_room`` / ``first_ever`` predicate objects are defined ONCE and
+        reused in BOTH the WHERE ``or_()`` and the SET ``case()`` so the boundary logic cannot drift
+        (Pitfall 5). ``now`` must be tz-aware (``datetime.now(UTC)``) — ``week_start`` is TIMESTAMP
+        with tz after migration 0002, so a naive ``now`` would raise on the subtraction (Pitfall 1).
+        """
+        stale = and_(
+            UserLimits.week_start.is_not(None),
+            UserLimits.week_start <= now - WINDOW,
+        )
+        fresh_has_room = and_(
+            UserLimits.week_start.is_not(None),
+            UserLimits.week_start > now - WINDOW,
+            UserLimits.free_used_this_week < UserLimits.free_weekly_limit,
+        )
+        first_ever = UserLimits.week_start.is_(None)
+
+        stmt = (
+            update(UserLimits)
+            .where(UserLimits.user_id == user_id)
+            .where(or_(stale, first_ever, fresh_has_room))
+            .values(
+                free_used_this_week=case(
+                    (stale, 1),
+                    (first_ever, 1),
+                    else_=UserLimits.free_used_this_week + 1,
+                ),
+                week_start=case(
+                    (stale, now),
+                    (first_ever, now),
+                    else_=UserLimits.week_start,
+                ),
+            )
+            .returning(UserLimits.free_used_this_week, UserLimits.free_weekly_limit)
+        )
+        row = (await session.execute(stmt)).first()  # None ⇒ no slot ⇒ paywall
+        return (row[0], row[1]) if row is not None else None
+
+    @staticmethod
+    async def _refund_free(session: AsyncSession, user_id: object) -> None:
+        """Compensating refund of one FREE unit after a post-consume non-success exit (Pitfall 2).
+
+        Because ``_consume_free_atomic`` consumes the slot AS THE GATE (before the draw), every
+        post-consume early exit (honest-fail) MUST refund so the net counter is unchanged and
+        READ-10 ("limit never consumed on failure") holds. Runs in the SAME transaction as the
+        consume, before the soft-body return. Phase 7 refunds sub/paid analogously behind ``Bucket``.
+        """
+        await session.execute(
+            update(UserLimits)
+            .where(UserLimits.user_id == user_id)
+            .values(free_used_this_week=UserLimits.free_used_this_week - 1)
+        )
+
+    @staticmethod
+    def _compute_reset_at(week_start: datetime | None) -> datetime | None:
+        """The per-user free-limit reopen moment = ``week_start + WINDOW`` (None → None).
+
+        Surfaced on the paywall body so the FE renders the D-04 countdown («вернутся через N»). A
+        NULL ``week_start`` (no window anchored yet) returns None — but the paywall only fires within
+        a fresh exhausted window, where ``week_start`` is always set.
+        """
+        return (week_start + WINDOW) if week_start is not None else None
 
     # ------------------------------------------------------------------ persistence
 
