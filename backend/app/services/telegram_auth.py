@@ -23,7 +23,7 @@ import hashlib
 import hmac
 import json
 import time
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 from urllib.parse import parse_qsl
 
 from sqlalchemy import select
@@ -91,12 +91,6 @@ def parse_user(pairs: dict[str, str]) -> dict:
     return json.loads(raw)
 
 
-def _current_week_start() -> date:
-    """Monday of the current ISO week (UTC) — the free-limit reset anchor."""
-    today = datetime.now(UTC).date()
-    return today - timedelta(days=today.weekday())
-
-
 async def authenticate(init_data: str, session: AsyncSession) -> tuple[User, str]:
     """Validate -> upsert the user (+ ensure user_limits) -> return ``(user, jwt)``.
 
@@ -148,28 +142,26 @@ async def authenticate(init_data: str, session: AsyncSession) -> tuple[User, str
     return user, token
 
 
-async def _ensure_user_limits(session: AsyncSession, user_id) -> UserLimits:
-    """Insert a ``user_limits`` row for a first-time user; return the existing one otherwise.
+async def _ensure_user_limits(session: AsyncSession, user_id) -> None:
+    """Ensure a ``user_limits`` row exists for the user (race-safe, D-02).
 
-    Idempotent: a repeat login does not create a second row (the SELECT short-circuits).
+    A single ``INSERT ... ON CONFLICT (user_id) DO NOTHING`` (relying on the
+    ``uq_user_limits_user_id`` UNIQUE constraint). Two concurrent first-logins for the same
+    brand-new user therefore create exactly ONE row — no SELECT-then-INSERT race, no duplicate
+    row (threat T-06-01 / Pattern 5). ``week_start`` is deliberately OMITTED so the row is
+    created with ``week_start = NULL``: the rolling window anchors on the *first reading*, NOT
+    an ISO-Monday date (D-01/D-02). Idempotent — a repeat login is a no-op conflict.
     """
-    existing = (
-        await session.execute(
-            select(UserLimits).where(UserLimits.user_id == user_id)
+    stmt = (
+        pg_insert(UserLimits)
+        .values(
+            user_id=user_id,
+            free_weekly_limit=_FREE_WEEKLY_LIMIT,
+            free_used_this_week=0,
         )
-    ).scalar_one_or_none()
-    if existing is not None:
-        return existing
-
-    limits = UserLimits(
-        user_id=user_id,
-        free_weekly_limit=_FREE_WEEKLY_LIMIT,
-        free_used_this_week=0,
-        week_start=_current_week_start(),
+        .on_conflict_do_nothing(index_elements=["user_id"])
     )
-    session.add(limits)
-    await session.flush()
-    return limits
+    await session.execute(stmt)
 
 
 async def get_user_limits(session: AsyncSession, user_id) -> UserLimits | None:
