@@ -28,7 +28,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_session
+from app.api.deps import get_current_user, get_session, throttle_gate
 from app.models.user import User
 from app.schemas.reading import ReadingCreate, ReadingListItemOut, ReadingOut
 from app.services.reading import ReadingInputError, ReadingService
@@ -46,7 +46,11 @@ def get_reading_service() -> ReadingService:
     return ReadingService()
 
 
-@router.post("/readings", response_model=ReadingOut)
+@router.post(
+    "/readings",
+    response_model=ReadingOut,
+    dependencies=[Depends(throttle_gate)],
+)
 async def create_reading(
     body: ReadingCreate,
     user: User = Depends(get_current_user),
@@ -55,6 +59,9 @@ async def create_reading(
 ) -> ReadingOut:
     """Create a reading for the authenticated user (Bearer JWT, validated body).
 
+    GATE 0 is ``throttle_gate`` (in ``dependencies=[...]``): FastAPI resolves it BEFORE the
+    path-operation's own ``Depends`` params, so a burst over the cap returns 429 before
+    ``get_session`` opens a transaction or the service runs (LIMIT-05, success-criterion 4).
     Delegates to ``ReadingService.create_reading``; maps an unknown/inactive deck or spread to a
     404. The user comes from the JWT (``get_current_user``), never the body (T-04-23).
     """

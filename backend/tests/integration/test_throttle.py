@@ -29,12 +29,19 @@ def _key_user() -> int:
 
 
 async def _throttle_ok(redis_client: object, user_id: int, *, window_s: int, burst_cap: int) -> bool:
-    """Adapter to whatever Plan 03 names the throttle primitive (deps or core.redis)."""
+    """Adapter to whatever Plan 03 named the throttle primitive (deps or core.redis).
+
+    Plan 03 finalized ``app.core.redis.throttle_ok(user_id, *, window_s, burst_cap)`` — it uses the
+    shared module-level ``redis_client`` and does NOT take a ``redis`` arg. The ``redis_client``
+    fixture is still received here so the test skips cleanly when Redis is down (the fixture pings
+    on setup), but only ``user_id`` is forwarded to the real primitive.
+    """
     try:
         from app.api.deps import throttle_ok  # type: ignore[attr-defined]
     except ImportError:
-        from app.core.redis import throttle_ok  # type: ignore[attr-defined]
-    return await throttle_ok(redis_client, user_id, window_s=window_s, burst_cap=burst_cap)
+        from app.core.redis import throttle_ok
+
+    return await throttle_ok(user_id, window_s=window_s, burst_cap=burst_cap)
 
 
 @pytest.mark.xfail(strict=False, reason="Plan 06-03 implements the Redis throttle primitive")

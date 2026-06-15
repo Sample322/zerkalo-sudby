@@ -59,9 +59,26 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+async def throttle_gate(user: User = Depends(get_current_user)) -> None:
+    """GATE 0 for ``POST /api/readings`` — anti-burst throttle before any PG/LLM work (LIMIT-05).
+
+    Over the burst cap → HTTP 429 (retryable, the FE's ``kind:"throttle"`` discriminant, D-08);
+    under the cap it is a no-op. Depends ONLY on ``get_current_user`` so it keys off the verified
+    JWT ``user.id`` (never a request-body field, T-06 spoofing) and — deliberately — does NOT
+    open a DB session, so the 429 short-circuits BEFORE any Postgres transaction opens (success-
+    criterion 4). The atomic Lua throttle lives in ``core.redis``; the import is local to keep the
+    Redis dependency off this module's import-time surface.
+    """
+    from app.core.redis import throttle_ok
+
+    if not await throttle_ok(user.id):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "throttled")
+
+
 __all__ = [
     "get_session",
     "get_redis",
     "get_current_user",
     "require_admin",
+    "throttle_gate",
 ]
