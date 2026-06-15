@@ -3,14 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-06-15T19:38:31.532Z"
-last_activity: 2026-06-15 -- Phase 06 planning complete
+last_updated: "2026-06-15T19:57:24.429Z"
+last_activity: 2026-06-15
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 31
-  completed_plans: 27
+  completed_plans: 28
   percent: 63
 ---
 
@@ -21,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Один и тот же вопрос ощущается по-разному в разных колодах — красивый мистический ритуал в Telegram, дающий глубокий, но бережный ответ.
-**Current focus:** Phase 6 — free limits & soft paywall
+**Current focus:** Phase 06 — free-limits-soft-paywall
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
+Phase: 06 (free-limits-soft-paywall) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-06-15 -- Phase 06 planning complete
+Last activity: 2026-06-15
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -75,6 +74,7 @@ Progress: [██████████] 100%
 | Phase 05 P05 | 10min | 2 tasks | 13 files |
 | Phase 05 P06 | 40min | 2 tasks | 8 files |
 | Phase 05 P07 | 60min | 2 tasks | 9 files |
+| Phase 06 P01 | 11 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -123,6 +123,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Phase 5 (Plan 05): FE history/profile navigation foundation + History list slice — Step union extended with OFF-FLOW history|profile|readingDetail (goTo/back only, excluded from STEP_ORDER so next('result') stays terminal; NO react-router — extends the Phase-3 D-02 Zustand step-machine); selection store gains detailReadingId + setDetailReadingId (the History→detail writer seam 05-06 reads); FlowRoot registers all three (readingDetail REUSES ResultScreen, D-02). This foundation plan owns ALL shared FE seams (step union, FlowRoot registry, api/readings.ts, useReadings.ts, ALL new copy) so 05-06/07 replace ONLY their own screen file (Phase-3 FlowRoot-stub pattern, no multi-writer conflict). HistoryScreen = reverse-chrono list via useReadingsList against GET /api/readings (server state, stable key ['readings','list'] — no filters D-01, the Pitfall-5 delete-mutation seam), §9.6 empty state, thumbnails reuse CardArtFallback down-scaled into a 44×70 box (empty→CSS fallback A2), back→Home (D-11), tap→setDetailReadingId+goTo(readingDetail). CatalogScreen header icons → goTo(history)/goTo(profile) (D-10, NO bottom tab bar — ritual/reveal/result stay chrome-free); ResultScreen «история» un-stubbed → goTo(history) (D-10 supersedes Phase-3 D-12 inert stub; «сохранить карточку» stays «скоро» Phase 8). Personalization explainer copy (consumed by 05-07) = «история раскладов»/«колода помнит» + privacy note, NEVER the mechanism (SAFE-06/Pitfall 6). Zero new deps. Full FE suite 87 green (baseline 80 +7), tsc 0, vite build ok. -> SettingsPatch (all-optional 3 booleans, NO user_id) + handler applies only model_dump(exclude_unset=True) keys to current_user, commit, return SettingsOut (PROF-02/D-09). Partial-update invariant (omitted flag untouched); JWT-scoped — forged body user_id dropped by closed schema, mutated row is always the JWT sub (T-05-SPOOF); empty body = 200 no-op. GET /api/me / MeResponse UNCHANGED (PROF-01 already satisfied, count/sub hidden by UI D-08) — only a request schema added. HIST-05/D-06 closed BY ABSENCE: lock comment above PromptEngine.build (no history param/fetch/branch added) + test_build_has_no_history_parameter introspection fence; consent flag persisted but history NEVER assembled into §18 prompt — the personalization feature stays v2/ENG-02. Turns 05-01 settings + gate red tests green (clean-skip without PG).
 
 - [Phase 05]: Phase 5 (Plan 07): FE Profile/Settings + onboarding server-migration — COMPLETES Phase 5 (7/7). me.ts (fetchMe GET /api/me + patchSettings PATCH /api/me/settings over apiFetch, types reused from api/auth.ts); useMe (queryKey ['me'], 60s staleTime) + usePatchSettings = canonical TanStack v5 optimistic mutation on the SINGLE ['me'] key (onMutate cancel+snapshot+merge-patch-into-settings, onError rollback, onSettled invalidate — mirrors the 05-06 delete recipe). ProfileScreen renders the Telegram identity (name+photo, graceful fallback) + reversals/personalization toggles wired to usePatchSettings (only the changed flag PATCHed, optimistic); back→Home (D-11); the readings-count/subscription block is DELIBERATELY omitted even though GET /api/me returns limits (D-08, the component test asserts the count value is absent); personalization explainer brand-safe (SAFE-06, copy from copy.ts, NOT edited). ONBOARDING SERVER-PRIMARY (D-09): FlowRoot gate reads GET /api/me settings.onboarding_completed as the truth, hasSeenOnboarding() localStorage is a BOOT FALLBACK only (no first-paint flash while useMe resolves, direct setState = no phantom back-history), a returning user with a stale-false server flag + localStorage seen triggers EXACTLY ONE reconciling PATCH onboarding_completed=true (reconciledRef-guarded); OnboardingFlow completion (CTA + skip) fires PATCH onboarding_completed=true while keeping markOnboardingSeen() as the boot fallback. REVERSALS SOURCE (D-09): CatalogScreen sources a new reading's reversals_enabled from the persisted GET /api/me flag (useMe), falling back to the local Zustand toggle only until useMe resolves (CTA never network-blocked); backend already enforces this (05-04), client now sends the persisted value for consistency; local toggle retained as a harmless transient fallback. FlowRoot SCREENS registry + CatalogScreen header-icon region (05-05) untouched (disjoint edits, boundary_note honored). Zero new deps. Full FE suite 101 green (baseline 99 +2: onboarding-completion-PATCH + persisted-reversals-source), tsc 0, vite build ok (520 modules). PROF-01/02 already complete (05-03 backend). /gsd-code-review 5 + /gsd-secure-phase 5 remain before phase close (Phase-4 deferral pattern).
+- [Phase ?]: Phase 6 (Plan 01): week_start DATE->TIMESTAMP(tz) (A1, user-approved) + UNIQUE(user_id) (A2) in reversible Alembic 0002 (postgresql_using self-heals existing rows). _ensure_user_limits now INSERT ON CONFLICT DO NOTHING with week_start=NULL (D-02, anchors on first reading); _current_week_start removed.
+- [Phase ?]: Phase 6 (Plan 01): Wave-0 substrate — committed_seeded_catalog + two_committed_sessions give true cross-connection PG row-lock concurrency (savepoint harness cannot, Pitfall 3). 6 red stubs xfail(strict=False) import Plan-02/03 symbols inside the test body: determine_access/Bucket + ReadingService consume-as-gate+refund + ReadingOut.reason/reset_at (Plan 02); throttle_gate/throttle_ok in app.api.deps (Plan 03). Migration apply = BLOCKING human-verify (no Docker in agent env). Baseline 83 pass preserved (+11 skip +3 xfail).
 
 ### Pending Todos
 
@@ -148,7 +150,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-15T10:06:56.844Z
+Last session: 2026-06-15T19:57:05.204Z
 Stopped at: Phase 6 UI-SPEC approved
-Resume file: .planning/phases/06-free-limits-soft-paywall/06-UI-SPEC.md
+Resume file: None
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)

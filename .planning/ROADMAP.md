@@ -257,6 +257,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
 | 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete    | 2026-06-13 |
 | 5. History & Profile | 7/7 | Complete    | 2026-06-14 |
-| 6. Free Limits & Soft Paywall | 0/TBD | Not started | - |
+| 6. Free Limits & Soft Paywall | 1/4 | In Progress|  |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
 | 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |
