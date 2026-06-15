@@ -22,7 +22,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
-from app.core.db import engine
+from app.core.db import SessionLocal, engine
 from app.main import app
 from app.schemas.reading import (
     CardInterpretation,
@@ -230,3 +230,85 @@ async def seeded_catalog(auth_session: AsyncSession) -> dict[str, int]:
     counts["deck_cards"] = await _ensure_deck_cards(auth_session)
     await auth_session.flush()
     return counts
+
+
+# ---------------------------------------------------------------------------------------
+# Wave-0 TRUE-CONCURRENCY substrate (research Pitfall 3).
+#
+# The ``auth_session`` savepoint harness binds every session to ONE connection — it CANNOT
+# exercise cross-connection PostgreSQL row locks, which is exactly what the LIMIT-03
+# boundary-race proof (success-criterion 3) needs. These fixtures provide the missing
+# substrate: a COMMITTED catalog seed visible to multiple independent connections, plus a
+# factory that opens independent ``AsyncSession``s on real connections for ``asyncio.gather``.
+#
+# Because the seed is COMMITTED (not inside an outer-rollback savepoint), nothing upstream can
+# clean it — the fixture registers an EXPLICIT teardown that deletes what it seeded.
+# ---------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def committed_seeded_catalog(_db_ready: bool) -> AsyncIterator[dict[str, int]]:
+    """Seed the real MVP catalog on its OWN committed connection (true-concurrency substrate).
+
+    A sibling of ``seeded_catalog`` that opens an independent ``AsyncSession`` via the app's real
+    ``SessionLocal`` factory, runs ``run_seed`` + ``_ensure_deck_cards``, and ``commit``s — so two
+    independent connections (the ``two_committed_sessions`` factory) both see the rows. Skips via
+    ``_db_ready`` when Postgres is unreachable. Registers an explicit teardown that deletes the
+    seeded rows (no outer savepoint rollback can clean a cross-connection commit). Yields the seed
+    counts (same shape as ``seeded_catalog``).
+    """
+    from sqlalchemy import delete
+
+    from app.models import (
+        Card,
+        Deck,
+        DeckCard,
+        PromptTemplate,
+        SpreadPosition,
+        SpreadType,
+        Topic,
+    )
+    from app.seed.loader import run_seed
+
+    async with SessionLocal() as session:
+        counts = await run_seed(session)
+        counts["deck_cards"] = await _ensure_deck_cards(session)
+        await session.commit()
+
+    try:
+        yield counts
+    finally:
+        # Explicit cleanup in child→parent FK order (the committed rows are NOT rolled back).
+        async with SessionLocal() as session:
+            for model in (
+                DeckCard,
+                SpreadPosition,
+                PromptTemplate,
+                Card,
+                SpreadType,
+                Deck,
+                Topic,
+            ):
+                await session.execute(delete(model))
+            await session.commit()
+
+
+@pytest.fixture
+def two_committed_sessions() -> object:
+    """Factory yielding independent committed ``AsyncSession``s on REAL connections.
+
+    Each call to the returned factory is an ``async with`` context over a fresh ``SessionLocal``
+    session bound to its OWN connection (NOT the savepoint-shared ``auth_session``). This is the
+    substrate ``asyncio.gather(create_reading, create_reading)`` needs to demonstrate a genuine
+    cross-connection row lock at the limit boundary (Pitfall 3) and the double-login single-row
+    race (D-02). Usage::
+
+        make = two_committed_sessions
+        async def attempt():
+            async with make() as s:
+                ...  # independent connection; the service commits
+
+    The shared ``app.core.db.SessionLocal`` is returned directly — calling it opens an independent
+    connection per invocation, which is exactly the contract.
+    """
+    return SessionLocal
