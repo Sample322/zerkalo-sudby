@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-15T19:57:24.429Z"
+last_updated: "2026-06-15T20:15:47.966Z"
 last_activity: 2026-06-15
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 31
-  completed_plans: 28
+  completed_plans: 29
   percent: 63
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 06 (free-limits-soft-paywall) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-15
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [█████████░] 90%
 | Phase 05 P06 | 40min | 2 tasks | 8 files |
 | Phase 05 P07 | 60min | 2 tasks | 9 files |
 | Phase 06 P01 | 11 | 3 tasks | 11 files |
+| Phase 06 P02 | 12min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,9 @@ Recent decisions affecting current work:
 - [Phase 05]: Phase 5 (Plan 07): FE Profile/Settings + onboarding server-migration — COMPLETES Phase 5 (7/7). me.ts (fetchMe GET /api/me + patchSettings PATCH /api/me/settings over apiFetch, types reused from api/auth.ts); useMe (queryKey ['me'], 60s staleTime) + usePatchSettings = canonical TanStack v5 optimistic mutation on the SINGLE ['me'] key (onMutate cancel+snapshot+merge-patch-into-settings, onError rollback, onSettled invalidate — mirrors the 05-06 delete recipe). ProfileScreen renders the Telegram identity (name+photo, graceful fallback) + reversals/personalization toggles wired to usePatchSettings (only the changed flag PATCHed, optimistic); back→Home (D-11); the readings-count/subscription block is DELIBERATELY omitted even though GET /api/me returns limits (D-08, the component test asserts the count value is absent); personalization explainer brand-safe (SAFE-06, copy from copy.ts, NOT edited). ONBOARDING SERVER-PRIMARY (D-09): FlowRoot gate reads GET /api/me settings.onboarding_completed as the truth, hasSeenOnboarding() localStorage is a BOOT FALLBACK only (no first-paint flash while useMe resolves, direct setState = no phantom back-history), a returning user with a stale-false server flag + localStorage seen triggers EXACTLY ONE reconciling PATCH onboarding_completed=true (reconciledRef-guarded); OnboardingFlow completion (CTA + skip) fires PATCH onboarding_completed=true while keeping markOnboardingSeen() as the boot fallback. REVERSALS SOURCE (D-09): CatalogScreen sources a new reading's reversals_enabled from the persisted GET /api/me flag (useMe), falling back to the local Zustand toggle only until useMe resolves (CTA never network-blocked); backend already enforces this (05-04), client now sends the persisted value for consistency; local toggle retained as a harmless transient fallback. FlowRoot SCREENS registry + CatalogScreen header-icon region (05-05) untouched (disjoint edits, boundary_note honored). Zero new deps. Full FE suite 101 green (baseline 99 +2: onboarding-completion-PATCH + persisted-reversals-source), tsc 0, vite build ok (520 modules). PROF-01/02 already complete (05-03 backend). /gsd-code-review 5 + /gsd-secure-phase 5 remain before phase close (Phase-4 deferral pattern).
 - [Phase ?]: Phase 6 (Plan 01): week_start DATE->TIMESTAMP(tz) (A1, user-approved) + UNIQUE(user_id) (A2) in reversible Alembic 0002 (postgresql_using self-heals existing rows). _ensure_user_limits now INSERT ON CONFLICT DO NOTHING with week_start=NULL (D-02, anchors on first reading); _current_week_start removed.
 - [Phase ?]: Phase 6 (Plan 01): Wave-0 substrate — committed_seeded_catalog + two_committed_sessions give true cross-connection PG row-lock concurrency (savepoint harness cannot, Pitfall 3). 6 red stubs xfail(strict=False) import Plan-02/03 symbols inside the test body: determine_access/Bucket + ReadingService consume-as-gate+refund + ReadingOut.reason/reset_at (Plan 02); throttle_gate/throttle_ok in app.api.deps (Plan 03). Migration apply = BLOCKING human-verify (no Docker in agent env). Baseline 83 pass preserved (+11 skip +3 xfail).
+- [Phase ?]: Phase 6 (Plan 02): atomic free-quota consume = ONE conditional UPDATE user_limits WHERE free_used<limit (OR stale OR null) RETURNING, lazy rolling-7d reset folded in via case() (stale/first_ever/fresh_has_room defined once, reused in WHERE+SET); no-slot via .first() is None (never rowcount), no FOR UPDATE/app lock — the PG row lock IS the success-criterion-3 control.
+- [Phase ?]: Phase 6 (Plan 02): consume-as-gate + refund-only-on-honest-fail — safety classify runs BEFORE the atomic consume (crisis/abusive short-circuit pre-gate, zero consume/refund); the consume is the gate before draw; the single post-consume exit (honest-fail) refunds free_used in-transaction so READ-10 holds. All four Phase-4 test_limit_untouched_on_* invariants preserved.
+- [Phase ?]: Phase 6 (Plan 02): FE limit-block contract (Plan 04) = HTTP 200 ReadingOut with reason=='paywall' + reset_at=week_start+7d; throttle (Plan 03) is a separate 429 {kind:'throttle'} GATE 0 (D-08, never conflated). determine_access free->subscription->paid; only FREE populated, sub/paid = Phase-7 seam.
 
 ### Pending Todos
 
@@ -150,7 +154,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-15T19:57:05.204Z
+Last session: 2026-06-15T20:14:57.534Z
 Stopped at: Phase 6 UI-SPEC approved
 Resume file: None
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)
