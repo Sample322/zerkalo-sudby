@@ -2,19 +2,25 @@
 
 This is the moment the Core Value goes live end-to-end on the backend. ``create_reading`` owns
 the ``AsyncSession`` transaction and composes every Wave-0/Wave-1 piece in the EXACT locked order
-the product invariants require (RESEARCH "System Architecture Diagram"):
+the product invariants require (RESEARCH "System Architecture Diagram"). The Phase-6 order inverts
+the Phase-4 "consume last": the free slot is now consumed AS THE GATE (atomically, before the
+draw), so the only post-consume non-success exit (honest-fail) must REFUND (Pitfall 2):
 
-  1. **limit check** — read the user's ``user_limits``; no quota → soft §9.8 paywall body,
-     NO draw (Phase-4 scope is "has quota?" + "consume on success"; weekly reset/buckets are
-     Phase 6);
-  2. **SAFETY GATE — BEFORE any draw/charge** (D-03, the most important ordering invariant in
-     the phase) — ``SafetyService.classify`` + ``route``:
+  1. **SAFETY GATE — BEFORE the consume-gate** (constraint 3 / D-03, the most important ordering
+     invariant in the phase) — ``SafetyService.classify`` + ``route``. Running safety FIRST keeps
+     the counter untouched on a safety exit (zero consume → zero refund):
        * crisis → persist a parent ``readings`` row (status=FAILED) FIRST so the NOT-NULL
          ``generation_logs.reading_id`` FK holds, write the classify log row IF a real classify
-         call was made, then return the seeded refusal copy — NO draw, NO generation, limit kept;
-       * abusive → same, returning the seeded redirect copy — NO draw, limit kept;
+         call was made, then return the seeded refusal copy — NO consume, NO draw, limit kept;
+       * abusive → same, returning the seeded redirect copy — NO consume, NO draw, limit kept;
        * ``*_sensitive`` → set a ``SAFETY_MODIFIER`` flag and continue (silent softening, D-05);
        * normal → continue;
+  2. **ATOMIC FREE CONSUME-GATE** (LIMIT-02/03/04, RESEARCH Pattern 1/2/4) — ``determine_access``
+     picks the bucket (free→sub→paid; only FREE populated this phase); the conditional
+     ``UPDATE … WHERE … RETURNING`` (with the lazy rolling-7d reset folded in via ``case()``) is
+     the indivisible check+decrement. A returned row ⇒ the slot is consumed (``remaining`` from
+     the RETURNING); NO row ⇒ exhausted within a fresh window ⇒ soft §9.8 paywall body carrying
+     ``reason="paywall"`` + ``reset_at`` (week_start + 7d), NO draw;
   3. **CSPRNG draw** (``CardDrawService.draw``) → persist ``readings`` (status=PENDING) + the
      immutable ``reading_cards`` rows; write the classify log row (if a call was made) against
      the now-existing reading;
@@ -22,18 +28,18 @@ the product invariants require (RESEARCH "System Architecture Diagram"):
   5. status=GENERATING; ONE ``LLMService.generate`` call. Each attempt's audit lands in
      ``generation_logs``. On ``LLMGenerationError`` (exhausted after the corrective retry) →
      HONEST FAIL (D-09): status=FAILED, truncated ``generation_error`` (server-side only), a final
-     failed log row, NO consume, NO templated stand-in reading, return the soft §9.8 body;
+     failed log row, **REFUND the gate's consume** (``free_used_this_week -= 1``, Pitfall 2 — keeps
+     READ-10), NO templated stand-in reading, return the soft §9.8 body;
   6. **brand guard** (SAFE-06) over the generated text → LOG+FLAG only (never fails the reading);
-  7. **persist the mapping** (RESEARCH Pattern 1): each ``CardInterpretation`` matched BY
-     ``position_index`` (Pitfall 3) onto ``reading_cards.short_meaning/interpretation/
-     mystical_accent`` (``soft_advice`` appended into ``interpretation``); ``readings.summary_short/
-     main_factor/advice`` + the full ``ReadingSummary`` JSON into ``readings.summary_full``;
-     ``model_name``/``completed_at``; status=COMPLETED;
-  8. **consume the limit in EXACTLY this one place** — ``free_used_this_week += 1`` (Pitfall 4),
-     AFTER persist, BEFORE commit;
-  9. commit; build and return ``ReadingOut`` (per-card names/orientations authoritative from the
+  7. **persist the mapping** (RESEARCH Pattern 3): each ``CardInterpretation`` matched BY
+     ``position_index`` onto ``reading_cards.short_meaning/interpretation/mystical_accent``
+     (``soft_advice`` appended into ``interpretation``); ``readings.summary_short/main_factor/
+     advice`` + the full ``ReadingSummary`` JSON into ``readings.summary_full``; ``model_name``/
+     ``completed_at``; status=COMPLETED;
+  8. commit; build and return ``ReadingOut`` (per-card names/orientations authoritative from the
      persisted ``reading_cards``, NOT echoed by the model; all five §18 summary fields;
-     remaining_limits).
+     ``remaining_limits`` from the consume-gate). NO consume here — the slot was already taken by
+     the gate in step 2.
 
 The collaborators (CardDrawService / SafetyService / PromptEngine / LLMService) are injected via
 constructor params defaulting to the real ones — the same seam Plan 03/04 used so tests pass fakes
@@ -241,22 +247,20 @@ class ReadingService:
         """
         deck = await self._resolve_deck(session, req.deck_slug)
         spread = await self._resolve_spread(session, req.spread_slug)
+        now = datetime.now(UTC)
 
-        # 1. Limit check (Phase-4 scope: has-quota? + consume-on-success). No quota → soft body.
+        # Load the user's limits row (D-02 guarantees one exists from auth; a missing row is
+        # treated as "no free quota" rather than unlimited — fail-closed, see the consume gate).
         limits = await self._get_limits(session, user.id)
-        if limits is not None and not self._has_quota(limits):
-            return self._soft_body(
-                reading_id=None,
-                message=SOFT_PAYWALL_COPY,
-                remaining=0,
-            )
 
-        # 2. SAFETY GATE — BEFORE any draw/charge (D-03).
+        # 1. SAFETY GATE — BEFORE the consume-gate (constraint 3). Running safety first keeps the
+        #    counter UNTOUCHED on a crisis/abusive exit (zero consume → zero refund), so the
+        #    Phase-4 test_limit_untouched_on_crisis/_abusive invariants hold under the new order.
         classify_result = _normalize_classify(await self._safety.classify(req.question))
         action = route(classify_result.verdict)
 
         if not action.continues_to_draw:
-            # crisis → refusal, abusive → redirect. Both short-circuit with NO draw, limit kept.
+            # crisis → refusal, abusive → redirect. Both short-circuit with NO consume, limit kept.
             return await self._short_circuit(
                 session, user, limits, action, classify_result, req, deck, spread
             )
@@ -266,6 +270,22 @@ class ReadingService:
             if action is SafetyAction.SAFETY_MODIFIER
             else SafetyAction.GENERATE
         )
+
+        # 2. ATOMIC FREE CONSUME-GATE (LIMIT-02/03/04). determine_access picks the bucket
+        #    (free→sub→paid; only FREE populated this phase); the conditional UPDATE…RETURNING is
+        #    the gate that atomically decides "got a slot?" (with the lazy reset folded in) BEFORE
+        #    any draw. None ⇒ exhausted within a fresh window ⇒ soft paywall, NO draw.
+        gate = await self._consume_free_gate(session, user, limits, now)
+        if gate is None:
+            return self._soft_body(
+                reading_id=None,
+                message=SOFT_PAYWALL_COPY,
+                remaining=0,
+                reason="paywall",
+                reset_at=self._compute_reset_at(limits.week_start if limits else None),
+            )
+        used, limit = gate
+        remaining = max(0, limit - used)
 
         # 3. CSPRNG draw + persist pending + immutable reading_cards.
         # D-09 / PROF-02: the draw's reversals come from the PERSISTED user flag (default ON,
@@ -307,8 +327,10 @@ class ReadingService:
                 session, reading, bundle.system, bundle.user, bundle.prompt_version
             )
         except LLMGenerationError as exc:
-            # HONEST FAIL (D-09): no consume, no templated stand-in, soft §9.8 body.
-            return await self._honest_fail(session, reading, limits, exc)
+            # HONEST FAIL (D-09): the slot was already consumed by the gate, so REFUND it here
+            # (Pitfall 2 — keeps READ-10 "limit never consumed on failure"); no templated
+            # stand-in, soft §9.8 body. The refund runs in-transaction inside _honest_fail.
+            return await self._honest_fail(session, reading, user, limits, exc)
 
         # 6. Brand guard — LOG + FLAG only (never fail the reading; RESEARCH Open Question 2).
         self._brand_guard(reading.id, output)
@@ -318,10 +340,10 @@ class ReadingService:
             session, reading, spread, draw_records, output, model_name
         )
 
-        # 8. Consume the limit in EXACTLY this one place (Pitfall 4).
-        remaining = self._consume_limit(limits)
-
-        # 9. Commit + return the real reading (authoritative names/orientations from the rows).
+        # 8. Commit + return the real reading (authoritative names/orientations from the rows).
+        #    NO consume here — the free slot was already taken atomically by the consume-gate
+        #    (step 2); ``remaining`` came from that gate's RETURNING. (Pattern 1 inverts the
+        #    Phase-4 "consume last" order; only the failure paths refund.)
         await session.commit()
         return self._build_response(reading, cards, remaining)
 
@@ -586,18 +608,6 @@ class ReadingService:
         ).scalar_one_or_none()
 
     @staticmethod
-    def _has_quota(limits: UserLimits) -> bool:
-        """Phase-4 quota check: a free unit remains, OR a paid / subscription balance is available.
-
-        Weekly reset / atomic decrement / Redis throttle are Phase 6 — out of scope here.
-        """
-        free_left = (limits.free_weekly_limit or 0) - (limits.free_used_this_week or 0)
-        subscription_left = (limits.subscription_spreads_limit or 0) - (
-            limits.subscription_spreads_used or 0
-        )
-        return free_left > 0 or (limits.paid_spreads_balance or 0) > 0 or subscription_left > 0
-
-    @staticmethod
     def _remaining(limits: UserLimits | None) -> int | None:
         """Remaining free units for the §14.5 ``remaining_limits`` field (None if no row)."""
         if limits is None:
@@ -665,6 +675,35 @@ class ReadingService:
         )
         row = (await session.execute(stmt)).first()  # None ⇒ no slot ⇒ paywall
         return (row[0], row[1]) if row is not None else None
+
+    async def _consume_free_gate(
+        self,
+        session: AsyncSession,
+        user: User,
+        limits: UserLimits | None,
+        now: datetime,
+    ) -> tuple[int, int] | None:
+        """Pick the bucket (``determine_access``) and run its atomic consume — the create-path gate.
+
+        This phase only the FREE bucket is populated, so the gate routes ``Bucket.FREE`` to the
+        atomic ``_consume_free_atomic`` (which self-handles stale/first-ever/exhausted) and treats
+        every other bucket as "no slot" (``None`` → paywall). The ``SUBSCRIPTION``/``PAID`` arms are
+        the Phase-7 seam: Phase 7 adds their atomic consume statements here behind the same enum,
+        falling through to them when ``determine_access`` returns those buckets.
+
+        A MISSING ``user_limits`` row (``limits is None``) is **fail-closed** → ``None`` (paywall):
+        D-02 guarantees a row at auth, so a missing row is anomalous, and granting a free reading on
+        a missing row would re-open the Phase-4 "no row → unlimited" gap. Returns ``(used, limit)``
+        on a consumed slot, ``None`` otherwise.
+        """
+        if limits is None:
+            return None
+        bucket = determine_access(limits, now)
+        if bucket is Bucket.FREE:
+            return await self._consume_free_atomic(session, user.id, now)
+        # SUBSCRIPTION / PAID are Phase-7 seams (their balances are 0 this phase, so determine_access
+        # never returns them here); NONE → exhausted. Either way: no slot this phase → paywall.
+        return None
 
     @staticmethod
     async def _refund_free(session: AsyncSession, user_id: object) -> None:
@@ -828,25 +867,6 @@ class ReadingService:
         """
         return json.dumps(summary.model_dump(), ensure_ascii=False)
 
-    @staticmethod
-    def _consume_limit(limits: UserLimits | None) -> int | None:
-        """Consume EXACTLY one unit on success (Pitfall 4) and return the remaining free count.
-
-        Decrements the free weekly counter when one is available; otherwise draws from the paid
-        balance, then the subscription allotment (the order the quota check accepts them). This is
-        the ONLY place the limit is mutated — every non-success exit leaves it untouched (READ-10).
-        """
-        if limits is None:
-            return None
-        free_left = (limits.free_weekly_limit or 0) - (limits.free_used_this_week or 0)
-        if free_left > 0:
-            limits.free_used_this_week = (limits.free_used_this_week or 0) + 1
-        elif (limits.paid_spreads_balance or 0) > 0:
-            limits.paid_spreads_balance = limits.paid_spreads_balance - 1
-        else:
-            limits.subscription_spreads_used = (limits.subscription_spreads_used or 0) + 1
-        return max(0, (limits.free_weekly_limit or 0) - (limits.free_used_this_week or 0))
-
     # ------------------------------------------------------------------ generation + logs
 
     async def _generate(
@@ -1007,14 +1027,17 @@ class ReadingService:
         self,
         session: AsyncSession,
         reading: Reading,
+        user: User,
         limits: UserLimits | None,
         exc: LLMGenerationError,
     ) -> ReadingOut:
-        """Honest fail (D-09): status=FAILED, truncated error server-side, final log row, soft body.
+        """Honest fail (D-09): status=FAILED, REFUND the consumed slot, log row, soft body.
 
-        Does NOT consume the limit (READ-04/10 — retry is free) and does NOT assemble any templated
-        stand-in reading from base meanings (D-09). The truncated ``generation_error`` is stored
-        server-side for debugging and never crosses the response boundary (T-04-27).
+        The free slot was already consumed by the atomic gate (Pattern 1), so this REFUNDS it
+        (``free_used_this_week -= 1`` in the same transaction, Pitfall 2) to keep the counter net
+        unchanged — READ-04/10 "retry is free / limit never consumed on failure". Does NOT assemble
+        any templated stand-in reading from base meanings (D-09). The truncated ``generation_error``
+        is stored server-side for debugging and never crosses the response boundary (T-04-27).
         """
         reading.status = ReadingStatus.FAILED
         reading.generation_error = self._truncate_error(exc)
@@ -1027,6 +1050,10 @@ class ReadingService:
                 error=self._truncate_error(exc),
             )
         )
+        # Compensating refund of the gate's consume (only when a row exists / was consumed).
+        if limits is not None:
+            await self._refund_free(session, user.id)
+            await session.refresh(limits)  # reflect the refunded counter in the returned remaining
         await session.commit()
         logger.warning(
             "reading_honest_fail",
@@ -1049,13 +1076,23 @@ class ReadingService:
 
     @staticmethod
     def _soft_body(
-        *, reading_id: str | None, message: str, remaining: int | None
+        *,
+        reading_id: str | None,
+        message: str,
+        remaining: int | None,
+        reason: str | None = None,
+        reset_at: datetime | None = None,
     ) -> ReadingOut:
         """A deliberate 200 soft body (paywall / refusal / redirect / honest fail), never a 500.
 
         ``status='failed'`` + ``summary=None`` + empty ``cards``; the human copy rides in
         ``summary_short`` so the existing frontend surfaces it (the result screen reads the soft
         message there). ``reading_id`` is the empty string for the pre-draw paywall (no row).
+
+        ``reason`` is the machine-readable discriminant the FE branches on (``"paywall"`` for the
+        limit block); ``reset_at`` is the per-user reopen moment fuelling the D-04 countdown. Both
+        default to None so refusal / redirect / honest-fail bodies stay unchanged (Plan 04 only
+        keys the paywall sheet off ``reason == "paywall"``).
         """
         return ReadingOut(
             reading_id=reading_id or "",
@@ -1069,6 +1106,8 @@ class ReadingService:
                 closing_phrase="",
             ),
             remaining_limits=remaining,
+            reason=reason,
+            reset_at=reset_at,
         )
 
     @staticmethod

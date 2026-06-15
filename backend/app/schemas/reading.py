@@ -280,6 +280,19 @@ class ReadingOut(BaseModel):
         default=None,
         description="TZ §14.5 remaining_limits — сколько раскладов осталось",
     )
+    reason: str | None = Field(
+        default=None,
+        description=(
+            "machine-readable outcome discriminant for the FE catch: "
+            "paywall / throttle / failure / null on success (D-04 / 06-UI-SPEC)"
+        ),
+    )
+    reset_at: datetime | None = Field(
+        default=None,
+        description=(
+            "per-user free-limit reopen moment (week_start + 7d); fuels the FE countdown, D-04"
+        ),
+    )
 
 
 class ReadingListItemOut(BaseModel):

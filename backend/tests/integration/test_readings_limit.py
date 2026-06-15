@@ -13,6 +13,9 @@ are Phase 6 (RESEARCH Deferred Ideas), out of scope here.
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +32,28 @@ from tests.integration.test_readings_flow import (
     _output_for_indices,
     _spread_position_indices,
 )
+
+
+async def _make_fresh_exhausted(session: AsyncSession) -> User:
+    """A user with a FRESH window (week_start=now) fully spent (used=3/limit=3).
+
+    Distinct from the imported ``_make_user`` (which leaves ``week_start`` NULL): a real ``reset_at``
+    on the paywall body requires an anchored window, so this seeds ``week_start=now`` — the only
+    state where the paywall carries a non-None reopen moment for the FE countdown (D-04).
+    """
+    user = User(telegram_id=int(uuid.uuid4().int % 1_000_000_000))
+    session.add(user)
+    await session.flush()
+    session.add(
+        UserLimits(
+            user_id=user.id,
+            free_weekly_limit=3,
+            free_used_this_week=3,
+            week_start=datetime.now(UTC),
+        )
+    )
+    await session.flush()
+    return user
 
 
 async def _used(session: AsyncSession, user: User) -> int:
@@ -118,3 +143,28 @@ async def test_limit_untouched_on_honest_fail(
 
     assert result.status == ReadingStatus.FAILED.value
     assert await _used(auth_session, user) == 0
+
+
+async def test_paywall_carries_reset_at(
+    auth_session: AsyncSession,
+    fake_llm: FakeLLM,
+    fake_safety: FakeSafety,
+    seeded_catalog: dict,
+) -> None:
+    """LIMIT-01/D-04: an exhausted FRESH window → paywall body with reason='paywall' + reset_at.
+
+    The consume-gate returns None (within a fresh window, used==limit), so the soft body carries the
+    machine-readable ``reason`` discriminant (Plan 04's FE branches on it) and the per-user
+    ``reset_at`` (week_start + 7d) for the countdown — with NO draw and the counter NOT pushed past
+    the limit (consume-as-gate never matched a row).
+    """
+    user = await _make_fresh_exhausted(auth_session)
+    service = ReadingService(safety=fake_safety, llm=fake_llm)
+
+    result = await service.create_reading(auth_session, user, _REQ)
+
+    assert result.status == ReadingStatus.FAILED.value
+    assert fake_llm.calls == 0  # no draw / no generation on a paywalled request
+    assert await _used(auth_session, user) == 3  # never past the limit
+    assert result.reason == "paywall"
+    assert result.reset_at is not None  # week_start + 7d, the FE countdown anchor (D-04)
