@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-15T20:15:47.966Z"
+last_updated: "2026-06-15T20:24:52.448Z"
 last_activity: 2026-06-15
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
   percent: 63
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 06 (free-limits-soft-paywall) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-06-15
 
-Progress: [█████████░] 94%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [█████████░] 94%
 | Phase 05 P07 | 60min | 2 tasks | 9 files |
 | Phase 06 P01 | 11 | 3 tasks | 11 files |
 | Phase 06 P02 | 12min | 3 tasks | 4 files |
+| Phase 06 P03 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 6 (Plan 02): atomic free-quota consume = ONE conditional UPDATE user_limits WHERE free_used<limit (OR stale OR null) RETURNING, lazy rolling-7d reset folded in via case() (stale/first_ever/fresh_has_room defined once, reused in WHERE+SET); no-slot via .first() is None (never rowcount), no FOR UPDATE/app lock — the PG row lock IS the success-criterion-3 control.
 - [Phase ?]: Phase 6 (Plan 02): consume-as-gate + refund-only-on-honest-fail — safety classify runs BEFORE the atomic consume (crisis/abusive short-circuit pre-gate, zero consume/refund); the consume is the gate before draw; the single post-consume exit (honest-fail) refunds free_used in-transaction so READ-10 holds. All four Phase-4 test_limit_untouched_on_* invariants preserved.
 - [Phase ?]: Phase 6 (Plan 02): FE limit-block contract (Plan 04) = HTTP 200 ReadingOut with reason=='paywall' + reset_at=week_start+7d; throttle (Plan 03) is a separate 429 {kind:'throttle'} GATE 0 (D-08, never conflated). determine_access free->subscription->paid; only FREE populated, sub/paid = Phase-7 seam.
+- [Phase ?]: 06-03: Redis throttle band locked at 60s window / cap 5 (D-07) — real 30s+ user never throttled; single fixed window, two-tier spacing deferred
+- [Phase ?]: 06-03: throttle_gate is GATE 0 on POST /readings only — keys off JWT user.id (T-06), not the DB session, so 429 short-circuits before any Postgres txn
 
 ### Pending Todos
 
@@ -154,7 +157,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-15T20:14:57.534Z
+Last session: 2026-06-15T20:24:22.792Z
 Stopped at: Phase 6 UI-SPEC approved
 Resume file: None
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)

@@ -86,7 +86,7 @@
 - [x] **LIMIT-02**: Недельный лимит сбрасывается (`week_start`)
 - [x] **LIMIT-03**: Перед раскладом проверяется доступ (free/paid/subscription); при исчерпании — мягкий paywall
 - [x] **LIMIT-04**: Платные расклады списываются из `paid_spreads_balance`, подписочные — из subscription-лимита; бесплатные считаются отдельно
-- [ ] **LIMIT-05**: Anti-abuse/rate-limit через Redis (атомарный throttle на создание раскладов)
+- [x] **LIMIT-05**: Anti-abuse/rate-limit через Redis (атомарный throttle на создание раскладов)
 
 ### Payments (PAY)
 
@@ -236,7 +236,7 @@
 | LIMIT-02 | Phase 6 — Free Limits & Soft Paywall | Complete |
 | LIMIT-03 | Phase 6 — Free Limits & Soft Paywall | Complete |
 | LIMIT-04 | Phase 6 — Free Limits & Soft Paywall | Complete |
-| LIMIT-05 | Phase 6 — Free Limits & Soft Paywall | Pending |
+| LIMIT-05 | Phase 6 — Free Limits & Soft Paywall | Complete |
 | PAY-01 | Phase 7 — Telegram Stars Payments | Pending |
 | PAY-02 | Phase 7 — Telegram Stars Payments | Pending |
 | PAY-03 | Phase 7 — Telegram Stars Payments | Pending |
