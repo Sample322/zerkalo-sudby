@@ -417,9 +417,12 @@ def _compute_reset_at(week_start: datetime | None) -> datetime | None:
 
 **These are the items discuss-phase / the planner should confirm before locking** — especially A1 and A2 (schema changes contradicting the "no schema change" CONTEXT note).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`week_start` DATE→TIMESTAMP migration (A1).**
+> **RESOLVED 2026-06-15 (before planning).** All four answered and reflected in the plans:
+> Q1 (A1) + Q2 (A2) → the user **APPROVED** the bundled Alembic migration (`week_start` Date→TIMESTAMP + UNIQUE on `user_limits.user_id`), implemented in **06-01-PLAN.md**. Q3 → **FastAPI dependency** (`throttle_gate`), **06-03-PLAN.md**. Q4 → **throttle 429 / paywall 200 soft body** carrying `reason` + `reset_at`, across **06-02 / 06-03 / 06-04**. The recommendations below are the chosen path.
+
+1. **`week_start` DATE→TIMESTAMP migration (A1).** *(RESOLVED → user-approved, 06-01)*
    - What we know: the column is `sa.Date()` (model + migration 0001 confirmed); D-01 needs timestamp precision; an Alembic `alter_column` casts existing dates to midnight-timestamps cleanly.
    - What's unclear: whether the user accepts a schema change here (CONTEXT said none expected).
    - Recommendation: **do the migration** — it's the correct fix and self-heals existing rows. Flag prominently; let discuss-phase/planner confirm. If declined, fall back to day-granular reset (document the imprecision in the countdown).

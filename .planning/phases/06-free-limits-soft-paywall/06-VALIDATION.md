@@ -52,8 +52,8 @@ created: 2026-06-15
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | {N}-0x | — | 0 | LIMIT-03 | — | Two concurrent create_reading at the boundary → exactly ONE succeeds, the other is limit-blocked (used never exceeds limit) | integration (2 committed AsyncSessions + `asyncio.gather`) | `uv run pytest backend/tests/.../test_limit_concurrency.py -q` | ❌ W0 | ⬜ pending |
 | {N}-0x | — | 0 | LIMIT-02 | — | Rolling reset fires exactly at `now ≥ week_start + 7d`, re-anchors `week_start`, zeroes `free_used_this_week` (boundary + just-under) | unit/integration | `uv run pytest -k rolling_reset -q` | ❌ W0 | ⬜ pending |
-| {N}-0x | — | 0 | LIMIT-04 | — | Throttle: Nth request inside the window → 429 BEFORE any PG/LLM work; TTL always set (Lua atomic INCR+EXPIRE), counter never stranded | integration (fakeredis/real Redis) | `uv run pytest -k throttle -q` | ❌ W0 | ⬜ pending |
-| {N}-0x | — | 0 | LIMIT-05 | — | `determine_access` selects free → subscription → paid in order; only `free` non-zero this phase; consume hits only the chosen bucket | unit (pure fn) | `uv run pytest -k determine_access -q` | ❌ W0 | ⬜ pending |
+| {N}-0x | — | 0 | LIMIT-05 | — | Throttle: Nth request inside the window → 429 BEFORE any PG/LLM work; TTL always set (Lua atomic INCR+EXPIRE), counter never stranded | integration (fakeredis/real Redis) | `uv run pytest -k throttle -q` | ❌ W0 | ⬜ pending |
+| {N}-0x | — | 0 | LIMIT-04 | — | `determine_access` selects free → subscription → paid in order; only `free` non-zero this phase; consume hits only the chosen bucket | unit (pure fn) | `uv run pytest -k determine_access -q` | ❌ W0 | ⬜ pending |
 | {N}-0x | — | 0 | LIMIT-01 | — | After 3 consumed, 4th create_reading → soft paywall body (200, `reason` + `reset_at`), limit NOT further decremented | integration | `uv run pytest -k paywall_block -q` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -64,8 +64,8 @@ created: 2026-06-15
 
 - [ ] `backend/tests/integration/test_limit_concurrency.py` — boundary-race stub (LIMIT-03); MUST use two independent **committed** `AsyncSession`s + `asyncio.gather` (the existing single-connection savepoint harness CANNOT exercise cross-connection row locks — research Pitfall 3)
 - [ ] `backend/tests/.../test_limits_reset.py` — rolling-reset boundary stubs (LIMIT-02)
-- [ ] `backend/tests/.../test_throttle.py` — Redis throttle gate stubs (LIMIT-04); fakeredis or a real Redis fixture
-- [ ] `backend/tests/.../test_determine_access.py` — bucket-order stubs (LIMIT-05)
+- [ ] `backend/tests/.../test_throttle.py` — Redis throttle gate stubs (LIMIT-05); fakeredis or a real Redis fixture
+- [ ] `backend/tests/.../test_determine_access.py` — bucket-order stubs (LIMIT-04)
 - [ ] `backend/tests/.../test_paywall_block.py` — exhaustion → paywall body + refund-on-failure stubs (LIMIT-01); assert `test_limit_untouched_on_*` (Phase-4) stay green under the new consume-as-gate + refund order
 - [ ] New fixture in `conftest.py` — two-committed-session factory for true concurrency
 
@@ -78,7 +78,7 @@ created: 2026-06-15
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | Migration applied (`week_start` TIMESTAMP + `user_id` UNIQUE) self-heals existing rows | LIMIT-02/D-02 | No Docker/Postgres in agent env | `cd backend && uv run alembic upgrade head` against a real DB, confirm columns/constraint |
-| Live throttle under real burst (readings <10–15s apart → 429) | LIMIT-04 | Needs live Redis + timing | Fire rapid reading requests, observe 429 then recovery after window |
+| Live throttle under real burst (readings <10–15s apart → 429) | LIMIT-05 | Needs live Redis + timing | Fire rapid reading requests, observe 429 then recovery after window |
 | Paywall sheet + countdown render in the real Mini App | LIMIT-01 | Telegram WebApp + live limit state | Exhaust 3 free, confirm soft paywall + correct reset countdown, no «AI»/fear copy |
 
 ---
