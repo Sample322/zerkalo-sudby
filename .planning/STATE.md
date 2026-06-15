@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-last_updated: 2026-06-14T21:32:57.975Z
+status: planning
+last_updated: "2026-06-15T09:44:19.150Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 8
@@ -11,7 +11,6 @@ progress:
   total_plans: 27
   completed_plans: 27
   percent: 63
-stopped_at: Phase 05 complete (7/7) — ready to discuss Phase 6
 ---
 
 # Project State
@@ -148,7 +147,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T21:21:49.449Z
-Stopped at: Completed 05-06-PLAN.md (FE reopen + swipe-to-delete/undo — ResultScreen detail mode renders the immutable GET /api/readings/{id} via the shared mapReadingOutToMock with an opacity fade-in + back→History; swipe-to-delete on the list card → optimistic remove on ["readings","list"] + a motion AnimatePresence UndoSnackbar (~5s, no toast lib) → DELETE; undo → POST /{id}/restore + re-insert the cached item at its original index. Full FE suite 95 green, tsc 0, vite build ok)
-Resume file: None
+Last session: 2026-06-15T09:44:19.141Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-free-limits-soft-paywall/06-CONTEXT.md
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)
