@@ -89,4 +89,15 @@ export interface ReadingOutResponse {
   cards: ReadingCardOutResponse[];
   summary: ReadingSummaryOutResponse | null;
   remaining_limits: number | null;
+  /**
+   * Phase-6 limit-block discriminant (06-02). On the soft paywall body this is `"paywall"`
+   * (HTTP 200, status != "completed", no draw); `null` on success / refusal / redirect /
+   * honest-fail. The createReading catch branches on this — NOT on string-matching the copy.
+   */
+  reason?: string | null;
+  /**
+   * Phase-6 per-user reopen moment (06-02): `week_start + 7d`, fuelling the D-04 countdown
+   * («вернутся через N»). Present on the paywall body, `null` otherwise.
+   */
+  reset_at?: string | null;
 }

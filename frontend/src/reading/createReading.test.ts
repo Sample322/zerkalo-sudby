@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "../stores/session";
 import { BANNED_BRAND_TOKENS } from "./copy";
-import { createReading } from "./createReading";
+import { createReading, ReadingError } from "./createReading";
 import type { ReadingOutResponse } from "./types";
 
 const POSITIONS = [
@@ -240,5 +240,77 @@ describe("createReading — real POST /api/readings via apiFetch (D-07 mechanica
       ...Object.values(reading.summary),
     ].join(" ");
     expect(BANNED_BRAND_TOKENS.test(text)).toBe(false);
+  });
+});
+
+// Phase-6 (D-08) — createReading rejects with a DISCRIMINABLE ReadingError so ONE catch in
+// CatalogScreen routes the throttle (429), the paywall (200 reason='paywall'), and a
+// generation failure to three distinct surfaces — never conflated. The success path,
+// signature, and MockReading return type are UNCHANGED (D-05/D-07 guard).
+describe("createReading — discriminated ReadingError (D-08 error transport)", () => {
+  it("throws ReadingError{kind:'throttle'} on HTTP 429 (the Redis burst gate, 06-03)", async () => {
+    stubFetch({ detail: "throttled" }, { status: 429 });
+    await expect(createReading(baseParams())).rejects.toMatchObject({
+      name: "ReadingError",
+      kind: "throttle",
+    });
+    // Belt: it is the typed subclass, not a bare Error.
+    await expect(createReading(baseParams())).rejects.toBeInstanceOf(ReadingError);
+  });
+
+  it("throws ReadingError{kind:'paywall', resetAt} on a 200 limit-block body (reason='paywall', 06-02)", async () => {
+    // The 06-02 soft paywall body: HTTP 200, status!='completed', reason='paywall',
+    // reset_at = week_start + 7d. NO draw (cards empty / summary may be null).
+    stubFetch(
+      completedReadingOut({
+        status: "blocked",
+        cards: [],
+        summary: null,
+        reason: "paywall",
+        reset_at: "2026-06-20T12:00:00Z",
+        remaining_limits: 0,
+      }),
+    );
+    let caught: unknown;
+    try {
+      await createReading(baseParams());
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ReadingError);
+    const error = caught as ReadingError;
+    expect(error.kind).toBe("paywall");
+    expect(error.resetAt).toBe("2026-06-20T12:00:00Z");
+  });
+
+  it("throws ReadingError{kind:'failure'} on a non-OK status that is NOT 429", async () => {
+    stubFetch({ detail: "boom" }, { status: 500 });
+    await expect(createReading(baseParams())).rejects.toMatchObject({
+      name: "ReadingError",
+      kind: "failure",
+    });
+  });
+
+  it("throws ReadingError{kind:'failure'} on a 200 honest-fail body (non-completed, NOT paywall)", async () => {
+    // The Phase-4 honest-fail soft body: status=failed, empty cards, no `reason='paywall'`.
+    stubFetch(
+      completedReadingOut({
+        status: "failed",
+        cards: [],
+        summary: {
+          linkage: "",
+          main_factor: "",
+          attention: "",
+          soft_advice:
+            "Колода замолчала на мгновение. Попробуй открыть расклад ещё раз — вопрос уже сохранён.",
+          closing_phrase: "",
+        },
+        remaining_limits: 3,
+      }),
+    );
+    const error = (await createReading(baseParams()).catch((e) => e)) as ReadingError;
+    expect(error).toBeInstanceOf(ReadingError);
+    expect(error.kind).toBe("failure");
+    expect(error.resetAt ?? null).toBeNull();
   });
 });

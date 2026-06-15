@@ -20,6 +20,33 @@ import type {
   ReadingOutResponse,
 } from "./types";
 
+/** The discriminable kind of a createReading rejection (D-08 — the seam that splits the three
+ *  surfaces). `throttle` = HTTP 429 (the Redis burst gate, 06-03, transient toast); `paywall` =
+ *  the 200 limit-block body (06-02, `reason='paywall'`, persistent sheet, carries `resetAt`);
+ *  `failure` = any other non-OK status or a non-completed/empty body (the existing §9.8 band). */
+export type ReadingErrorKind = "throttle" | "paywall" | "failure";
+
+/**
+ * The typed rejection createReading throws so ONE `catch` in CatalogScreen.handleStart can route
+ * to three distinct surfaces without conflating them (D-08). The throttle and the paywall are
+ * NEVER the same transport: 429 → `throttle`, the 200 `reason='paywall'` body → `paywall` (with
+ * the per-user `resetAt` for the D-04 countdown), everything else → `failure`. createReading's
+ * SUCCESS path, signature, and `MockReading` return type are unchanged — only the error type is
+ * new (D-05/D-07 architecture guard).
+ */
+export class ReadingError extends Error {
+  readonly kind: ReadingErrorKind;
+  /** The per-user reopen moment (`reset_at`, = week_start + 7d). Set ONLY on the paywall kind. */
+  readonly resetAt?: string | null;
+
+  constructor(kind: ReadingErrorKind, message: string, resetAt?: string | null) {
+    super(message);
+    this.name = "ReadingError";
+    this.kind = kind;
+    this.resetAt = resetAt;
+  }
+}
+
 export interface CreateReadingParams {
   question: string | null;
   topic: string;
@@ -127,12 +154,16 @@ export function mapReadingOutToMock(
 /**
  * Create a real per-deck reading via `POST /api/readings` and resolve to a `MockReading`.
  *
- * The promise REJECTS on any failure so the caller's `catch` surfaces the §9.8 copy and
- * the D-08 retry/change-deck UX without advancing the ritual (D-07/D-09):
- *   - a non-OK HTTP status, OR
- *   - a soft honest-fail/paywall/refusal body (`status !== "completed"`, or no cards, or a
- *     missing summary) — on those paths the limit is NOT consumed server-side, so a retry
- *     is free.
+ * The promise REJECTS with a discriminated {@link ReadingError} (D-08) so the caller's ONE
+ * `catch` routes to three distinct surfaces without conflating them — the throttle, the
+ * paywall, and a generation failure are never the same transport:
+ *   - HTTP 429 (the Redis burst gate, 06-03) → `kind:"throttle"` (transient toast),
+ *   - a 200 limit-block body (`status !== "completed"` AND `reason === "paywall"`, 06-02) →
+ *     `kind:"paywall"` carrying `resetAt` (= `reset_at` = week_start + 7d) for the D-04 countdown,
+ *   - any other non-OK status, or a non-completed/empty/summary-less body → `kind:"failure"`
+ *     (the existing §9.8 «Колода замолчала…» band).
+ * On every rejection the limit was NOT consumed server-side, so a retry is free (D-09). The
+ * success path / signature / `MockReading` return are unchanged (D-05/D-07 guard).
  */
 export async function createReading(
   params: CreateReadingParams,
@@ -154,17 +185,27 @@ export async function createReading(
   });
 
   if (!response.ok) {
-    // Soft §9.8 path is the caller's concern — reject so the ritual does not advance.
-    throw new Error(`createReading failed: HTTP ${response.status}`);
+    // D-08: a 429 is the Redis burst gate (06-03) — the FIRST gate, distinct from the paywall.
+    // Any other non-OK status is a generic failure. Reject so the ritual does not advance.
+    throw new ReadingError(
+      response.status === 429 ? "throttle" : "failure",
+      `createReading failed: HTTP ${response.status}`,
+    );
   }
 
   const data = (await response.json()) as ReadingOutResponse;
 
-  // Honest-fail / safety / paywall: a soft 200 body with status=failed + empty cards (the
-  // §9.8 copy rides in summary.soft_advice). Reject — the reveal must not show an empty
-  // reading and the limit was not consumed (D-09).
+  // A soft 200 body that is not a completed reading. Two cases, kept DISTINCT (D-08):
+  //   - the 06-02 limit block carries `reason === "paywall"` (no draw) → the paywall sheet,
+  //     carrying `reset_at` for the D-04 countdown. The limit was NOT consumed (the gate
+  //     blocked before the draw), so this is not an error — it's the weekly exhaustion state.
+  //   - otherwise it's the Phase-4 honest-fail / refusal / redirect (§9.8 copy in
+  //     summary.soft_advice) → the existing failure band; the limit was refunded server-side.
   if (data.status !== "completed" || data.cards.length === 0 || data.summary === null) {
-    throw new Error(`createReading not completed: status=${data.status}`);
+    if (data.reason === "paywall") {
+      throw new ReadingError("paywall", "createReading blocked: free limit reached", data.reset_at);
+    }
+    throw new ReadingError("failure", `createReading not completed: status=${data.status}`);
   }
 
   // Map through the ONE shared transform (DRY) — the live-flow meta comes from the params,

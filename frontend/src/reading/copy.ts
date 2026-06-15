@@ -161,6 +161,36 @@ export const SETTINGS_PERSONALIZATION_EXPLAINER =
   "Если включить, колода сможет опираться на твою историю раскладов, чтобы ответы со временем звучали ближе к тебе. История остаётся только твоей и никуда не передаётся.";
 
 // ---------------------------------------------------------------------------------------
+// Phase 6 — free-limit surfaces (LIMIT-01/03/05, D-03/04/08/09/10). The verbatim UI-SPEC
+// Copywriting-Contract strings for the soft paywall sheet, the transient throttle toast, and
+// the subtle remaining-count line. SAFE-06 hard gate: zero AI/ИИ/нейросеть/модель, no fear /
+// «приговор» / pressure — show «открыть ещё», never «купи» (TZ §11.2). The interpolated
+// countdown + count are composed by the pure helpers in limitCopy.ts (kept there so this
+// module stays a flat constant bank; limitCopy re-uses these leads).
+
+// Soft paywall bottom-sheet (D-03/D-04). Adopts TZ §9.8's first sentence, replaces «подождать
+// обновления лимита» with the concrete reset countdown, and drops the «…за Stars» clause
+// (payments are Phase 7) — substituted by PAYWALL_SOON_NOTE.
+export const PAYWALL_TITLE =
+  "На этой неделе бесплатные расклады закончились";
+// Reset lead-in — the countdown value (formatReset) is appended after the trailing space.
+export const PAYWALL_RESET_LEAD = "Бесплатные расклады вернутся ";
+export const PAYWALL_SOON_NOTE =
+  "А ещё совсем скоро колоду можно будет открыть ещё — без ожидания.";
+export const PAYWALL_DISMISS = "Закрыть";
+
+// Transient throttle toast (D-08, HTTP 429) — «one breath, then continue», never an alarm.
+export const THROTTLE_MESSAGE =
+  "Колода переводит дыхание. Подожди мгновение и попробуй снова.";
+
+// Remaining-count line (D-09/D-10) — composed as «Осталось {N} из {total}» by formatRemaining;
+// the lead lives here so the ban-list scan covers it. LIMIT_LAST_ONE_HINT is the single gentle
+// accent at exactly 1 remaining; PROFILE_LIMIT_LABEL is the un-hidden profile block eyebrow.
+export const LIMIT_REMAINING_PREFIX = "Осталось ";
+export const LIMIT_LAST_ONE_HINT = "Последний расклад на этой неделе";
+export const PROFILE_LIMIT_LABEL = "Бесплатные расклады";
+
+// ---------------------------------------------------------------------------------------
 // Error state (TZ §9.8) — the generation-failure copy + the D-08 recovery affordances.
 // On a failed reading the selection screen shows READING_ERROR plus two buttons: Повторить
 // (re-run the same reading — the limit was NOT consumed, so the retry is free) and Сменить
