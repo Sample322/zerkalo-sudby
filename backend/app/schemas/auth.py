@@ -10,7 +10,7 @@ no internal audit columns ever cross this boundary (threat T-04-08).
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -51,7 +51,7 @@ class LimitsOut(BaseModel):
 
     free_weekly_limit: int
     free_used_this_week: int
-    week_start: date | None = None
+    week_start: datetime | None = None
     paid_spreads_balance: int
     subscription_spreads_limit: int
     subscription_spreads_used: int

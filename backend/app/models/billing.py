@@ -19,9 +19,9 @@ has ``created_at``/``paid_at``/``refunded_at`` (no ``updated_at``); ``products``
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, String, func
+from sqlalchemy import TIMESTAMP, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -39,6 +39,10 @@ from app.models.enums import (
 class UserLimits(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "user_limits"
 
+    # 1:1 with ``users`` — the UNIQUE constraint is the ON CONFLICT (user_id) target for the
+    # race-safe row-ensure at auth (D-02 / migration 0002); the name MUST match the migration.
+    __table_args__ = (UniqueConstraint("user_id", name="uq_user_limits_user_id"),)
+
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -48,7 +52,12 @@ class UserLimits(UUIDPrimaryKeyMixin, Base):
     free_used_this_week: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0"
     )
-    week_start: Mapped[date | None] = mapped_column(nullable=True)
+    # Rolling-window anchor (D-01): the TIMESTAMP of the first reading after a reset, NULL for a
+    # brand-new user (anchors on first reading). TIMESTAMP not DATE so the 7-day window is
+    # hour-accurate (A1 / Pitfall 1).
+    week_start: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
     paid_spreads_balance: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0"
     )
