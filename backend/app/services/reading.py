@@ -46,9 +46,10 @@ bodies carrying a ``status`` field — the global handler (``core/errors.py``) s
 
 from __future__ import annotations
 
+import enum
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 from sqlalchemy import select
@@ -115,6 +116,56 @@ GENERATION_ERROR_MAX_CHARS = 500
 # the full history); no tier plumbing lives here. The effective page window is bounded by
 # ``min(limit, FREE_HISTORY_CAP - offset)`` so load-more (offset) can never page past the cap.
 FREE_HISTORY_CAP = 10
+
+# Per-user rolling free-limit window (D-01). The reset fires lazily-on-read when
+# ``now - week_start >= WINDOW``; the same constant computes ``reset_at = week_start + WINDOW``
+# for the FE countdown (D-04). One source of truth, reused by the atomic consume and the helper.
+WINDOW = timedelta(days=7)
+
+
+class Bucket(enum.StrEnum):
+    """Which access bucket the next reading should spend (LIMIT-04, D-06).
+
+    Order is **free → subscription → paid** (spend expiring buckets first, preserve the permanent
+    ``paid_spreads_balance`` last). This phase only ever returns ``FREE`` or ``NONE`` — the
+    ``SUBSCRIPTION``/``PAID`` arms are the Phase-7 seam (those balances are 0 until then), built so
+    Phase 7 fills them in behind the same enum with no re-architecture.
+    """
+
+    FREE = "free"
+    SUBSCRIPTION = "subscription"
+    PAID = "paid"
+    NONE = "none"
+
+
+def determine_access(limits: UserLimits, now: datetime | None = None) -> Bucket:
+    """Pure policy: pick the bucket the next reading spends, free → subscription → paid (D-06).
+
+    ``FREE`` whenever the free bucket has a slot — either ``free_left > 0`` OR the window is
+    **stale** (``week_start`` is set and ``<= now - WINDOW``), because a stale window resets inside
+    the atomic UPDATE and therefore genuinely has a slot (RESEARCH Pattern 4 "treat stale-window as
+    FREE-available"; the atomic consume is the final arbiter). A NULL ``week_start`` is NOT treated
+    as a free slot here — a brand-new user has ``free_used == 0`` so ``free_left > 0`` already
+    selects FREE; only the impossible NULL-with-exhausted combination would differ, and the unit
+    contract (``test_none_when_exhausted`` / ``test_bucket_order``) requires NONE/SUBSCRIPTION there.
+
+    Falls through to ``SUBSCRIPTION`` (sub units left), then ``PAID`` (paid balance), then ``NONE``.
+    Pure: no session, no ``await``, no I/O. ``now`` defaults to a tz-aware ``datetime.now(UTC)`` so
+    the stale comparison never subtracts a naive from an aware datetime (Pitfall 1).
+    """
+    moment = now if now is not None else datetime.now(UTC)
+    free_left = (limits.free_weekly_limit or 0) - (limits.free_used_this_week or 0)
+    window_stale = limits.week_start is not None and limits.week_start <= moment - WINDOW
+    if free_left > 0 or window_stale:
+        return Bucket.FREE
+    subscription_left = (limits.subscription_spreads_limit or 0) - (
+        limits.subscription_spreads_used or 0
+    )
+    if subscription_left > 0:
+        return Bucket.SUBSCRIPTION
+    if (limits.paid_spreads_balance or 0) > 0:
+        return Bucket.PAID
+    return Bucket.NONE
 
 
 class ReadingInputError(Exception):
@@ -975,6 +1026,9 @@ __all__ = [
     "FREE_HISTORY_CAP",
     "SOFT_FAILURE_COPY",
     "SOFT_PAYWALL_COPY",
+    "WINDOW",
+    "Bucket",
     "ReadingInputError",
     "ReadingService",
+    "determine_access",
 ]
