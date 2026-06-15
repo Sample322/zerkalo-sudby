@@ -5,9 +5,11 @@ import { useDecks } from "../hooks/useDecks";
 import { useMe } from "../hooks/useMe";
 import { useRecommendation, useSpreads } from "../hooks/useSpreads";
 import { getContentSafeAreaInsets, getSafeAreaInsets } from "../lib/telegram";
-import { createReading } from "../reading/createReading";
+import { createReading, ReadingError } from "../reading/createReading";
+import { formatRemaining } from "../reading/limitCopy";
 import {
   HISTORY_HEADER,
+  LIMIT_LAST_ONE_HINT,
   PROFILE_HEADER,
   QUESTION_EMPTY_HELPER,
   QUESTION_PLACEHOLDER,
@@ -21,8 +23,26 @@ import {
 import { canStart, questionValidity, useSelection } from "../stores/selection";
 import { useDeckTheme } from "../theme/useDeckTheme";
 import { DeckCarousel } from "./DeckCarousel";
+import { PaywallSheet } from "./PaywallSheet";
 import { SpreadCard } from "./SpreadCard";
+import { ThrottleToast } from "./ThrottleToast";
 import { TopicChip } from "./TopicChip";
+
+/** 7 days in milliseconds — the pre-emptive paywall reset moment is `week_start + 7d` (06-02). */
+const WEEK_MS = 7 * 86_400_000;
+
+/**
+ * The reset moment for the pre-emptive paywall (when freeLeft===0 is known from `useMe` BEFORE
+ * any POST): `week_start + 7d`, mirroring the backend `_compute_reset_at`. On the belt-and-
+ * suspenders catch path the authoritative `reset_at` rides on the ReadingError instead. Returns
+ * null when no window is anchored yet (the sheet then shows the «совсем скоро» fallback).
+ */
+function computeResetAt(weekStart: string | null | undefined): string | null {
+  if (!weekStart) return null;
+  const anchored = new Date(weekStart);
+  if (Number.isNaN(anchored.getTime())) return null;
+  return new Date(anchored.getTime() + WEEK_MS).toISOString();
+}
 
 // The 7 MVP topics (REQUIREMENTS HOME-03) — slug -> RU label.
 const TOPICS: { slug: string; label: string }[] = [
@@ -69,12 +89,26 @@ export function CatalogScreen() {
   const reversalsEnabled =
     meQuery.data?.settings.reversals_enabled ?? localReversals;
 
+  // D-09/D-10 free-limit display chrome (non-authoritative — the server gate is the real arbiter,
+  // T-06-14). `freeLeft` is undefined while `useMe` is pending or limits are absent, so the count
+  // line + the freeLeft===0 CTA gate both render nothing until the count is known (never a flash).
+  const limits = meQuery.data?.limits;
+  const freeLeft = limits
+    ? Math.max(0, limits.free_weekly_limit - limits.free_used_this_week)
+    : undefined;
+
   // HOME-07 start gate (topic + deck + spread all chosen) — the pure store helper, never
   // re-implemented here. A pending flag debounces double-taps while the seam resolves; an
   // error flag surfaces the soft in-character failure copy (the Phase-4 swap inherits this).
   const ready = canStart({ topic, deckSlug, spreadSlug });
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState(false);
+  // D-08 limit surfaces, routed from ONE handleStart catch (never conflated): the persistent
+  // paywall sheet (freeLeft===0 pre-check OR a 200 reason='paywall' body) and the transient
+  // throttle toast (HTTP 429). The sheet carries the per-user reset moment.
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallResetAt, setPaywallResetAt] = useState<string | null>(null);
+  const [throttleOpen, setThrottleOpen] = useState(false);
 
   // The chosen spread's positions (from the trusted Phase-2 spreads query) are what
   // createReading draws against — passed through, never mirrored into client state.
@@ -84,6 +118,15 @@ export function CatalogScreen() {
     // Guard: the CTA is disabled when !ready, but re-check (and ignore re-entrancy / a
     // missing spread record) so the handler is robust to races.
     if (!ready || isStarting || !selectedSpread || !topic || !deckSlug || !spreadSlug) {
+      return;
+    }
+    // D-03 pre-emptive paywall: when the free quota is known-exhausted (freeLeft===0 from
+    // `useMe`), tapping «Начать расклад» opens the sheet INSTEAD of starting — no wasted POST.
+    // The reset moment is week_start + 7d; the belt-and-suspenders catch below re-derives the
+    // authoritative reset_at if the backend still returns the limit block.
+    if (freeLeft === 0) {
+      setPaywallResetAt(computeResetAt(limits?.week_start));
+      setPaywallOpen(true);
       return;
     }
     setIsStarting(true);
@@ -104,12 +147,23 @@ export function CatalogScreen() {
       });
       setReading(reading);
       goTo("ritual");
-    } catch {
-      // D-08: a failed generation surfaces the soft §9.8 «Колода замолчала…» copy and does
-      // NOT advance the step. The recovery affordances (Повторить / Сменить колоду) render in
-      // the sticky band below. The limit was NOT consumed server-side (D-09), so Повторить —
-      // which simply re-invokes handleStart with the unchanged store params — is free.
-      setStartError(true);
+    } catch (err) {
+      // D-08: route the ONE catch by the discriminated ReadingError.kind to three DISTINCT
+      // surfaces — never conflated. The reading was NOT started and the limit was NOT consumed
+      // on any branch (Повторить, on the failure branch, simply re-invokes handleStart with the
+      // unchanged store params — free).
+      if (err instanceof ReadingError && err.kind === "throttle") {
+        // HTTP 429 (the Redis burst gate) — the transient «переводит дыхание» toast; retry soon.
+        setThrottleOpen(true);
+      } else if (err instanceof ReadingError && err.kind === "paywall") {
+        // The 200 limit-block body — the persistent paywall sheet with the authoritative reset.
+        setPaywallResetAt(err.resetAt ?? null);
+        setPaywallOpen(true);
+      } else {
+        // Honest-fail / refusal / any other error — the existing soft §9.8 «Колода замолчала…»
+        // band with Повторить / Сменить колоду.
+        setStartError(true);
+      }
       setIsStarting(false);
     }
   }
@@ -320,6 +374,26 @@ export function CatalogScreen() {
           maxHeight: "var(--tg-viewport-stable-height, 100dvh)",
         }}
       >
+        {/* D-09/D-10 remaining-count line — a quiet Label above the CTA (styled like the gate
+            hint). Shows «Осталось N из 3» ONLY when limits are present and freeLeft>0; at exactly
+            1 left it ALSO shows the gentle accent «последний на этой неделе» hint (a single tint
+            bump, no size/weight bump). Suppressed at 0 (the sheet carries the state) and while
+            useMe is pending/absent (no flash of a broken value). Hidden during the failure band. */}
+        {!startError && limits && freeLeft !== undefined && freeLeft > 0 && (
+          <div className="pb-2">
+            <p className="px-1 text-center text-sm opacity-70">
+              {formatRemaining(freeLeft, limits.free_weekly_limit)}
+            </p>
+            {freeLeft === 1 && (
+              <p
+                className="px-1 text-center text-sm"
+                style={{ color: "var(--deck-accent)" }}
+              >
+                {LIMIT_LAST_ONE_HINT}
+              </p>
+            )}
+          </div>
+        )}
         {!ready && !startError && (
           <p className="px-1 pb-2 text-center text-sm opacity-70">
             {START_GATE_HINT}
@@ -388,6 +462,16 @@ export function CatalogScreen() {
           </m.button>
         )}
       </div>
+
+      {/* D-08 limit surfaces — both routed from handleStart, kept DISTINCT (persistent sheet vs
+          transient toast). Dismissing the sheet preserves the question + selections (never
+          clears `question`); the toast auto-dismisses on its own. */}
+      <PaywallSheet
+        open={paywallOpen}
+        resetAt={paywallResetAt}
+        onDismiss={() => setPaywallOpen(false)}
+      />
+      <ThrottleToast open={throttleOpen} onDismiss={() => setThrottleOpen(false)} />
     </main>
   );
 }

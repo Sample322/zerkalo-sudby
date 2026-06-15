@@ -26,6 +26,13 @@ export interface SessionLimits {
   paid_spreads_balance: number;
   subscription_spreads_limit: number;
   subscription_spreads_used: number;
+  /**
+   * The current rolling-window anchor (Phase 6 — backend `LimitsOut` serializes it; null until
+   * the user's first reading anchors it). The paywall's reset moment is `week_start + 7d`; the
+   * CatalogScreen reads it for the pre-emptive (freeLeft===0 on CTA tap) sheet, and the
+   * authoritative `reset_at` rides on the createReading paywall-branch error for the catch path.
+   */
+  week_start?: string | null;
 }
 
 /** User-facing settings flags. */

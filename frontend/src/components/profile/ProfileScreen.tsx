@@ -5,9 +5,11 @@
 // and carries a plain-language privacy explainer that describes «история раскладов» / «колода
 // помнит», NEVER the mechanism (SAFE-06 / Pitfall 6 — all strings come from copy.ts).
 //
-// DELIBERATE OMISSION (D-08): even though `GET /api/me` returns `limits` (the weekly count +
-// subscription balance), this screen renders NO readings-count or subscription block — that
-// surface stays hidden until Phase 6/7. The component test asserts the count value is absent.
+// FREE-COUNT BLOCK (D-09, Phase 6): un-hides the Phase-5 deliberately-omitted limits surface now
+// that the weekly free limit is real. A small glass block between identity and settings shows the
+// FREE count ONLY (PROFILE_LIMIT_LABEL + «Осталось N из M» via formatRemaining) — the subscription
+// / paid-balance surface stays out until Phase 7 (no tariffs, no «buy» here). The Phase-5 test
+// that asserted the count was ABSENT is inverted to assert it is PRESENT.
 //
 // Renders inside FlowRoot's <LazyMotion features={domAnimation}> so all motion uses `m.*` from
 // "motion/react-m" (D-10 / Pitfall 5). The GLASS visual language + back affordance mirror
@@ -26,10 +28,12 @@ import {
   HISTORY_LOADING,
   NAV_BACK,
   PROFILE_HEADER,
+  PROFILE_LIMIT_LABEL,
   SETTINGS_PERSONALIZATION_EXPLAINER,
   SETTINGS_PERSONALIZATION_LABEL,
   SETTINGS_REVERSALS_LABEL,
 } from "../../reading/copy";
+import { formatRemaining } from "../../reading/limitCopy";
 
 const GLASS: CSSProperties = {
   background: "color-mix(in srgb, var(--deck-deep) 70%, transparent)",
@@ -157,7 +161,8 @@ export function ProfileScreen() {
 
     return (
       <>
-        {/* Telegram identity — photo (or an initial fallback) + name. NO readings count (D-08). */}
+        {/* Telegram identity — photo (or an initial fallback) + name. The free-count block (D-09)
+            follows below, between identity and settings. */}
         <section className="flex items-center gap-4 p-4" style={GLASS}>
           {data.user.photo_url ? (
             <img
@@ -185,6 +190,23 @@ export function ProfileScreen() {
             {name}
           </span>
         </section>
+
+        {/* Free-readings count (D-09) — the un-hidden Phase-5 block. Eyebrow label + «Осталось N
+            из M», free count ONLY (no subscription/paid/buy — that is Phase 7). Sourced from the
+            same `GET /api/me` limits; the value is a React text node (T-06-17). */}
+        {data.limits && (
+          <section className="flex flex-col gap-1 p-4" style={GLASS}>
+            <span className="text-sm uppercase tracking-wide opacity-70">
+              {PROFILE_LIMIT_LABEL}
+            </span>
+            <span className="text-base" style={{ color: "var(--deck-soft)" }}>
+              {formatRemaining(
+                Math.max(0, data.limits.free_weekly_limit - data.limits.free_used_this_week),
+                data.limits.free_weekly_limit,
+              )}
+            </span>
+          </section>
+        )}
 
         {/* The two user-facing toggles (D-07). Each reads its value from the persisted settings
             and writes via the optimistic PATCH. The personalization row carries the privacy

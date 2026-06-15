@@ -7,11 +7,13 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { useSelection } from "../../stores/selection";
 import {
   PROFILE_HEADER,
+  PROFILE_LIMIT_LABEL,
   SETTINGS_PERSONALIZATION_EXPLAINER,
   SETTINGS_PERSONALIZATION_LABEL,
   SETTINGS_REVERSALS_LABEL,
   containsBannedBrandToken,
 } from "../../reading/copy";
+import { formatRemaining } from "../../reading/limitCopy";
 import { ProfileScreen } from "./ProfileScreen";
 
 // ProfileScreen renders `m.*` inside FlowRoot's <LazyMotion features={domAnimation}> in
@@ -20,7 +22,9 @@ import { ProfileScreen } from "./ProfileScreen";
 // → apiFetch seam is exercised without a backend: GET /api/me returns the profile, and the
 // PATCH /api/me/settings call is captured so we can assert the changed flag is the only key sent.
 
-// A distinctive weekly-limit number we can scan the DOM for — D-08 asserts it is NEVER rendered.
+// A distinctive weekly-limit number we can scan the DOM for. Phase-5 D-08 asserted it was NEVER
+// rendered (the count was hidden «until the limit is real»); Phase-6 D-09 UN-HIDES it, so the
+// inverted test below now asserts the count «Осталось 36 из 37» IS present (free_used_this_week=1).
 const FREE_WEEKLY_LIMIT = 37;
 
 const ME_RESPONSE = {
@@ -131,15 +135,17 @@ test("renders the Telegram identity + both settings toggles from GET /api/me (PR
   expect(personalization.getAttribute("aria-checked")).toBe("false");
 });
 
-test("D-08: the readings-count / subscription block is NOT rendered (the weekly-limit value is absent)", async () => {
+test("D-09: the free-readings count block IS rendered (un-hides the Phase-5 D-08 block)", async () => {
   stubFetch();
-  const { getByText, container } = render(renderProfile());
+  const { getByText } = render(renderProfile());
 
   await waitFor(() => expect(getByText("Алина Лунная")).toBeTruthy());
 
-  // The distinctive limit number from the mocked `limits` must never appear in the DOM (D-08 —
-  // the count/subscription surface is hidden until Phase 6/7). Scan the whole rendered text.
-  expect(container.textContent ?? "").not.toContain(String(FREE_WEEKLY_LIMIT));
+  // D-09 inverts the Phase-5 absence assertion: the un-hidden block shows the eyebrow label +
+  // «Осталось 36 из 37» (free_weekly_limit=37, free_used_this_week=1 → 36 left). The free count
+  // ONLY — no subscription/paid/buy (that stays Phase 7).
+  expect(getByText(PROFILE_LIMIT_LABEL)).toBeTruthy();
+  expect(getByText(formatRemaining(36, FREE_WEEKLY_LIMIT))).toBeTruthy();
 });
 
 test("flipping a toggle optimistically reflects it and PATCHes /api/me/settings with only that flag (PROF-02)", async () => {

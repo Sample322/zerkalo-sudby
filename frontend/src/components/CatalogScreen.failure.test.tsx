@@ -11,10 +11,15 @@ import { useSelection } from "../stores/selection";
 import { renderWithClient } from "../test/renderWithClient";
 
 // Mock the seam so the CTA's await rejects (the §9.8 / D-08 path). The factory must be
-// self-contained (vi.mock is hoisted above imports).
-vi.mock("../reading/createReading", () => ({
-  createReading: vi.fn(),
-}));
+// self-contained (vi.mock is hoisted above imports). It re-exports the REAL ReadingError class
+// so CatalogScreen's `err instanceof ReadingError` discriminant (D-08) still resolves to a real
+// constructor under the mock — only `createReading` itself is stubbed.
+vi.mock("../reading/createReading", async () => {
+  const actual = await vi.importActual<typeof import("../reading/createReading")>(
+    "../reading/createReading",
+  );
+  return { ...actual, createReading: vi.fn() };
+});
 
 // Import AFTER the mock so we get the mocked function + the component that consumes it.
 import { CatalogScreen } from "./CatalogScreen";
