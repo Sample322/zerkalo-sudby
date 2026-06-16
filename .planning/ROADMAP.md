@@ -18,8 +18,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: The Ritual (mock)** - User runs the entire flow — onboarding → question/topic/deck/spread → ritual → reveal — against a mock reading (completed 2026-06-12)
 - [x] **Phase 4: Real Personal Reading (KEYSTONE)** - User gets a real, per-deck personalized reading from one structured LLM call, safely gated
  (completed 2026-06-13)
+
 - [x] **Phase 5: History & Profile** - User revisits, reopens, and soft-deletes past readings, and manages profile/settings (completed 2026-06-14)
-- [ ] **Phase 6: Free Limits & Soft Paywall** - User is bounded to 3 free readings/week with a deterministic reset and an honest paywall
+- [x] **Phase 6: Free Limits & Soft Paywall** - User is bounded to 3 free readings/week with a deterministic reset and an honest paywall (completed 2026-06-16)
 - [ ] **Phase 7: Telegram Stars Payments** - User buys reading packs or a recurring subscription via Stars to unlock more readings
 - [ ] **Phase 8: Admin, Analytics, Polish & Deploy** - Operators run the product without code; the app ships polished and legally cleared on timeweb.cloud
 
@@ -257,6 +258,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. The Ritual (mock) | 6/6 | Complete    | 2026-06-12 |
 | 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete    | 2026-06-13 |
 | 5. History & Profile | 7/7 | Complete    | 2026-06-14 |
-| 6. Free Limits & Soft Paywall | 3/4 | In Progress|  |
+| 6. Free Limits & Soft Paywall | 4/4 | Complete   | 2026-06-16 |
 | 7. Telegram Stars Payments | 0/TBD | Not started | - |
 | 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |
