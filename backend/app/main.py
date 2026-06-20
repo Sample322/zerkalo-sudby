@@ -12,8 +12,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import admin, auth, decks, health, readings, spreads, users
+from app.core.config import settings
 from app.core.db import engine
 from app.core.errors import unhandled_exception_handler
 from app.core.logging import configure_logging
@@ -41,6 +43,19 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# --- CORS (deploy) -----------------------------------------------------------------
+# The Mini App frontend is served from a SEPARATE origin (the nginx static app) and calls
+# this API cross-origin with a Bearer JWT (no cookies, so allow_credentials stays False).
+# Installed only when CORS_ORIGINS is set; in same-origin / dev setups it is a no-op.
+if settings.CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # --- Routers ---
 app.include_router(health.router)

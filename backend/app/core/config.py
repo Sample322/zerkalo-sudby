@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     # full dashboards/alerting are deferred to Phase 8 (RESEARCH Open Question #4).
     SENTRY_DSN: str | None = None
 
+    # --- CORS (deploy) ---
+    # Comma-separated allowed origins for the Mini App frontend. On timeweb this is the
+    # nginx static app's HTTPS URL (the frontend calls this API cross-origin with a Bearer
+    # JWT — no cookies). Empty => CORS middleware is NOT installed (same-origin / dev).
+    # NoDecode + split avoids the JSON-decode footgun, same as ADMIN_TELEGRAM_IDS.
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = []
+
     @field_validator("ADMIN_TELEGRAM_IDS", mode="before")
     @classmethod
     def _parse_ids(cls, v: object) -> object:
@@ -55,6 +62,19 @@ class Settings(BaseSettings):
         """
         if isinstance(v, str):
             return [int(x) for x in v.split(",") if x.strip()]
+        return v
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def _parse_origins(cls, v: object) -> object:
+        """Split a comma-separated env string into a list of origin URLs.
+
+        Accepts ``"https://a.example,https://b.example"`` -> ``[...]``. Already-parsed
+        lists pass through. Trailing slashes are stripped so an origin matches the
+        browser's ``Origin`` header (which never has a trailing slash).
+        """
+        if isinstance(v, str):
+            return [o.strip().rstrip("/") for o in v.split(",") if o.strip()]
         return v
 
 

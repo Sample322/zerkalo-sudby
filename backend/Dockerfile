@@ -23,9 +23,16 @@ COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
 
+# Entrypoint: migrate + seed + uvicorn. Strip any CR (Windows checkout writes CRLF, which
+# breaks the `#!/bin/sh` shebang inside the Linux container) before marking it executable.
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh
+
 EXPOSE 8000
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
+HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
     CMD curl -fsS http://localhost:8000/healthz || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# ENTRYPOINT runs alembic upgrade head + python -m app.seed (idempotent) then execs uvicorn.
+# Set RUN_MIGRATIONS=0 to skip migrate+seed (multi-instance / separate release job).
+ENTRYPOINT ["./docker-entrypoint.sh"]
