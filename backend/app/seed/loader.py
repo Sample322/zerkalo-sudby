@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     Card,
     Deck,
+    DeckCard,
     DeckSpreadCompatibility,
     PromptTemplate,
     SpreadPosition,
@@ -157,6 +158,40 @@ async def _upsert_compatibility(
     return written
 
 
+async def _seed_deck_cards(session: AsyncSession) -> int:
+    """Populate ``deck_cards`` — the per-deck card pool the reading draw selects from.
+
+    One row per (deck, card): 6 decks x 78 cards = 468. Idempotent WITHOUT a single-column
+    unique key — existing ``(deck_id, card_id)`` pairs are skipped, missing ones inserted.
+    Imagery is a deferred content task (TZ §5), so ``image_url`` / ``thumbnail_url`` are seeded
+    empty: the frontend renders the CSS/SVG card-art fallback until real art is uploaded via the
+    admin panel. WITHOUT these rows the card draw raises "deck ... has 0 active cards".
+    """
+    deck_ids = (await session.execute(select(Deck.id))).scalars().all()
+    card_ids = (await session.execute(select(Card.id))).scalars().all()
+    existing = {
+        (deck_id, card_id)
+        for deck_id, card_id in (
+            await session.execute(select(DeckCard.deck_id, DeckCard.card_id))
+        ).all()
+    }
+    rows = [
+        {
+            "deck_id": deck_id,
+            "card_id": card_id,
+            "image_url": "",
+            "thumbnail_url": "",
+            "is_active": True,
+        }
+        for deck_id in deck_ids
+        for card_id in card_ids
+        if (deck_id, card_id) not in existing
+    ]
+    if rows:
+        await session.execute(pg_insert(DeckCard), rows)
+    return len(existing) + len(rows)
+
+
 async def run_seed(session: AsyncSession) -> dict[str, int]:
     """Load and upsert all MVP seed content in FK-safe order.
 
@@ -178,6 +213,8 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
     await upsert_by_slug(session, PromptTemplate, prompts)
     # Compatibility needs deck + spread ids, so it runs AFTER both are upserted.
     compat_count = await _upsert_compatibility(session, compatibility)
+    # deck_cards is the per-deck draw pool — needs deck + card ids, so it runs last.
+    deck_card_count = await _seed_deck_cards(session)
 
     return {
         "topics": len(topics),
@@ -185,6 +222,7 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
         "spread_types": len(spreads),
         "spread_positions": sum(len(s.get("positions", [])) for s in spreads),
         "cards": len(cards),
+        "deck_cards": deck_card_count,
         "prompt_templates": len(prompts),
         "deck_spread_compatibility": compat_count,
     }
