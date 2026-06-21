@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { authenticate } from "../api/auth";
-import { telegramReady } from "../lib/telegram";
+import { getInitData, telegramReady } from "../lib/telegram";
 import { useSession } from "../stores/session";
 
 interface AuthGateProps {
@@ -26,6 +26,14 @@ export function AuthGate({ children }: AuthGateProps) {
 
   // Guard against React StrictMode's dev double-mount firing two auth requests.
   const startedRef = useRef(false);
+  // TEMP deploy diagnostic: capture what the client actually had (initData length + a safe
+  // prefix) and the backend verdict, so the "колода не узнала" screen tells us empty-initData
+  // (len 0 → SDK/Telegram not providing) vs a real backend reject (len>0, status 401).
+  const debugRef = useRef<{ len: number; head: string; status: number | string }>({
+    len: -1,
+    head: "",
+    status: "?",
+  });
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -39,7 +47,13 @@ export function AuthGate({ children }: AuthGateProps) {
       .then((response) => {
         if (active) setAuthenticated(response);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        const id = getInitData();
+        debugRef.current = {
+          len: id.length,
+          head: id.slice(0, 16),
+          status: (err as { status?: number })?.status ?? "net",
+        };
         // Failure cause stays internal; the user sees only the in-character state.
         if (active) setError();
       });
@@ -61,6 +75,11 @@ export function AuthGate({ children }: AuthGateProps) {
         <p className="max-w-xs text-lg opacity-80">
           Колода не узнала тебя. Открой ритуал из Telegram, чтобы зеркало
           отразило твой путь.
+        </p>
+        {/* TEMP diagnostic line — remove after deploy debugging. */}
+        <p className="max-w-xs text-xs opacity-50" style={{ wordBreak: "break-all" }}>
+          debug: initData len={debugRef.current.len} · status=
+          {String(debugRef.current.status)} · head=&quot;{debugRef.current.head}&quot;
         </p>
       </main>
     );
