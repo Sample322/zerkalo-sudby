@@ -107,7 +107,10 @@ async def authenticate(init_data: str, session: AsyncSession) -> tuple[User, str
     )
     tg = parse_user(pairs)
     telegram_id = int(tg["id"])  # validated identity — the only trusted source
-    now = datetime.now(UTC)
+    # The users timestamp columns (last_seen_at / updated_at) are TIMESTAMP WITHOUT TIME ZONE
+    # (naive, server_default=func.now()). asyncpg's naive timestamp codec rejects a tz-AWARE
+    # value ("can't subtract offset-naive and offset-aware datetimes"), so bind a naive UTC now.
+    now = datetime.now(UTC).replace(tzinfo=None)
 
     stmt = (
         pg_insert(User)
