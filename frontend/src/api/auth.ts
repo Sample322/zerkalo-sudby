@@ -68,21 +68,42 @@ export class AuthError extends Error {
  * single generic 401 for every validation failure — no detail is leaked).
  */
 export async function authenticate(): Promise<AuthResponse> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE}/api/auth/telegram`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ init_data: getInitData() }),
-    });
-  } catch {
-    // Network/CSP failure (e.g. WebView connect-src blocks the API origin).
-    throw new AuthError(0, "network unreachable");
+  // The Mini App boots over the user's network straight to the backend origin. On unstable
+  // links (DPI / throttling / a flaky edge) the first fetches often time out, so retry the
+  // network leg a few times with backoff before surfacing "колода не узнала". A real HTTP
+  // response (401 / 500) is FINAL — only fetch failures and timeouts are retried.
+  const MAX_ATTEMPTS = 4;
+  const PER_ATTEMPT_MS = 12000;
+  const init_data = getInitData();
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PER_ATTEMPT_MS);
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}/api/auth/telegram`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ init_data }),
+        signal: controller.signal,
+      });
+    } catch {
+      // Network / timeout / CSP failure — retry with backoff, then give up as "unreachable".
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, 900 * attempt));
+        continue;
+      }
+      throw new AuthError(0, "network unreachable");
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (!response.ok) {
+      throw new AuthError(response.status); // definitive backend verdict — never retried
+    }
+    return (await response.json()) as AuthResponse;
   }
 
-  if (!response.ok) {
-    throw new AuthError(response.status);
-  }
-
-  return (await response.json()) as AuthResponse;
+  // Unreachable — the loop always returns or throws; this satisfies the type checker.
+  throw new AuthError(0, "network unreachable");
 }
