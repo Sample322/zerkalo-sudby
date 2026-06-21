@@ -30,9 +30,8 @@ RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
-    CMD curl -fsS http://localhost:8000/healthz || exit 1
-
+# No Dockerfile HEALTHCHECK — timeweb App Platform injects its own and a second one fights it.
+# (The app still exposes GET /healthz for the platform probe.)
 # ENTRYPOINT runs alembic upgrade head + python -m app.seed (idempotent) then execs uvicorn.
 # Set RUN_MIGRATIONS=0 to skip migrate+seed (multi-instance / separate release job).
 ENTRYPOINT ["./docker-entrypoint.sh"]

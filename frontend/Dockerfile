@@ -26,8 +26,8 @@ FROM nginx:alpine AS serve
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \
-    CMD wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1
+# timeweb reserves 80/443 (nginx listens 8080, see nginx.conf) and injects its own
+# healthcheck — do NOT declare a Dockerfile HEALTHCHECK here, it fights the platform's.
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]

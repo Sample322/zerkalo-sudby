@@ -75,10 +75,20 @@ hint, and **no «AI/нейросеть/модель»** copy anywhere.
 
 ## What is automated vs manual
 
-- **Claude via timeweb MCP**: create App Platform app(s) from a connected VCS repo, read deploy
-  settings/presets, trigger deploys.
-- **Manual (panel / you)**: provision managed PostgreSQL + Redis, create the Git remote, set the
-  real secrets (`BOT_TOKEN`, `ANTHROPIC_API_KEY`, `JWT_SECRET`), and the BotFather Mini App URL.
+- **Claude (timeweb MCP)** — initial provisioning only: connect the GitHub VCS provider + create
+  the two App Platform apps from the repo (needs the repo pushed to GitHub first).
+- **Claude (`tw.mjs` CLI, `node ~/.claude/scripts/tw.mjs`)** — everything operational once the apps
+  exist: `set-env`, `deploy`, `wait-deploy`, runtime + deploy `logs`. Drives the REST API directly
+  (token from `~/.claude.json`), so it works even when the MCP server is unavailable.
+- **Manual (panel / you)** — provision managed PostgreSQL + Redis, create the GitHub repo + push,
+  set the real secrets (`BOT_TOKEN`, `ANTHROPIC_API_KEY`, `JWT_SECRET`), and the BotFather Mini App URL.
+
+## timeweb specifics baked into these files
+- Frontend nginx listens on **8080** (timeweb reserves 80/443). Backend uvicorn on **8000**.
+- **No Dockerfile HEALTHCHECK** — the platform injects its own; a second one fights it.
+- A git push **redeploys every app** wired to the repo (no path filter). For single-app work,
+  deploy manually via `tw.mjs deploy <name> <sha>` and disable auto-deploy on the others.
+- Patching env does **not** restart the container — trigger a deploy after `set-env`.
 
 ## Hardening deferred to public launch (Phase 8 — NOT required for a closed test)
 
