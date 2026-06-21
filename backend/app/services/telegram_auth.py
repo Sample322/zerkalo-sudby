@@ -55,13 +55,16 @@ def validate_init_data(init_data: str, bot_token: str, max_age: int) -> dict[str
         secret_key = HMAC_SHA256(key=b"WebAppData", msg=bot_token)
         expected   = HMAC_SHA256(key=secret_key, msg=data_check_string).hexdigest()
     where ``data_check_string`` is the ``\\n``-joined, key-sorted ``k=v`` of every field
-    EXCEPT ``hash`` (and ``signature``), using the RAW values (no further URL-decoding).
+    EXCEPT ``hash`` (``signature`` is INCLUDED — current Telegram hashes it), URL-decoded.
     """
-    # strict_parsing=True rejects malformed pairs; values are the raw decoded strings.
-    pairs = dict(parse_qsl(init_data, strict_parsing=True))
+    # strict_parsing rejects malformed pairs; keep_blank_values retains present-but-empty
+    # fields (Telegram includes every received field in the hash, blank ones too).
+    pairs = dict(parse_qsl(init_data, strict_parsing=True, keep_blank_values=True))
 
     received_hash = pairs.pop("hash", None)
-    pairs.pop("signature", None)  # belongs to the Ed25519 third-party method, not this one
+    # `signature` (Telegram's Ed25519 field) MUST stay in the data-check string: current
+    # Telegram computes the HMAC `hash` over EVERY field except `hash` itself — signature
+    # INCLUDED. Verified against a live initData (exclude it → mismatch; keep it → match).
     if not received_hash:
         raise ValueError("missing hash")
 
