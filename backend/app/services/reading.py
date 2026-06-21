@@ -547,7 +547,8 @@ class ReadingService:
         ).scalar_one_or_none()
         if reading is None or reading.deleted_at is not None:
             raise ReadingInputError("reading not found")
-        reading.deleted_at = datetime.now(UTC)
+        # deleted_at is TIMESTAMP WITHOUT TIME ZONE (naive) — asyncpg rejects a tz-aware value.
+        reading.deleted_at = datetime.now(UTC).replace(tzinfo=None)
         await session.commit()
 
     async def restore(
@@ -833,7 +834,8 @@ class ReadingService:
         reading.summary_full = self._serialize_summary(summary)
         reading.model_name = model_name
         reading.status = ReadingStatus.COMPLETED
-        reading.completed_at = datetime.now(UTC)
+        # completed_at is TIMESTAMP WITHOUT TIME ZONE (naive) — asyncpg rejects a tz-aware value.
+        reading.completed_at = datetime.now(UTC).replace(tzinfo=None)
         await session.flush()
 
         ordered = sorted(rows, key=lambda r: r.position_index)
