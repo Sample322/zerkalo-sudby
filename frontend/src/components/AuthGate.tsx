@@ -29,10 +29,11 @@ export function AuthGate({ children }: AuthGateProps) {
   // TEMP deploy diagnostic: capture what the client actually had (initData length + a safe
   // prefix) and the backend verdict, so the "колода не узнала" screen tells us empty-initData
   // (len 0 → SDK/Telegram not providing) vs a real backend reject (len>0, status 401).
-  const debugRef = useRef<{ len: number; head: string; status: number | string }>({
+  const debugRef = useRef<{ len: number; head: string; status: number | string; raw: string }>({
     len: -1,
     head: "",
     status: "?",
+    raw: "",
   });
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export function AuthGate({ children }: AuthGateProps) {
           len: id.length,
           head: id.slice(0, 16),
           status: (err as { status?: number })?.status ?? "net",
+          raw: id,
         };
         // Failure cause stays internal; the user sees only the in-character state.
         if (active) setError();
@@ -76,10 +78,21 @@ export function AuthGate({ children }: AuthGateProps) {
           Колода не узнала тебя. Открой ритуал из Telegram, чтобы зеркало
           отразило твой путь.
         </p>
-        {/* TEMP diagnostic line — remove after deploy debugging. */}
+        {/* TEMP diagnostic — remove after deploy debugging. Shows the raw initData so the
+            backend HMAC mismatch can be reproduced + fixed. */}
         <p className="max-w-xs text-xs opacity-50" style={{ wordBreak: "break-all" }}>
           debug: initData len={debugRef.current.len} · status=
-          {String(debugRef.current.status)} · head=&quot;{debugRef.current.head}&quot;
+          {String(debugRef.current.status)}
+        </p>
+        <textarea
+          readOnly
+          onFocus={(e) => e.currentTarget.select()}
+          value={debugRef.current.raw}
+          className="h-28 w-full max-w-xs rounded border border-white/20 bg-black/40 p-2 text-[10px] opacity-70"
+          style={{ wordBreak: "break-all" }}
+        />
+        <p className="max-w-xs text-[10px] opacity-40">
+          (выдели всё в поле выше и скопируй — пришли это разработчику)
         </p>
       </main>
     );
