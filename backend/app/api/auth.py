@@ -32,9 +32,19 @@ async def auth_telegram(
 ) -> AuthResponse:
     try:
         user, token = await authenticate(body.init_data, session)
-    except ValueError:
-        # Generic 401 — never reveal which check failed (T-04-07). Detail stays server-side.
-        logger.warning("auth_failed", extra={"event": "auth.initdata_rejected"})
+    except ValueError as exc:
+        # Generic 401 to the client — never reveal which check failed (T-04-07).
+        # TEMP deploy diagnostic (server-side only, no oracle leak to the client): the reason
+        # string + init_data length distinguish "empty initData" (SDK not loaded → len 0,
+        # 'missing hash') from a real HMAC mismatch (len>0, 'signature mismatch').
+        logger.warning(
+            "auth_failed",
+            extra={
+                "event": "auth.initdata_rejected",
+                "reason": str(exc),
+                "init_data_len": len(body.init_data or ""),
+            },
+        )
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "authentication failed"
         ) from None
