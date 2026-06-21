@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import anthropic
+import openai
 from pydantic import ValidationError
 from tenacity import (
     AsyncRetrying,
@@ -82,6 +83,11 @@ RETRYABLE: tuple[type[BaseException], ...] = (
     ValidationError,
     anthropic.APIStatusError,
     anthropic.APIConnectionError,
+    # OpenRouter/OpenAI transient errors (when the OpenRouter adapter backs the client) — so a
+    # transient generation failure retries then surfaces as LLMGenerationError (honest-fail, D-09).
+    openai.APIStatusError,
+    openai.APIConnectionError,
+    openai.APITimeoutError,
     TimeoutError,
     _NonSchemaStopReason,
 )

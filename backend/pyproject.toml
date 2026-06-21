@@ -22,6 +22,10 @@ dependencies = [
     # resolvable: anthropic 0.109.1, tenacity 9.1.4). anthropic is the CLAUDE.md-locked
     # provider (messages.parse Structured Outputs). github.com/anthropics/anthropic-sdk-python
     "anthropic>=0.69,<1",
+    # OpenRouter / OpenAI-compatible provider (the "swappable provider" CLAUDE.md anticipated).
+    # Used via the OpenAI SDK's structured-outputs parse() pointed at OpenRouter's base_url when
+    # OPENROUTER_API_KEY is set. github.com/openai/openai-python
+    "openai>=1.55,<2",
     # Bounded retry + per-attempt timeout around the single LLM call. github.com/jd/tenacity
     "tenacity>=9,<10",
 ]

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -30,8 +30,16 @@ class Settings(BaseSettings):
     DATABASE_URL: str  # postgresql+asyncpg://user:pass@postgres:5432/db
     REDIS_URL: str  # redis://redis:6379/0
     JWT_SECRET: str
-    # LLM key — required at startup per INFRA-04 even though unused until Phase 4.
-    ANTHROPIC_API_KEY: str
+
+    # --- LLM provider keys: at least ONE is required (enforced below). ---
+    # ANTHROPIC_API_KEY → the CLAUDE.md-default provider (anthropic SDK messages.parse).
+    # OPENROUTER_API_KEY → an OpenAI-compatible gateway used via the adapter (cheap test models).
+    ANTHROPIC_API_KEY: str | None = None
+    OPENROUTER_API_KEY: str | None = None
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    # Single OpenRouter model id backing every call when OPENROUTER_API_KEY is set. Cheap default
+    # for a test deploy; tune via env without code changes (e.g. anthropic/claude-3.5-haiku).
+    OPENROUTER_MODEL: str = "openai/gpt-4o-mini"
 
     # --- Admin allowlist — MUST bypass JSON decoding (Pitfall 2) ---
     ADMIN_TELEGRAM_IDS: Annotated[list[int], NoDecode] = []
@@ -76,6 +84,15 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [o.strip().rstrip("/") for o in v.split(",") if o.strip()]
         return v
+
+    @model_validator(mode="after")
+    def _require_llm_key(self) -> Settings:
+        """Fail-fast unless at least one LLM provider key is configured (INFRA-04 spirit)."""
+        if not self.ANTHROPIC_API_KEY and not self.OPENROUTER_API_KEY:
+            raise ValueError(
+                "An LLM provider key is required: set ANTHROPIC_API_KEY or OPENROUTER_API_KEY."
+            )
+        return self
 
 
 # Instantiated at import -> fail-fast on any missing required secret.
