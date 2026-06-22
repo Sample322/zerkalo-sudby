@@ -68,11 +68,14 @@ async def upsert_by_slug(session: AsyncSession, model: type, rows: list[dict[str
 
 
 async def _upsert_spreads(session: AsyncSession, rows: list[dict[str, Any]]) -> None:
-    """Upsert spread_types by slug, then rebuild each spread's positions idempotently.
+    """Upsert spread_types by slug, then seed each spread's positions once.
 
-    ``spread_positions`` has no single-column unique key, so positions are made
-    idempotent by deleting the spread's existing positions and re-inserting the
-    authored set (scoped to that ``spread_type_id`` only) inside the same transaction.
+    ``spread_positions`` is authored content, immutable after the first seed. A
+    delete-then-reinsert would crash a re-seed once real readings exist: ``reading_cards``
+    FK-references ``spread_positions`` (``reading_cards_position_id_fkey``), so deleting a
+    referenced position raises ForeignKeyViolationError. We therefore insert a spread's
+    positions ONLY when it has none yet — idempotent, and never touching a row a reading
+    depends on.
     """
     for spread in rows:
         positions = spread.get("positions", [])
@@ -87,14 +90,17 @@ async def _upsert_spreads(session: AsyncSession, rows: list[dict[str, Any]]) -> 
             select(SpreadType.id).where(SpreadType.slug == spread["slug"])
         )
 
-        # Rebuild positions for THIS spread only (scoped delete -> insert).
-        await session.execute(
-            delete(SpreadPosition).where(SpreadPosition.spread_type_id == spread_type_id)
+        # Insert positions only when this spread has none (immutable; never delete referenced rows).
+        has_positions = await session.scalar(
+            select(SpreadPosition.id)
+            .where(SpreadPosition.spread_type_id == spread_type_id)
+            .limit(1)
         )
-        for position in positions:
-            await session.execute(
-                pg_insert(SpreadPosition).values(spread_type_id=spread_type_id, **position)
-            )
+        if has_positions is None:
+            for position in positions:
+                await session.execute(
+                    pg_insert(SpreadPosition).values(spread_type_id=spread_type_id, **position)
+                )
 
 
 async def _upsert_compatibility(
