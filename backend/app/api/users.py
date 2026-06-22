@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_session
 from app.models.user import User
 from app.schemas.auth import MeResponse, SettingsOut, SettingsPatch
-from app.services.telegram_auth import get_user_limits
+from app.services.telegram_auth import get_user_limits, project_limits
 
 router = APIRouter(tags=["users"])
 
@@ -28,7 +28,7 @@ async def get_me(
     limits = await get_user_limits(session, current_user.id)
     return MeResponse(
         user=current_user,
-        limits=limits,
+        limits=project_limits(limits, current_user.telegram_id),
         settings=current_user,
     )
 

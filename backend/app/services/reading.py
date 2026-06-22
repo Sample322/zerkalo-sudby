@@ -63,6 +63,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.brand_guard import contains_banned_brand_token
+from app.core.config import settings
 from app.models import (
     Card,
     Deck,
@@ -271,21 +272,26 @@ class ReadingService:
             else SafetyAction.GENERATE
         )
 
-        # 2. ATOMIC FREE CONSUME-GATE (LIMIT-02/03/04). determine_access picks the bucket
-        #    (free→sub→paid; only FREE populated this phase); the conditional UPDATE…RETURNING is
-        #    the gate that atomically decides "got a slot?" (with the lazy reset folded in) BEFORE
-        #    any draw. None ⇒ exhausted within a fresh window ⇒ soft paywall, NO draw.
-        gate = await self._consume_free_gate(session, user, limits, now)
-        if gate is None:
-            return self._soft_body(
-                reading_id=None,
-                message=SOFT_PAYWALL_COPY,
-                remaining=0,
-                reason="paywall",
-                reset_at=self._compute_reset_at(limits.week_start if limits else None),
-            )
-        used, limit = gate
-        remaining = max(0, limit - used)
+        # 2. ATOMIC FREE CONSUME-GATE (LIMIT-02/03/04) — BYPASSED for the unlimited allowlist
+        #    (admin + invited testers, UNLIMITED_TELEGRAM_IDS): no decrement, no paywall, uncapped.
+        #    Otherwise the conditional UPDATE…RETURNING atomically decides "got a slot?" (lazy reset
+        #    folded in) BEFORE any draw; None ⇒ exhausted within a fresh window ⇒ soft paywall, NO draw.
+        unlimited = settings.is_unlimited(user.telegram_id)
+        remaining: int | None
+        if unlimited:
+            remaining = None
+        else:
+            gate = await self._consume_free_gate(session, user, limits, now)
+            if gate is None:
+                return self._soft_body(
+                    reading_id=None,
+                    message=SOFT_PAYWALL_COPY,
+                    remaining=0,
+                    reason="paywall",
+                    reset_at=self._compute_reset_at(limits.week_start if limits else None),
+                )
+            used, limit = gate
+            remaining = max(0, limit - used)
 
         # 3. CSPRNG draw + persist pending + immutable reading_cards.
         # D-09 / PROF-02: the draw's reversals come from the PERSISTED user flag (default ON,
@@ -330,7 +336,9 @@ class ReadingService:
             # HONEST FAIL (D-09): the slot was already consumed by the gate, so REFUND it here
             # (Pitfall 2 — keeps READ-10 "limit never consumed on failure"); no templated
             # stand-in, soft §9.8 body. The refund runs in-transaction inside _honest_fail.
-            return await self._honest_fail(session, reading, user, limits, exc)
+            return await self._honest_fail(
+                session, reading, user, limits, exc, refund=not unlimited
+            )
 
         # 6. Brand guard — LOG + FLAG only (never fail the reading; RESEARCH Open Question 2).
         self._brand_guard(reading.id, output)
@@ -1032,6 +1040,8 @@ class ReadingService:
         user: User,
         limits: UserLimits | None,
         exc: LLMGenerationError,
+        *,
+        refund: bool = True,
     ) -> ReadingOut:
         """Honest fail (D-09): status=FAILED, REFUND the consumed slot, log row, soft body.
 
@@ -1052,8 +1062,9 @@ class ReadingService:
                 error=self._truncate_error(exc),
             )
         )
-        # Compensating refund of the gate's consume (only when a row exists / was consumed).
-        if limits is not None:
+        # Compensating refund of the gate's consume — skipped for the unlimited allowlist
+        # (``refund=False``), whose gate never consumed, so there is nothing to give back.
+        if refund and limits is not None:
             await self._refund_free(session, user.id)
             await session.refresh(limits)  # reflect the refunded counter in the returned remaining
         await session.commit()
@@ -1064,7 +1075,7 @@ class ReadingService:
         return self._soft_body(
             reading_id=str(reading.id),
             message=SOFT_FAILURE_COPY,
-            remaining=self._remaining(limits),
+            remaining=self._remaining(limits) if refund else None,
         )
 
     @staticmethod

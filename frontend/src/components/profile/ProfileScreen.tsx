@@ -177,11 +177,16 @@ export function ProfileScreen() {
             <span className="eyebrow" style={{ color: "var(--color-mist-dim)" }}>
               {PROFILE_LIMIT_LABEL}
             </span>
-            <span className="font-display text-[20px]" style={{ color: "var(--deck-soft)" }}>
-              {formatRemaining(
-                Math.max(0, data.limits.free_weekly_limit - data.limits.free_used_this_week),
-                data.limits.free_weekly_limit,
-              )}
+            <span
+              className="font-display text-[20px]"
+              style={{ color: data.limits.unlimited ? "var(--deck-accent)" : "var(--deck-soft)" }}
+            >
+              {data.limits.unlimited
+                ? "✦ Безлимит"
+                : formatRemaining(
+                    Math.max(0, data.limits.free_weekly_limit - data.limits.free_used_this_week),
+                    data.limits.free_weekly_limit,
+                  )}
             </span>
           </section>
         )}

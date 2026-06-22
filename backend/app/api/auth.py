@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
 from app.schemas.auth import AuthRequest, AuthResponse
-from app.services.telegram_auth import authenticate, get_user_limits
+from app.services.telegram_auth import authenticate, get_user_limits, project_limits
 
 logger = logging.getLogger("app.auth")
 
@@ -44,7 +44,7 @@ async def auth_telegram(
     return AuthResponse(
         access_token=token,
         user=user,
-        limits=limits,
+        limits=project_limits(limits, user.telegram_id),
         settings=user,
     )
 

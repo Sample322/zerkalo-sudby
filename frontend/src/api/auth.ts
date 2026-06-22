@@ -33,6 +33,11 @@ export interface SessionLimits {
    * authoritative `reset_at` rides on the createReading paywall-branch error for the catch path.
    */
   week_start?: string | null;
+  /**
+   * True for the admin/tester allowlist (backend `UNLIMITED_TELEGRAM_IDS`): the weekly cap never
+   * applies — the catalog skips the pre-emptive paywall and shows «Безлимит» instead of a count.
+   */
+  unlimited?: boolean;
 }
 
 /** User-facing settings flags. */

@@ -55,6 +55,9 @@ class LimitsOut(BaseModel):
     paid_spreads_balance: int
     subscription_spreads_limit: int
     subscription_spreads_used: int
+    # True for the admin/tester allowlist (UNLIMITED_TELEGRAM_IDS): the FE then never pre-blocks on
+    # the weekly cap and shows «Безлимит» instead of a count. Defaults False for every normal user.
+    unlimited: bool = False
 
 
 class SettingsOut(BaseModel):

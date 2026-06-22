@@ -88,6 +88,7 @@ export function CatalogScreen() {
   const reversalsEnabled = meQuery.data?.settings.reversals_enabled ?? localReversals;
 
   const limits = meQuery.data?.limits;
+  const unlimited = limits?.unlimited ?? false;
   const freeLeft = limits
     ? Math.max(0, limits.free_weekly_limit - limits.free_used_this_week)
     : undefined;
@@ -129,7 +130,8 @@ export function CatalogScreen() {
 
   async function handleStart() {
     if (isStarting || !selectedSpread || !topic || !deckSlug || !spreadSlug) return;
-    if (freeLeft === 0) {
+    // Pre-emptive paywall — skipped for the unlimited allowlist (admin + testers never pre-block).
+    if (!unlimited && freeLeft === 0) {
       setPaywallResetAt(computeResetAt(limits?.week_start));
       setPaywallOpen(true);
       return;
@@ -303,6 +305,7 @@ export function CatalogScreen() {
             startError={startError}
             limits={limits}
             freeLeft={freeLeft}
+            unlimited={unlimited}
             onStart={handleStart}
             onRetry={handleStart}
             onChangeDeck={() => {
@@ -434,6 +437,7 @@ function SpreadFooter({
   startError,
   limits,
   freeLeft,
+  unlimited,
   onStart,
   onRetry,
   onChangeDeck,
@@ -443,6 +447,7 @@ function SpreadFooter({
   startError: boolean;
   limits: { free_weekly_limit: number } | undefined;
   freeLeft: number | undefined;
+  unlimited: boolean;
   onStart: () => void;
   onRetry: () => void;
   onChangeDeck: () => void;
@@ -478,17 +483,25 @@ function SpreadFooter({
 
   return (
     <>
-      {limits && freeLeft !== undefined && freeLeft > 0 && (
-        <div className="pb-2">
-          <p className="px-1 text-center text-[15px]" style={{ color: "var(--color-mist-dim)" }}>
-            {formatRemaining(freeLeft, limits.free_weekly_limit)}
-          </p>
-          {freeLeft === 1 && (
-            <p className="px-1 text-center text-[15px]" style={{ color: "var(--deck-accent)" }}>
-              {LIMIT_LAST_ONE_HINT}
+      {unlimited ? (
+        <p className="px-1 pb-2 text-center text-[15px]" style={{ color: "var(--deck-accent)" }}>
+          ✦&nbsp;Безлимит
+        </p>
+      ) : (
+        limits &&
+        freeLeft !== undefined &&
+        freeLeft > 0 && (
+          <div className="pb-2">
+            <p className="px-1 text-center text-[15px]" style={{ color: "var(--color-mist-dim)" }}>
+              {formatRemaining(freeLeft, limits.free_weekly_limit)}
             </p>
-          )}
-        </div>
+            {freeLeft === 1 && (
+              <p className="px-1 text-center text-[15px]" style={{ color: "var(--deck-accent)" }}>
+                {LIMIT_LAST_ONE_HINT}
+              </p>
+            )}
+          </div>
+        )
       )}
       <m.button
         type="button"

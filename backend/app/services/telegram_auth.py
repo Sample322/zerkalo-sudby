@@ -34,6 +34,7 @@ from app.core.config import settings
 from app.core.security import encode_jwt
 from app.models.billing import UserLimits
 from app.models.user import User
+from app.schemas.auth import LimitsOut
 
 # The HMAC key constant fixed by Telegram for the first stage. A missing ``"WebAppData"``
 # constant in the code is the canonical warning sign of a broken validator (PITFALLS 1).
@@ -179,9 +180,33 @@ async def get_user_limits(session: AsyncSession, user_id) -> UserLimits | None:
     ).scalar_one_or_none()
 
 
+def project_limits(row: UserLimits | None, telegram_id: int) -> LimitsOut | None:
+    """Project a limits row into ``LimitsOut`` with the unlimited-allowlist flag set.
+
+    Shared by ``/api/auth/telegram`` + ``/api/me`` so both carry ``unlimited`` (admin + invited
+    testers, ``UNLIMITED_TELEGRAM_IDS``). For an unlimited user with no row we still surface the
+    flag (a synthetic zeroed projection) so the FE never pre-blocks them; a normal user with no
+    row projects to ``None`` (unchanged behaviour).
+    """
+    unlimited = settings.is_unlimited(telegram_id)
+    if row is None:
+        if not unlimited:
+            return None
+        return LimitsOut(
+            free_weekly_limit=0,
+            free_used_this_week=0,
+            paid_spreads_balance=0,
+            subscription_spreads_limit=0,
+            subscription_spreads_used=0,
+            unlimited=True,
+        )
+    return LimitsOut.model_validate(row).model_copy(update={"unlimited": unlimited})
+
+
 __all__ = [
     "validate_init_data",
     "parse_user",
     "authenticate",
     "get_user_limits",
+    "project_limits",
 ]

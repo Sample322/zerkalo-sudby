@@ -35,7 +35,7 @@ class SpreadType(UUIDPrimaryKeyMixin, Base):
     # ORM-only relationship (no DDL change) — lets the catalog service eager-load
     # positions via selectinload(); ordered by position_index so SpreadOut serializes
     # the slots in reading order (Phase 2 catalog, RESEARCH Pattern 1 / Pitfall 2).
-    positions: Mapped[list["SpreadPosition"]] = relationship(
+    positions: Mapped[list[SpreadPosition]] = relationship(
         back_populates="spread_type",
         order_by="SpreadPosition.position_index",
         cascade="all, delete-orphan",
@@ -53,7 +53,7 @@ class SpreadPosition(UUIDPrimaryKeyMixin, Base):
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     prompt_instruction: Mapped[str | None] = mapped_column(String, nullable=True)
 
-    spread_type: Mapped["SpreadType"] = relationship(back_populates="positions")
+    spread_type: Mapped[SpreadType] = relationship(back_populates="positions")
 
 
 __all__ = ["SpreadType", "SpreadPosition"]

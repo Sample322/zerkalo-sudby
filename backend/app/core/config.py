@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     # --- Admin allowlist — MUST bypass JSON decoding (Pitfall 2) ---
     ADMIN_TELEGRAM_IDS: Annotated[list[int], NoDecode] = []
 
+    # --- Unlimited allowlist — admin + invited testers get uncapped readings (the consume gate
+    # is bypassed for these telegram_ids). Comma-separated, same NoDecode split as the admins. ---
+    UNLIMITED_TELEGRAM_IDS: Annotated[list[int], NoDecode] = []
+
     # --- Optional / tunable ---
     JWT_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7-day session token
     INITDATA_MAX_AGE_SECONDS: int = 86400  # 24h initData freshness window
@@ -60,7 +64,7 @@ class Settings(BaseSettings):
     # NoDecode + split avoids the JSON-decode footgun, same as ADMIN_TELEGRAM_IDS.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = []
 
-    @field_validator("ADMIN_TELEGRAM_IDS", mode="before")
+    @field_validator("ADMIN_TELEGRAM_IDS", "UNLIMITED_TELEGRAM_IDS", mode="before")
     @classmethod
     def _parse_ids(cls, v: object) -> object:
         """Split a comma-separated env string into a list of ints.
@@ -71,6 +75,10 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [int(x) for x in v.split(",") if x.strip()]
         return v
+
+    def is_unlimited(self, telegram_id: int) -> bool:
+        """True when this user (admin or invited tester) bypasses the weekly free-reading cap."""
+        return telegram_id in self.UNLIMITED_TELEGRAM_IDS
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
