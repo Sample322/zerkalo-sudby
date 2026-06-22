@@ -80,6 +80,10 @@ class Settings(BaseSettings):
         """True when this user (admin or invited tester) bypasses the weekly free-reading cap."""
         return telegram_id in self.UNLIMITED_TELEGRAM_IDS
 
+    def is_admin(self, telegram_id: int) -> bool:
+        """True when this user is on the admin allowlist (server-side dashboard access)."""
+        return telegram_id in self.ADMIN_TELEGRAM_IDS
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def _parse_origins(cls, v: object) -> object:

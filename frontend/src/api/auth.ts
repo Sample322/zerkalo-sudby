@@ -52,6 +52,8 @@ export interface AuthResponse {
   user: SessionUser;
   limits: SessionLimits;
   settings: SessionSettings;
+  /** True for the admin allowlist (backend ADMIN_TELEGRAM_IDS) — reveals the dashboard entry. */
+  is_admin?: boolean;
 }
 
 /** Thrown when the backend rejects authentication (e.g. missing/forged/stale initData). */

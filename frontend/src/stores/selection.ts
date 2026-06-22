@@ -14,6 +14,10 @@ import type { MockReading } from "../reading/types";
 export const QUESTION_MIN = 10;
 export const QUESTION_MAX = 500;
 
+/** The answer-style preference (Ясный / Бережный / Таинственный) — tunes how the reading sounds. */
+export type AnswerStyle = "yasny" | "berezhny" | "tainstvenny";
+export const DEFAULT_ANSWER_STYLE: AnswerStyle = "berezhny";
+
 /** Discriminated result of validating the question text (pure, React-free). */
 export type QuestionValidity =
   | { status: "valid" }
@@ -27,6 +31,9 @@ export interface SelectionState {
   setTopic: (topic: string | null) => void;
   setDeck: (deckSlug: string | null) => void;
   setSpread: (spreadSlug: string | null) => void;
+  /** Answer-style preference (default Бережный). Recorded on the reading + tracked for the MVP A/B. */
+  answerStyle: AnswerStyle;
+  setAnswerStyle: (style: AnswerStyle) => void;
 
   // --- flow slice (Phase 3) ---
   /** The free-text question (HOME-01/02). Empty string = general reading (D-13). */
@@ -98,6 +105,8 @@ export const useSelection = create<SelectionState>((set) => ({
   setTopic: (topic) => set({ topic }),
   setDeck: (deckSlug) => set({ deckSlug }),
   setSpread: (spreadSlug) => set({ spreadSlug }),
+  answerStyle: "berezhny",
+  setAnswerStyle: (answerStyle) => set({ answerStyle }),
 
   question: "",
   reversalsEnabled: false,

@@ -157,32 +157,34 @@ test("walks the wizard: topic → deck (re-themes) → spread, rendering each st
   expect(BANNED_BRAND_TOKENS.test(REASON)).toBe(false);
 });
 
-test("HOME-07: the spread-step «Начать расклад» stays disabled until a spread is chosen", async () => {
-  const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-
-  // Walk the wizard to the spread step (the only place the start CTA lives).
+// Walk the wizard question → topic → deck → spread → style (each choice auto-advances; each step
+// awaits its own data). Leaves the user on the final style step where «Начать расклад» lives.
+async function walkToStyle(
+  getByText: (t: string) => HTMLElement,
+  getByRole: (role: string, opts: { name: string }) => HTMLElement,
+) {
   fireEvent.click(getByRole("button", { name: "Далее" }));
   fireEvent.click(getByText("Любовь"));
   await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
   fireEvent.click(getByText("Колода 0"));
   await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
-
-  const cta = () => getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
-  expect(cta().disabled).toBe(true); // no spread chosen yet on the spread step
-
   fireEvent.click(getByText("Расклад 1"));
-  await waitFor(() => expect(cta().disabled).toBe(false));
+  await waitFor(() => expect(getByText("Бережный")).toBeTruthy());
+}
+
+test("the wizard's final step offers the 3 answer styles + an enabled «Начать расклад»", async () => {
+  const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
+  await walkToStyle(getByText, getByRole);
+
+  // The final style step shows all 3 options; the start CTA is enabled (a spread is chosen).
+  expect(getByText("Ясный")).toBeTruthy();
+  expect(getByText("Бережный")).toBeTruthy();
+  expect(getByText("Таинственный")).toBeTruthy();
+  expect((getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement).disabled).toBe(false);
 });
 
-test("HOME-07/D-05: with topic+deck+spread set, tapping the CTA builds the reading via createReading, writes it to the store `reading` slot BEFORE advancing to ritual", async () => {
-  // Drive the gate directly through the store (the store-test pattern). spread_0 matches a
-  // slug in the stubbed /api/spreads response so its positions are available to the handler.
-  useSelection.setState({
-    topic: "love",
-    deckSlug: "deck_0",
-    spreadSlug: "spread_0",
-    question: "Что меня ждёт в отношениях этой осенью?",
-  });
+test("HOME-07/D-05: «Начать расклад» on the final step builds the reading via createReading, writes it to the store `reading` slot BEFORE advancing to ritual", async () => {
+  useSelection.setState({ question: "Что меня ждёт в отношениях этой осенью?" });
 
   // Record the ORDER of (reading, step) transitions so we can prove setReading runs before
   // the step changes to "ritual" (the downstream 03-04/05/06 contract).
@@ -194,29 +196,19 @@ test("HOME-07/D-05: with topic+deck+spread set, tapping the CTA builds the readi
   });
 
   const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-  // Wait for the spreads query to resolve so selectedSpread is populated. Anchor on
-  // "Расклад 1" — it appears ONLY in the spreads list (the recommendation banner shows
-  // SPREADS[0] = "Расклад 0", so that title is ambiguous; "Расклад 1" is unique).
-  await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
+  await walkToStyle(getByText, getByRole);
 
-  const cta = getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
-  expect(cta.disabled).toBe(false); // gate open
-
-  fireEvent.click(cta);
-
-  // The reading slot is populated with a fully-built MockReading and the step is now "ritual".
+  fireEvent.click(getByRole("button", { name: "Начать расклад" }));
   await waitFor(() => expect(useSelection.getState().step).toBe("ritual"));
 
   const reading = useSelection.getState().reading;
   expect(reading).not.toBeNull();
-  // It is the reading createReading built from our params (question passes through; one card
-  // per the single spread position; brand-safe summary present).
   expect(reading?.question).toBe("Что меня ждёт в отношениях этой осенью?");
   // The result meta carries the RU labels (the slugs go to the backend; the human titles go on
-  // screen) — never the English slugs. See createReading deckTitle/spreadTitle/topicLabel.
+  // screen) — never the English slugs. We walked Любовь / Колода 0 / Расклад 1.
   expect(reading?.topic).toBe("Любовь");
   expect(reading?.deckSlug).toBe("Колода 0");
-  expect(reading?.spreadSlug).toBe("Расклад 0");
+  expect(reading?.spreadSlug).toBe("Расклад 1");
   expect(reading?.cards).toHaveLength(1);
   expect(reading?.cards[0]?.positionTitle).toBe("Суть");
   expect(reading?.summary).toBeTruthy();
@@ -228,20 +220,17 @@ test("HOME-07/D-05: with topic+deck+spread set, tapping the CTA builds the readi
   unsubscribe();
 });
 
-test("D-09: a new reading's reversals_enabled is sourced from the persisted GET /api/me flag, not the local toggle", async () => {
+test("D-09: a new reading's reversals_enabled is sourced from the persisted GET /api/me flag (+ default answer_style)", async () => {
   // The store reset leaves the LOCAL toggle `false`; the mocked `GET /api/me` says
   // reversals_enabled === true. The POST /api/readings body must carry the PERSISTED value.
   const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
   useSelection.setState({
-    topic: "love",
-    deckSlug: "deck_0",
-    spreadSlug: "spread_0",
     question: "Что меня ждёт в отношениях этой осенью?",
     reversalsEnabled: false, // local toggle OFF — must NOT win over the persisted flag
   });
 
   const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-  await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
+  await walkToStyle(getByText, getByRole);
   // Let the profile query resolve so the persisted flag (not the local fallback) is in effect.
   await waitFor(() =>
     expect(
@@ -249,9 +238,7 @@ test("D-09: a new reading's reversals_enabled is sourced from the persisted GET 
     ).toBe(true),
   );
 
-  const cta = getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
-  fireEvent.click(cta);
-
+  fireEvent.click(getByRole("button", { name: "Начать расклад" }));
   await waitFor(() => expect(useSelection.getState().step).toBe("ritual"));
 
   const postCall = fetchMock.mock.calls.find(
@@ -262,6 +249,7 @@ test("D-09: a new reading's reversals_enabled is sourced from the persisted GET 
   expect(postCall).toBeTruthy();
   const body = JSON.parse(String((postCall?.[1] as RequestInit).body));
   expect(body.reversals_enabled).toBe(true); // the PERSISTED flag, not the local `false`
+  expect(body.answer_style).toBe("berezhny"); // the default style (no style tapped)
 });
 
 test("HOME-01/02/D-13: an empty question shows no error and a 1–9-char question shows the gentle too-short hint", async () => {

@@ -121,6 +121,7 @@ function ProfileHeader({ onBack, topInset }: { onBack: () => void; topInset: num
 
 export function ProfileScreen() {
   const back = useSelection((s) => s.back);
+  const goTo = useSelection((s) => s.goTo);
   const insets = getContentSafeAreaInsets();
 
   const { data, isPending, isError } = useMe();
@@ -207,6 +208,18 @@ export function ProfileScreen() {
             onChange={(next) => toggle("allow_history_personalization", next)}
           />
         </section>
+
+        {/* Admin dashboard entry — shown only when the server reports this user is an admin. */}
+        {data.is_admin && (
+          <m.button
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            onClick={() => goTo("admin")}
+            className="pill-ghost w-full py-3.5 text-[16px] outline-none focus-visible:ring-2"
+          >
+            ✦&nbsp;Админ-панель
+          </m.button>
+        )}
       </>
     );
   })();

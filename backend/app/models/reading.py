@@ -56,6 +56,8 @@ class Reading(UUIDPrimaryKeyMixin, Base):
     model_name: Mapped[str | None] = mapped_column(String, nullable=True)
     prompt_version: Mapped[str | None] = mapped_column(String, nullable=True)
     generation_error: Mapped[str | None] = mapped_column(String, nullable=True)
+    # The chosen answer style (Ясный/Бережный/Таинственный) — NULL on rows that predate the feature.
+    answer_style: Mapped[str | None] = mapped_column(String, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)

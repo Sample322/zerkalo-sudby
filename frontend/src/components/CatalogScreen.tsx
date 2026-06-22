@@ -20,7 +20,7 @@ import {
   READING_RETRY,
   START_CTA,
 } from "../reading/copy";
-import { questionValidity, useSelection } from "../stores/selection";
+import { questionValidity, useSelection, type AnswerStyle } from "../stores/selection";
 import { useDeckTheme } from "../theme/useDeckTheme";
 import { DeckCard } from "./DeckCard";
 import { PaywallSheet } from "./PaywallSheet";
@@ -54,14 +54,22 @@ const TOPICS: { slug: string; label: string }[] = [
 // The selection wizard sub-steps, in order. One focus per page (Вопрос → Тема → Колода →
 // Расклад), each its own screen with back/change — far calmer than the old single dense screen,
 // and it adapts cleanly from a 360px phone to a wide desktop window.
-type WizardStep = "question" | "topic" | "deck" | "spread";
-const WIZARD_ORDER: readonly WizardStep[] = ["question", "topic", "deck", "spread"];
+type WizardStep = "question" | "topic" | "deck" | "spread" | "style";
+const WIZARD_ORDER: readonly WizardStep[] = ["question", "topic", "deck", "spread", "style"];
 const STEP_TITLE: Record<WizardStep, string> = {
   question: "Твой вопрос",
   topic: "Выбери тему",
   deck: "Выбери колоду",
   spread: "Выбери расклад",
+  style: "Стиль ответа",
 };
+
+/** The 3 answer-style options shown on the final wizard step (label + a one-line hint). */
+const ANSWER_STYLE_OPTIONS: { key: AnswerStyle; label: string; hint: string }[] = [
+  { key: "yasny", label: "Ясный", hint: "По существу и конкретно, с практичным выводом." },
+  { key: "berezhny", label: "Бережный", hint: "Тепло и понятно — и смысл, и атмосфера." },
+  { key: "tainstvenny", label: "Таинственный", hint: "Образно, голосом оракула, с метафорами." },
+];
 
 const PAGE_TRANSITION = { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const };
 
@@ -76,6 +84,8 @@ export function CatalogScreen() {
   const setTopic = useSelection((s) => s.setTopic);
   const setDeck = useSelection((s) => s.setDeck);
   const setSpread = useSelection((s) => s.setSpread);
+  const answerStyle = useSelection((s) => s.answerStyle);
+  const setAnswerStyle = useSelection((s) => s.setAnswerStyle);
   const setQuestion = useSelection((s) => s.setQuestion);
   const setReading = useSelection((s) => s.setReading);
   const goTo = useSelection((s) => s.goTo);
@@ -96,7 +106,7 @@ export function CatalogScreen() {
   // Open on the furthest already-chosen step so returning to selection (or a deep-linked store)
   // resumes where the user left off instead of forcing the whole wizard again.
   const [wizardStep, setWizardStep] = useState<WizardStep>(() =>
-    spreadSlug ? "spread" : deckSlug ? "deck" : topic ? "topic" : "question",
+    spreadSlug ? "style" : deckSlug ? "spread" : topic ? "deck" : "question",
   );
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState(false);
@@ -127,6 +137,10 @@ export function CatalogScreen() {
     setDeck(slug);
     goToStep("spread");
   }
+  function pickSpread(slug: string): void {
+    setSpread(slug);
+    goToStep("style");
+  }
 
   async function handleStart() {
     if (isStarting || !selectedSpread || !topic || !deckSlug || !spreadSlug) return;
@@ -150,6 +164,7 @@ export function CatalogScreen() {
         deckTitle: decksQuery.data?.find((d) => d.slug === deckSlug)?.title,
         spreadTitle: selectedSpread.title,
         topicLabel: TOPICS.find((t) => t.slug === topic)?.label,
+        answerStyle,
       });
       setReading(reading);
       goTo("ritual");
@@ -271,14 +286,18 @@ export function CatalogScreen() {
               selected={spreadSlug}
               recommendedSlug={recommendation.data?.recommended_spread.slug}
               recommendation={recommendation.data}
-              onSelect={setSpread}
+              onSelect={pickSpread}
             />
+          )}
+
+          {wizardStep === "style" && (
+            <StyleStep selected={answerStyle} onSelect={setAnswerStyle} />
           )}
         </m.section>
       </AnimatePresence>
 
-      {/* Footer CTA — «Далее» on the question step; «Начать расклад» (+ limits) on the spread step.
-          Topic/deck steps auto-advance on tap, so they have no footer button. */}
+      {/* Footer CTA — «Далее» on the question step; «Начать расклад» (+ limits) on the final style
+          step. Topic/deck/spread steps auto-advance on a choice, so they have no footer button. */}
       <div
         className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-xl px-5 pt-3"
         style={{
@@ -298,7 +317,7 @@ export function CatalogScreen() {
           </m.button>
         )}
 
-        {wizardStep === "spread" && (
+        {wizardStep === "style" && (
           <SpreadFooter
             ready={Boolean(spreadSlug)}
             isStarting={isStarting}
@@ -430,7 +449,48 @@ function SpreadStep({
   );
 }
 
-/** The spread-step footer: remaining-count + «Начать расклад», or the soft failure band. */
+/** The final wizard step — pick how the reading should sound (Ясный/Бережный/Таинственный). */
+function StyleStep({
+  selected,
+  onSelect,
+}: {
+  selected: AnswerStyle;
+  onSelect: (style: AnswerStyle) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {ANSWER_STYLE_OPTIONS.map((opt) => {
+        const active = selected === opt.key;
+        return (
+          <m.button
+            key={opt.key}
+            type="button"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onSelect(opt.key)}
+            aria-pressed={active}
+            className="panel flex flex-col gap-1 p-5 text-left"
+            style={
+              active
+                ? {
+                    borderColor: "color-mix(in srgb, var(--deck-accent) 55%, transparent)",
+                    boxShadow:
+                      "0 0 0 1.5px var(--deck-accent), 0 0 26px -8px color-mix(in srgb, var(--deck-glow) 75%, transparent)",
+                  }
+                : undefined
+            }
+          >
+            <span className="font-display metal-text text-[22px] leading-tight">{opt.label}</span>
+            <span className="text-[15px] leading-relaxed" style={{ color: "var(--color-mist)" }}>
+              {opt.hint}
+            </span>
+          </m.button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The final-step footer: remaining-count + «Начать расклад», or the soft failure band. */
 function SpreadFooter({
   ready,
   isStarting,

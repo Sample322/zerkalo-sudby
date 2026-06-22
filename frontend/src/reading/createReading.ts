@@ -69,6 +69,8 @@ export interface CreateReadingParams {
   deckTitle?: string;
   spreadTitle?: string;
   topicLabel?: string;
+  /** Answer-style preference (Ясный/Бережный/Таинственный) → tunes the generation + tracked. */
+  answerStyle?: string;
 }
 
 /** §14.5 request body field names — exactly what `ReadingCreate` validates server-side. */
@@ -78,6 +80,7 @@ interface ReadingCreateBody {
   deck_slug: string;
   spread_slug: string;
   reversals_enabled: boolean;
+  answer_style: string;
 }
 
 /**
@@ -185,6 +188,7 @@ export async function createReading(
     deck_slug: deckSlug,
     spread_slug: spreadSlug,
     reversals_enabled: reversalsEnabled,
+    answer_style: params.answerStyle ?? "berezhny",
   };
 
   const response = await apiFetch("/api/readings", {

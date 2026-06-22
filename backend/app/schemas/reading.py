@@ -200,6 +200,10 @@ class ReadingCreate(BaseModel):
         default=True,
         description="включены ли перевёрнутые карты (D-13: по умолчанию on, 70/30)",
     )
+    answer_style: str = Field(
+        default="berezhny",
+        description="стиль ответа: yasny | berezhny | tainstvenny (нормализуется на сервере)",
+    )
 
     @field_validator("question", mode="before")
     @classmethod

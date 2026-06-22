@@ -88,6 +88,7 @@ from app.schemas.reading import (
     ReadingSummaryOut,
     SafetyVerdict,
 )
+from app.services.answer_style import normalize_answer_style
 from app.services.card_draw import CardDrawService, DrawnCard
 from app.services.llm import LLMGenerationError, LLMService
 from app.services.prompt_engine import PromptEngine
@@ -309,6 +310,8 @@ class ReadingService:
         reading = await self._persist_pending(
             session, user, req, deck, spread, draw_records, reversals_enabled
         )
+        # Record the chosen answer style for the admin stats (normalized — unknown → default).
+        reading.answer_style = normalize_answer_style(req.answer_style)
 
         # The classify call (if a real one happened) is now logged against the existing reading.
         await self._log_classify(session, reading.id, classify_result)
@@ -322,6 +325,7 @@ class ReadingService:
             question=req.question,
             topic=req.topic,
             safety_action=safety_action,
+            answer_style=req.answer_style,
         )
         reading.prompt_version = bundle.prompt_version
 

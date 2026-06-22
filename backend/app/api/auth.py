@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
+from app.core.config import settings
 from app.schemas.auth import AuthRequest, AuthResponse
 from app.services.telegram_auth import authenticate, get_user_limits, project_limits
 
@@ -46,6 +47,7 @@ async def auth_telegram(
         user=user,
         limits=project_limits(limits, user.telegram_id),
         settings=user,
+        is_admin=settings.is_admin(user.telegram_id),
     )
 
 

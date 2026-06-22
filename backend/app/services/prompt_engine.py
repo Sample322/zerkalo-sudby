@@ -44,6 +44,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Deck, DeckCard, PromptTemplate, SpreadType
 from app.models.enums import Orientation
+from app.services.answer_style import DEFAULT_ANSWER_STYLE, answer_style_modifier
 from app.services.card_draw import DrawnCard
 from app.services.safety import SafetyAction
 
@@ -127,14 +128,22 @@ def _deck_specific_modifier(style: DeckCardStyle, orientation: Orientation) -> s
     )
 
 
-def build_system_block(*, system_text: str, deck_modifier_text: str) -> str:
-    """Compose the SYSTEM block: §16 principles + the deck's §19 modifier + D-02 signature.
+def build_system_block(
+    *, system_text: str, deck_modifier_text: str, style_text: str | None = None
+) -> str:
+    """Compose the SYSTEM block: §16 principles + the deck's §19 modifier + D-02 signature,
+    plus the chosen answer-style instruction (Ясный/Бережный/Таинственный) when given.
 
     Pure. ``deck_modifier_text`` already carries BOTH the §19 tone and the mandatory
     "Обязательная подпись колоды…" signature sentence (authored in the seed, Task 1), so the
-    guaranteed per-deck device is part of the system frame the model is bound to (D-01/D-02).
+    guaranteed per-deck device is part of the system frame the model is bound to (D-01/D-02). The
+    ``style_text`` is appended last so it tunes HOW the bound model speaks without loosening any
+    safety / brand rule above it.
     """
-    return f"{system_text.strip()}\n\n{deck_modifier_text.strip()}"
+    block = f"{system_text.strip()}\n\n{deck_modifier_text.strip()}"
+    if style_text:
+        block = f"{block}\n\n{style_text.strip()}"
+    return block
 
 
 def _build_card_context(
@@ -361,6 +370,7 @@ class PromptEngine:
         question: str | None,
         topic: str,
         safety_action: SafetyAction = SafetyAction.GENERATE,
+        answer_style: str = DEFAULT_ANSWER_STYLE,
     ) -> PromptBundle:
         """Build the fused ``PromptBundle`` (system + user + prompt_version) for one reading.
 
@@ -395,6 +405,7 @@ class PromptEngine:
         system_block = build_system_block(
             system_text=system_row.template_text,
             deck_modifier_text=deck_modifier_row.template_text,
+            style_text=answer_style_modifier(answer_style),
         )
         user_block = build_user_block(
             single_card_text=single_card_row.template_text,

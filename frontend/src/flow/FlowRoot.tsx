@@ -27,6 +27,7 @@ import { RevealScreen } from "../components/reveal/RevealScreen";
 import { ResultScreen } from "../components/result/ResultScreen";
 import { HistoryScreen } from "../components/history/HistoryScreen";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
+import { AdminScreen } from "../components/admin/AdminScreen";
 import type { Step } from "./steps";
 
 // Map each step token to its screen component. `selection` reuses the existing CatalogScreen
@@ -44,6 +45,7 @@ const SCREENS: Record<Step, () => React.JSX.Element> = {
   history: HistoryScreen,
   profile: ProfileScreen,
   readingDetail: ResultScreen,
+  admin: AdminScreen,
 };
 
 export function FlowRoot() {

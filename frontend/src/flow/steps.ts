@@ -16,7 +16,8 @@ export type Step =
   | "result"
   | "history"
   | "profile"
-  | "readingDetail";
+  | "readingDetail"
+  | "admin";
 
 /**
  * The five ritual steps in their natural forward order. The Phase-5 off-flow destinations

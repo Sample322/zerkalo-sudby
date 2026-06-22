@@ -99,17 +99,19 @@ afterEach(() => {
 });
 
 async function tapStart(getByRole: (role: string, opts: { name: string }) => HTMLElement) {
-  const cta = getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
-  await waitFor(() => expect(cta.disabled).toBe(false));
-  fireEvent.click(cta);
+  // The CTA lives on the final (style) wizard step; the seeded topic+deck+spread make the wizard
+  // open there (initialStep). Retry the click until createReading actually fires — the click is a
+  // no-op until the spreads query resolves selectedSpread (so the handler's early-return passes).
+  await waitFor(() => {
+    fireEvent.click(getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement);
+    expect(createReadingMock).toHaveBeenCalled();
+  });
 }
 
 describe("CatalogScreen — D-08 failure UX (Повторить + Сменить колоду)", () => {
   // [test_failure_offers_retry_and_change_deck]
   test("on a failed reading the screen shows §9.8 + Повторить + Сменить колоду", async () => {
     const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-    await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
-
     await tapStart(getByRole);
 
     await waitFor(() => expect(getByText(READING_ERROR)).toBeTruthy());
@@ -124,8 +126,6 @@ describe("CatalogScreen — D-08 failure UX (Повторить + Сменить
   // [test_no_advance_on_failure]
   test("the CTA does NOT advance to ritual on failure (stays on selection)", async () => {
     const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-    await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
-
     await tapStart(getByRole);
 
     await waitFor(() => expect(getByText(READING_ERROR)).toBeTruthy());
@@ -136,8 +136,6 @@ describe("CatalogScreen — D-08 failure UX (Повторить + Сменить
   // [test_retry_reuses_same_params]
   test("Повторить re-runs the same request (same question/topic/deck/spread)", async () => {
     const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-    await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
-
     await tapStart(getByRole);
     await waitFor(() => expect(getByText(READING_ERROR)).toBeTruthy());
     expect(createReadingMock).toHaveBeenCalledTimes(1);
@@ -183,8 +181,6 @@ describe("CatalogScreen — D-08 failure UX (Повторить + Сменить
       },
     };
     const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-    await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
-
     await tapStart(getByRole);
     await waitFor(() => expect(getByText(READING_ERROR)).toBeTruthy());
 
@@ -201,8 +197,6 @@ describe("CatalogScreen — D-08 failure UX (Повторить + Сменить
   // [test_change_deck_preserves_question]
   test("Сменить колоду keeps the question in the store (D-04) and dismisses the error", async () => {
     const { getByText, getByRole, queryByText } = renderWithClient(<CatalogScreen />);
-    await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
-
     await tapStart(getByRole);
     await waitFor(() => expect(getByText(READING_ERROR)).toBeTruthy());
 

@@ -100,6 +100,8 @@ class AuthResponse(BaseModel):
     user: UserOut
     limits: LimitsOut
     settings: SettingsOut
+    # True for the admin allowlist (ADMIN_TELEGRAM_IDS) — the FE reveals the admin dashboard entry.
+    is_admin: bool = False
 
 
 class MeResponse(BaseModel):
@@ -108,6 +110,7 @@ class MeResponse(BaseModel):
     user: UserOut
     limits: LimitsOut
     settings: SettingsOut
+    is_admin: bool = False
 
 
 __all__ = [

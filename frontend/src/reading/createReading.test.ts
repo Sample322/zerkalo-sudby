@@ -128,6 +128,7 @@ describe("createReading — real POST /api/readings via apiFetch (D-07 mechanica
       deck_slug: "moon_mirror",
       spread_slug: "three_card",
       reversals_enabled: true,
+      answer_style: "berezhny", // default when the caller doesn't pass answerStyle
     });
     // The mock-only `positions`/`rng` must NOT leak into the request body.
     expect(sent).not.toHaveProperty("positions");

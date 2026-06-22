@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_session
+from app.core.config import settings
 from app.models.user import User
 from app.schemas.auth import MeResponse, SettingsOut, SettingsPatch
 from app.services.telegram_auth import get_user_limits, project_limits
@@ -30,6 +31,7 @@ async def get_me(
         user=current_user,
         limits=project_limits(limits, current_user.telegram_id),
         settings=current_user,
+        is_admin=settings.is_admin(current_user.telegram_id),
     )
 
 
