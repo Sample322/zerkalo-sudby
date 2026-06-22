@@ -136,40 +136,42 @@ afterEach(() => {
   document.documentElement.removeAttribute("data-deck");
 });
 
-test("renders decks + spreads, re-themes on deck select, shows recommendation on topic", async () => {
-  const { getByText } = renderWithClient(<CatalogScreen />);
+test("walks the wizard: topic → deck (re-themes) → spread, rendering each step's options + the recommendation", async () => {
+  const { getByText, getAllByText, getByRole } = renderWithClient(<CatalogScreen />);
 
-  // Decks + spreads load (no topic chosen yet -> no recommendation banner, titles unique).
+  // Question step is first → advance; topic step → pick a topic (auto-advances to the deck step).
+  fireEvent.click(getByRole("button", { name: "Далее" }));
+  fireEvent.click(getByText("Любовь"));
+
+  // Deck step: every deck renders; selecting one flips the root data-deck (UI-02) + advances.
   await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
   for (const deck of DECKS) expect(getByText(deck.title)).toBeTruthy();
-  for (const spread of SPREADS) expect(getByText(spread.title)).toBeTruthy();
-
-  // UI-02 end-to-end: selecting a deck flips the root data-deck attribute.
   fireEvent.click(getByText("Колода 1"));
-  await waitFor(() =>
-    expect(document.documentElement.dataset.deck).toBe("deck_1"),
-  );
+  await waitFor(() => expect(document.documentElement.dataset.deck).toBe("deck_1"));
 
-  // SPREAD-04: choosing a topic surfaces the recommendation reason (brand-voice clean).
-  fireEvent.click(getByText("Любовь"));
-  await waitFor(() => expect(getByText(REASON)).toBeTruthy());
+  // Spread step: every spread renders + the recommendation reason (SPREAD-04, brand-safe).
+  // "Расклад 0" appears twice (recommendation banner + list) → getAllByText.
+  await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
+  for (const spread of SPREADS) expect(getAllByText(spread.title).length).toBeGreaterThan(0);
+  expect(getByText(REASON)).toBeTruthy();
   expect(BANNED_BRAND_TOKENS.test(REASON)).toBe(false);
 });
 
-test("HOME-07: «Начать расклад» is disabled with the gating hint until topic+deck+spread are chosen", async () => {
+test("HOME-07: the spread-step «Начать расклад» stays disabled until a spread is chosen", async () => {
   const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
-  await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
 
-  // Nothing chosen -> CTA disabled + the quiet gating hint (no dead click, no error).
-  const cta = getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
-  expect(cta.disabled).toBe(true);
-  expect(getByText("Выбери тему, колоду и расклад — и колода будет готова.")).toBeTruthy();
-  // The gating hint copy is brand-safe (SAFE-06 via the shared ban-list, incl. ИИ).
-  expect(
-    BANNED_BRAND_TOKENS.test(
-      "Выбери тему, колоду и расклад — и колода будет готова.",
-    ),
-  ).toBe(false);
+  // Walk the wizard to the spread step (the only place the start CTA lives).
+  fireEvent.click(getByRole("button", { name: "Далее" }));
+  fireEvent.click(getByText("Любовь"));
+  await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
+  fireEvent.click(getByText("Колода 0"));
+  await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
+
+  const cta = () => getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement;
+  expect(cta().disabled).toBe(true); // no spread chosen yet on the spread step
+
+  fireEvent.click(getByText("Расклад 1"));
+  await waitFor(() => expect(cta().disabled).toBe(false));
 });
 
 test("HOME-07/D-05: with topic+deck+spread set, tapping the CTA builds the reading via createReading, writes it to the store `reading` slot BEFORE advancing to ritual", async () => {
@@ -266,8 +268,7 @@ test("HOME-01/02/D-13: an empty question shows no error and a 1–9-char questio
   const { getByText, queryByText, getByPlaceholderText } = renderWithClient(
     <CatalogScreen />,
   );
-  await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
-
+  // The question textarea is the first wizard step — immediately present, no navigation needed.
   const textarea = getByPlaceholderText("О чём спросим колоду?") as HTMLTextAreaElement;
 
   // Empty question is VALID (HOME-02): the optional neutral helper shows, the too-short hint
