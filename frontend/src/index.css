@@ -9,8 +9,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 @theme {
   /* Typography */
-  --font-display: "Playfair Display", ui-serif, Georgia, serif;
-  --font-body: "Cormorant Garamond", ui-serif, Georgia, "Times New Roman", serif;
+  --font-display: "Forum", ui-serif, Georgia, serif;
+  --font-body: "Lora", ui-serif, Georgia, "Times New Roman", serif;
 
   /* Universal neutrals (deck palettes tint --deck-* on top of these) */
   --color-mist: #c6c1d2;

@@ -210,9 +210,11 @@ test("HOME-07/D-05: with topic+deck+spread set, tapping the CTA builds the readi
   // It is the reading createReading built from our params (question passes through; one card
   // per the single spread position; brand-safe summary present).
   expect(reading?.question).toBe("Что меня ждёт в отношениях этой осенью?");
-  expect(reading?.topic).toBe("love");
-  expect(reading?.deckSlug).toBe("deck_0");
-  expect(reading?.spreadSlug).toBe("spread_0");
+  // The result meta carries the RU labels (the slugs go to the backend; the human titles go on
+  // screen) — never the English slugs. See createReading deckTitle/spreadTitle/topicLabel.
+  expect(reading?.topic).toBe("Любовь");
+  expect(reading?.deckSlug).toBe("Колода 0");
+  expect(reading?.spreadSlug).toBe("Расклад 0");
   expect(reading?.cards).toHaveLength(1);
   expect(reading?.cards[0]?.positionTitle).toBe("Суть");
   expect(reading?.summary).toBeTruthy();

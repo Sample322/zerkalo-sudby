@@ -15,8 +15,6 @@ import {
   RESULT_HEADER,
   RESULT_HISTORY_CTA,
   RESULT_LABELS,
-  RESULT_SAVE_CTA,
-  RESULT_SOON_BADGE,
   SUMMARY_LABELS,
 } from "../../reading/copy";
 import type { MockReading } from "../../reading/types";
@@ -232,37 +230,29 @@ export function ResultScreen() {
 
       <ReadingBody reading={reading} fadeCards={false} />
 
-      {/* Sticky actions — «Ещё расклад» (D-04); save «скоро» stub; «История» → list (D-10). */}
+      {/* Sticky actions — «Ещё расклад» (D-04) + «История» (D-10) as stacked full-width pills for
+          comfortable mobile tap targets. The reading is already saved to history, so the Phase-7
+          «сохранить» stub is intentionally omitted (a dead control only added clutter). */}
       <div
-        className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-md items-stretch gap-3 px-6 pt-3"
+        className="fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-md flex-col gap-2.5 px-6 pt-3"
         style={{
           paddingBottom: 14 + insets.bottom,
-          background: "linear-gradient(to top, var(--deck-bg) 64%, transparent)",
+          background: "linear-gradient(to top, var(--deck-bg) 72%, var(--deck-bg) 40%, transparent)",
         }}
       >
         <m.button
           type="button"
           whileTap={{ scale: 0.97 }}
           onClick={startReadingAgain}
-          className="pill-primary flex-1 py-3.5 text-[17px] outline-none focus-visible:ring-2"
+          className="pill-primary w-full py-4 text-[18px] outline-none focus-visible:ring-2"
         >
           {RESULT_AGAIN_CTA}
         </m.button>
-        <button
-          type="button"
-          disabled
-          className="pill-ghost flex flex-col items-center justify-center px-4 text-[13px] opacity-50"
-        >
-          <span>{RESULT_SAVE_CTA}</span>
-          <span className="eyebrow" style={{ fontSize: 9, letterSpacing: "0.16em" }}>
-            {RESULT_SOON_BADGE}
-          </span>
-        </button>
         <m.button
           type="button"
           whileTap={{ scale: 0.97 }}
           onClick={() => goTo("history")}
-          className="pill-ghost flex items-center justify-center px-5 text-[13px] outline-none focus-visible:ring-2"
+          className="pill-ghost w-full py-3 text-[15px] outline-none focus-visible:ring-2"
         >
           {RESULT_HISTORY_CTA}
         </m.button>

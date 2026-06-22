@@ -60,6 +60,15 @@ export interface CreateReadingParams {
    * on the params so the caller's call site is unchanged across the swap.
    */
   positions?: { title: string }[];
+  /**
+   * Human RU labels for the result meta. The backend request carries the slugs (deck_slug /
+   * spread_slug / topic), but the result screen must show these titles — never the English
+   * slugs. Sourced by the caller from the loaded decks/spreads/topics. Optional: falls back to
+   * the slug when absent (e.g. a future caller that lacks the catalog).
+   */
+  deckTitle?: string;
+  spreadTitle?: string;
+  topicLabel?: string;
 }
 
 /** §14.5 request body field names — exactly what `ReadingCreate` validates server-side. */
@@ -208,13 +217,14 @@ export async function createReading(
     throw new ReadingError("failure", `createReading not completed: status=${data.status}`);
   }
 
-  // Map through the ONE shared transform (DRY) — the live-flow meta comes from the params,
-  // createdAt is "now" (the reading was just generated).
+  // Map through the ONE shared transform (DRY). The result meta shows the RU titles (the slugs
+  // go to the backend; the human labels go on screen) — fall back to the slug only if a label
+  // wasn't supplied. createdAt is "now" (the reading was just generated).
   return mapReadingOutToMock(data, {
     question,
-    topic,
-    deckSlug,
-    spreadSlug,
+    topic: params.topicLabel ?? topic,
+    deckSlug: params.deckTitle ?? deckSlug,
+    spreadSlug: params.spreadTitle ?? spreadSlug,
     createdAt: new Date().toISOString(),
   });
 }

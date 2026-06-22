@@ -156,16 +156,12 @@ test("«Ещё расклад» returns to selection preserving question + topic
   expect(state.topic).toBe("work");
 });
 
-test("«Сохранить карточку» stays a disabled, inert «скоро» stub (Phase 8)", () => {
-  const { getByText } = renderResult();
+test("the Phase-7 «сохранить» stub is gone — the reading auto-saves, so no dead control is shown", () => {
+  const { queryByText } = renderResult();
 
-  const saveBtn = getByText(RESULT_SAVE_CTA).closest("button");
-  expect(saveBtn).toBeTruthy();
-  expect((saveBtn as HTMLButtonElement).disabled).toBe(true);
-
-  // Tapping the disabled stub does nothing — the flow does not advance.
-  fireEvent.click(saveBtn as HTMLButtonElement);
-  expect(useSelection.getState().step).toBe("result");
+  // The disabled «скоро» save stub was removed (it only added clutter + a dead button); the
+  // reading is already persisted to history, reachable via «История».
+  expect(queryByText(RESULT_SAVE_CTA)).toBeNull();
 });
 
 test("«История» is un-stubbed (D-10) — enabled and routes to the History step", () => {

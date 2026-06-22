@@ -121,6 +121,10 @@ export function CatalogScreen() {
         spreadSlug,
         reversalsEnabled,
         positions: selectedSpread.positions,
+        // RU labels for the result meta (the slugs above go to the backend; these go on screen).
+        deckTitle: decksQuery.data?.find((d) => d.slug === deckSlug)?.title,
+        spreadTitle: selectedSpread.title,
+        topicLabel: TOPICS.find((t) => t.slug === topic)?.label,
       });
       setReading(reading);
       goTo("ritual");
