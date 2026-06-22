@@ -24,11 +24,11 @@ const FACE: CSSProperties = {
   WebkitBackfaceVisibility: "hidden",
 };
 
-// READ-08 / D-09 — a single tap-to-flip 3D card. The flip is a COMPOSITOR-ONLY rotateY
-// (transform) with a spring (260/26); the parent owns `flipped` so RevealScreen can
-// orchestrate «Раскрыть все». The edge-glow is the OPACITY of a pre-rendered accent
-// border layer — never an animated box-shadow/layout prop (Pitfall 2). A light haptic
-// fires once the flip settles (UI-03). The 120×192 button satisfies the ≥44px tap floor.
+// READ-08 / D-09 — a single tap-to-flip 3D card. The flip is a COMPOSITOR-ONLY rotateY with a
+// spring (260/26); the parent owns `flipped` so RevealScreen can orchestrate «Раскрыть все». The
+// edge-glow is the OPACITY of a pre-rendered accent border — never an animated box-shadow/layout
+// prop (Pitfall 2). A light haptic fires once the flip settles. The 120×192 button meets the
+// ≥44px tap floor.
 export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
   return (
     <button
@@ -54,28 +54,51 @@ export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
         }}
         style={{ ...SIZE, position: "relative", transformStyle: "preserve-3d" }}
       >
-        {/* Back (рубашка) at 0deg — a deck-tinted card back. */}
+        {/* Back (рубашка) at 0deg — an ornate deck-tinted card back: double gold hairline, halo,
+            sigil, corner ✦. */}
         <div
           aria-hidden="true"
           style={{
             ...FACE,
-            display: "grid",
-            placeItems: "center",
-            background: "linear-gradient(150deg, var(--deck-deep), var(--deck-bg))",
-            border: "1px solid color-mix(in srgb, var(--deck-accent) 40%, transparent)",
+            overflow: "hidden",
+            background: "linear-gradient(152deg, var(--deck-deep), var(--deck-bg) 78%)",
+            border: "1px solid color-mix(in srgb, var(--deck-accent) 50%, transparent)",
+            boxShadow: "inset 0 0 20px color-mix(in srgb, var(--deck-glow) 16%, transparent)",
           }}
         >
-          <span
-            aria-hidden="true"
+          <div
             style={{
-              fontFamily: "ui-serif, Georgia, serif",
-              fontSize: 34,
-              color: "var(--deck-accent)",
-              opacity: 0.85,
+              position: "absolute",
+              inset: 6,
+              borderRadius: 8,
+              border: "1px solid color-mix(in srgb, var(--deck-accent) 28%, transparent)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(70% 55% at 50% 44%, color-mix(in srgb, var(--deck-glow) 22%, transparent), transparent 70%)",
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "grid",
+              placeItems: "center",
+              fontFamily: "var(--font-display), Georgia, serif",
+              fontSize: 38,
+              fontWeight: 600,
+              color: "var(--deck-soft)",
+              textShadow: "0 0 10px color-mix(in srgb, var(--deck-glow) 55%, transparent)",
             }}
           >
             ✦
           </span>
+          <span style={{ position: "absolute", top: 9, left: 10, fontSize: 11, color: "color-mix(in srgb, var(--deck-accent) 70%, transparent)" }}>✦</span>
+          <span style={{ position: "absolute", bottom: 9, right: 10, fontSize: 11, color: "color-mix(in srgb, var(--deck-accent) 70%, transparent)" }}>✦</span>
         </div>
 
         {/* Front (the card face, reused from CardArt) at 180deg. */}
@@ -89,6 +112,7 @@ export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
               inset: 0,
               borderRadius: 12,
               border: "1px solid var(--deck-accent)",
+              boxShadow: "0 0 22px -2px color-mix(in srgb, var(--deck-glow) 70%, transparent)",
               opacity: flipped ? 1 : 0,
               transition: "opacity 280ms cubic-bezier(0.16, 1, 0.3, 1)",
               pointerEvents: "none",

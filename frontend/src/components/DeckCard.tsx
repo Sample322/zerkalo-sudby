@@ -19,9 +19,10 @@ interface DeckCardProps {
   onSelect: (slug: string) => void;
 }
 
-// A premium-dark glass deck tile. The atmospheric CardArt fallback stands in for art
-// (none seeded in Phase 2), so a deck still reads intentionally. Selecting accents it and
-// (via the screen's useDeckTheme) re-tints the whole surface.
+// A premium-dark glass deck tile. The atmospheric CardArt fallback stands in for art (none
+// seeded yet), floating once chosen, so a deck still reads intentionally. Selecting accents it
+// and (via the screen's useDeckTheme) re-tints the whole surface — the core «один вопрос, разные
+// колоды» feel.
 export function DeckCard({ deck, active, onSelect }: DeckCardProps) {
   const suits = deck.recommended_topics
     .map((t) => TOPIC_LABELS[t] ?? t)
@@ -33,33 +34,33 @@ export function DeckCard({ deck, active, onSelect }: DeckCardProps) {
       type="button"
       onClick={() => onSelect(deck.slug)}
       aria-pressed={active}
-      whileHover={{ scale: 1.03 }}
+      whileHover={{ scale: 1.03, y: -3 }}
       whileTap={{ scale: 0.97 }}
-      className="flex w-56 shrink-0 snap-center flex-col gap-3 rounded-2xl border p-4 text-left"
+      className="panel flex w-56 shrink-0 snap-center flex-col items-center gap-4 p-5 text-center"
       style={{
-        background:
-          "linear-gradient(155deg, color-mix(in srgb, var(--deck-bg) 88%, transparent), color-mix(in srgb, var(--deck-deep) 72%, transparent))",
         borderColor: active
-          ? "var(--deck-accent)"
-          : "color-mix(in srgb, var(--deck-soft) 22%, transparent)",
+          ? "color-mix(in srgb, var(--deck-accent) 60%, transparent)"
+          : undefined,
         boxShadow: active
-          ? "0 0 0 1px var(--deck-accent), 0 14px 44px -18px var(--deck-accent)"
-          : "0 12px 32px -22px #000",
+          ? "inset 0 1px 0 color-mix(in srgb, var(--deck-soft) 12%, transparent), 0 0 0 1px color-mix(in srgb, var(--deck-accent) 50%, transparent), 0 18px 46px -18px color-mix(in srgb, var(--deck-glow) 70%, transparent)"
+          : undefined,
       }}
     >
-      <span className="self-center">
-        <CardArt src={null} alt={deck.title} glyph={deck.title.charAt(0)} />
-      </span>
-      <span className="flex flex-col gap-1">
-        <span className="text-lg font-semibold" style={{ color: "var(--deck-soft)" }}>
-          {deck.title}
-        </span>
+      <CardArt src={null} alt={deck.title} glyph={deck.title.charAt(0)} float={active} />
+      <span className="flex flex-col items-center gap-1">
+        <span className="font-display metal-text text-[21px] leading-tight">{deck.title}</span>
         {deck.atmosphere && (
-          <span className="text-xs opacity-70">{deck.atmosphere}</span>
+          <span className="text-[15px]" style={{ color: "color-mix(in srgb, var(--color-mist) 82%, transparent)" }}>
+            {deck.atmosphere}
+          </span>
         )}
-        {deck.tone && <span className="text-xs italic opacity-60">{deck.tone}</span>}
+        {deck.tone && (
+          <span className="text-[14px] italic" style={{ color: "var(--color-mist-dim)" }}>
+            {deck.tone}
+          </span>
+        )}
         {suits && (
-          <span className="mt-1 text-xs" style={{ color: "var(--deck-accent)" }}>
+          <span className="eyebrow mt-2" style={{ letterSpacing: "0.14em" }}>
             Для: {suits}
           </span>
         )}

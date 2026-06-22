@@ -49,26 +49,14 @@ export function UndoSnackbar({ open, onUndo, onDismiss }: UndoSnackbarProps) {
           role="status"
           aria-live="polite"
         >
-          <div
-            className="flex w-full items-center justify-between gap-4 rounded-2xl px-4 py-3"
-            style={{
-              background: "color-mix(in srgb, var(--deck-deep) 92%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--deck-accent) 24%, transparent)",
-              color: "var(--deck-soft)",
-            }}
-          >
-            <span className="text-sm">{HISTORY_DELETED_NOTICE}</span>
+          <div className="panel flex w-full items-center justify-between gap-4 px-4 py-3" style={{ color: "var(--deck-soft)" }}>
+            <span className="text-[15px] italic">{HISTORY_DELETED_NOTICE}</span>
             <m.button
               type="button"
               whileTap={{ scale: 0.95 }}
               onClick={onUndo}
-              className="shrink-0 rounded-full px-3 py-1 text-sm font-semibold outline-none focus-visible:ring-2"
-              style={{
-                background: "transparent",
-                border: "1px solid var(--deck-accent)",
-                color: "var(--deck-accent)",
-                cursor: "pointer",
-              }}
+              className="pill-ghost shrink-0 px-4 py-1.5 text-[14px] outline-none focus-visible:ring-2"
+              style={{ color: "var(--deck-accent)", borderColor: "color-mix(in srgb, var(--deck-accent) 50%, transparent)" }}
             >
               {HISTORY_DELETE_UNDO}
             </m.button>

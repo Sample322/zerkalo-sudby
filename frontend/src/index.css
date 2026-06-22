@@ -1,12 +1,34 @@
 @import "tailwindcss";
 @import "./theme/deckThemes.css";
 
-/* Minimal ritual atmosphere — full per-deck theming arrives in Phase 2. */
+/* ─────────────────────────────────────────────────────────────────────────
+   Зеркало Судьбы — visual system: «обсидиановая небесная роскошь».
+   Obsidian depths + per-deck metal (the deck accent plays the gold/leaf role),
+   high-contrast serif typography, ritual glass surfaces, starlit atmosphere.
+   Per-deck palettes live in theme/deckThemes.css ([data-deck] swaps the metal).
+   ───────────────────────────────────────────────────────────────────────── */
 @theme {
+  /* Typography */
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+  --font-body: "Cormorant Garamond", ui-serif, Georgia, "Times New Roman", serif;
+
+  /* Universal neutrals (deck palettes tint --deck-* on top of these) */
+  --color-mist: #c6c1d2;
+  --color-mist-dim: #918da0;
+  --color-gold: #c9a45c;
+  --color-gold-soft: #e5d3a3;
+
+  /* Back-compat tokens (old screens reference these until each is redesigned) */
   --color-night: oklch(18% 0.03 285);
   --color-veil: oklch(28% 0.04 285);
   --color-glow: oklch(82% 0.13 90);
-  --color-mist: oklch(72% 0.02 285);
+
+  /* Motion grammar */
+  --ease-ritual: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 220ms;
+  --dur-normal: 460ms;
+  --dur-slow: 900ms;
 }
 
 html,
@@ -15,15 +37,178 @@ body,
   height: 100%;
 }
 
+/* Content paints above the fixed atmosphere layer (RitualBackground, z-index 0). */
+#root {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
 body {
   margin: 0;
-  background:
-    radial-gradient(120% 90% at 50% -10%, var(--deck-deep), var(--deck-bg) 70%);
+  background-color: var(--deck-bg);
   color: var(--color-mist);
-  font-family:
-    ui-serif, Georgia, "Times New Roman", serif;
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.6;
+  letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   transition:
-    background 400ms ease,
-    color 400ms ease;
+    background-color 600ms var(--ease-out-expo),
+    color 600ms var(--ease-out-expo);
+}
+
+@layer components {
+  /* Display face helper. */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* Letterspaced uppercase label — the recurring ritual eyebrow. */
+  .eyebrow {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: color-mix(in srgb, var(--deck-accent) 72%, var(--color-mist));
+  }
+
+  /* Gold-leaf gradient text — pour the deck metal into a heading. */
+  .metal-text {
+    background: linear-gradient(
+      176deg,
+      var(--deck-soft) 0%,
+      var(--deck-accent) 52%,
+      color-mix(in srgb, var(--deck-accent) 64%, #000) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 26px color-mix(in srgb, var(--deck-glow) 22%, transparent);
+  }
+
+  /* Ritual glass surface — layered translucency + metal hairline + inner light. */
+  .panel {
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--deck-deep) 64%, transparent),
+      color-mix(in srgb, var(--deck-bg) 48%, transparent)
+    );
+    border: 1px solid color-mix(in srgb, var(--deck-accent) 22%, transparent);
+    border-radius: 18px;
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--deck-soft) 9%, transparent),
+      0 16px 34px rgba(0, 0, 0, 0.34);
+  }
+
+  /* The итог / ritual-emphasis surface — darker, deeper, gold-crowned. */
+  .panel-altar {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--deck-deep) 88%, transparent),
+      color-mix(in srgb, var(--deck-bg) 90%, transparent)
+    );
+    border: 1px solid color-mix(in srgb, var(--deck-accent) 34%, transparent);
+    border-radius: 18px;
+    box-shadow:
+      inset 0 0 42px color-mix(in srgb, var(--deck-accent) 7%, transparent),
+      0 18px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Hairline metal rule (use inside a flex row, optionally flanking a ✦). */
+  .gold-rule {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--deck-accent) 55%, transparent),
+      transparent
+    );
+  }
+
+  /* Primary ritual CTA — polished metal pill, ink text. */
+  .pill-primary {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--deck-bg);
+    background: linear-gradient(180deg, var(--deck-soft), var(--deck-accent));
+    border: none;
+    border-radius: 999px;
+    box-shadow:
+      0 12px 28px color-mix(in srgb, var(--deck-accent) 32%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  }
+
+  /* Secondary / ghost control — metal outline on glass. */
+  .pill-ghost {
+    font-family: var(--font-display);
+    letter-spacing: 0.03em;
+    color: var(--deck-soft);
+    background: color-mix(in srgb, var(--deck-deep) 42%, transparent);
+    border: 1px solid color-mix(in srgb, var(--deck-soft) 34%, transparent);
+    border-radius: 999px;
+  }
+}
+
+/* ── Atmosphere + reveal keyframes ────────────────────────────────────────── */
+@keyframes zs-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes zs-glow {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) scale(1.14);
+  }
+}
+
+@keyframes zs-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes zs-drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes zs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect the OS reduced-motion preference for the ambient loops only — the flow's
+   staged reveals are deliberate (the project ships MotionConfig reducedMotion="never"). */
+@media (prefers-reduced-motion: reduce) {
+  .zs-twinkle,
+  .zs-glow,
+  .zs-float,
+  .zs-spin {
+    animation: none !important;
+  }
 }

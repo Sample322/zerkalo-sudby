@@ -54,13 +54,10 @@ export function ThrottleToast({ open, onDismiss }: ThrottleToastProps) {
           aria-live="polite"
         >
           <div
-            className="rounded-2xl px-4 py-3 text-center text-base leading-relaxed"
-            style={{
-              background: "color-mix(in srgb, var(--deck-deep) 92%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--deck-accent) 24%, transparent)",
-              color: "var(--deck-soft)",
-            }}
+            className="panel flex items-center gap-3 px-5 py-3.5 text-center text-[16px] italic leading-relaxed"
+            style={{ color: "var(--deck-soft)" }}
           >
+            <span aria-hidden="true" style={{ color: "var(--deck-accent)" }}>✦</span>
             {THROTTLE_MESSAGE}
           </div>
         </m.div>
