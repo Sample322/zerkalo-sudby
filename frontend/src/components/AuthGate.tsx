@@ -9,7 +9,9 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { authenticate } from "../api/auth";
+import { markOnboardingSeen } from "../hooks/useOnboardingSeen";
 import { telegramReady } from "../lib/telegram";
+import { useSelection } from "../stores/selection";
 import { useSession } from "../stores/session";
 
 interface AuthGateProps {
@@ -35,7 +37,21 @@ export function AuthGate({ children }: AuthGateProps) {
 
     authenticate()
       .then((response) => {
-        if (active) setAuthenticated(response);
+        if (!active) return;
+        // Onboarding decision must use the SERVER flag, not localStorage — Telegram's in-app
+        // webview does not reliably persist localStorage between launches, so a returning user
+        // whose server flag is `true` would otherwise flash the onboarding for a frame. The auth
+        // response resolves BEFORE FlowRoot mounts, so setting the step here (only at boot, empty
+        // history) means FlowRoot's first paint is already correct — no flash. Also persist the
+        // local flag best-effort so the synchronous store init is right next time too.
+        if (
+          response.settings.onboarding_completed &&
+          useSelection.getState().history.length === 0
+        ) {
+          useSelection.setState({ step: "selection" });
+          markOnboardingSeen();
+        }
+        setAuthenticated(response);
       })
       .catch(() => {
         // Failure cause stays internal; the user only ever sees the in-character state.
