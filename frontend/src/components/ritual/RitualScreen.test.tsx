@@ -11,7 +11,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { useSelection } from "../../stores/selection";
 import { RITUAL_BEATS, RITUAL_SKIP } from "../../reading/copy";
 import type { MockReading } from "../../reading/types";
-import { RitualScreen } from "./RitualScreen";
+import { BEAT_MS, MIN_DWELL_MS, RitualScreen } from "./RitualScreen";
 
 // RitualScreen renders inside FlowRoot's <LazyMotion features={domAnimation}> in production, so
 // its `m.*` (motion/react-m) elements require a LazyMotion provider here too (mirrors the
@@ -95,9 +95,9 @@ test("the first beat headline renders on mount and skip is NOT active before bea
 test("advancing the timer past all beats transitions the store step to 'reveal' (READ-07)", () => {
   renderRitual();
 
-  // Drive past all three beats (3 × BEAT_MS = 3000ms) plus a margin for the completing tick.
+  // Drive past the minimum ritual dwell (the reveal gate) plus a margin for the completing tick.
   act(() => {
-    vi.advanceTimersByTime(RITUAL_BEATS.length * 1000 + 50);
+    vi.advanceTimersByTime(MIN_DWELL_MS + 50);
   });
 
   expect(useSelection.getState().step).toBe("reveal");
@@ -106,9 +106,9 @@ test("advancing the timer past all beats transitions the store step to 'reveal' 
 test("after the first beat, a skip tap transitions to 'reveal' early (D-08)", () => {
   const { getByText, container } = renderRitual();
 
-  // Advance ONE beat so skip unlocks (beat >= 1).
+  // Advance ONE phrase cadence so skip unlocks (beat >= 1).
   act(() => {
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(BEAT_MS);
   });
 
   // The «Пропустить» affordance is now present.
@@ -135,7 +135,7 @@ test("completion invokes haptic.notify('success') (READ-07 completion haptic)", 
   ).Telegram.WebApp.HapticFeedback.notificationOccurred;
 
   act(() => {
-    vi.advanceTimersByTime(RITUAL_BEATS.length * 1000 + 50);
+    vi.advanceTimersByTime(MIN_DWELL_MS + 50);
   });
 
   expect(notify).toHaveBeenCalledWith("success");
@@ -152,9 +152,9 @@ test("a pending reading HOLDS the ritual; depositing the reading then advances t
   useSelection.setState({ reading: null });
   renderRitual();
 
-  // Play past every beat: the ritual holds on the last beat, still on the ritual step (no cards).
+  // Past the minimum dwell, but with no cards yet the ritual must HOLD on the ritual step.
   act(() => {
-    vi.advanceTimersByTime(RITUAL_BEATS.length * 1000 + 50);
+    vi.advanceTimersByTime(MIN_DWELL_MS + 50);
   });
   expect(useSelection.getState().step).toBe("ritual");
 
@@ -170,7 +170,7 @@ test("a generation failure bounces out of the ritual back to selection", () => {
   renderRitual();
 
   act(() => {
-    vi.advanceTimersByTime(1000); // a beat in
+    vi.advanceTimersByTime(BEAT_MS); // a phrase in
   });
   expect(useSelection.getState().step).toBe("ritual");
 

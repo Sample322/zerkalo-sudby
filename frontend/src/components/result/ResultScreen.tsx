@@ -217,7 +217,7 @@ export function ResultScreen() {
 
   // ---- Live result mode (READ-09 / D-12). ----
   return (
-    <main className="flex min-h-full flex-col gap-6 px-6 pb-28 pt-9" style={{ color: "var(--deck-soft)" }}>
+    <main className="flex min-h-full flex-col gap-6 px-6 pb-48 pt-9" style={{ color: "var(--deck-soft)" }}>
       <header className="flex flex-col items-center gap-3 text-center">
         <span className="eyebrow">Зеркало Судьбы</span>
         <h1 className="font-display metal-text text-[34px] leading-tight">{RESULT_HEADER}</h1>

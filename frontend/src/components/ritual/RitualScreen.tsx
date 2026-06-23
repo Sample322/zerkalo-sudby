@@ -22,8 +22,13 @@ import { RITUAL_BEATS, RITUAL_SKIP } from "../../reading/copy";
 import { CardArt } from "../CardArtFallback";
 import { Particles } from "./Particles";
 
-/** Per-beat dwell (ms). 3 beats × ~1000ms ≈ the locked ~3s ritual (UI-SPEC / D-08). */
-const BEAT_MS = 1000;
+/** Phrase cadence (ms) — how slowly the ritual headlines crossfade while we wait. Decoupled from
+ *  the reveal timing below, so a calmer cadence never delays the actual result. */
+export const BEAT_MS = 2400;
+
+/** Minimum on-screen ritual time before the reveal — keeps the shuffle feeling like a real ritual
+ *  even when the cards arrive fast, WITHOUT being tied to how many phrases have shown. */
+export const MIN_DWELL_MS = 3500;
 
 /** Skip becomes active only from this beat onward (D-08: after the first beat). */
 const SKIP_UNLOCK_BEAT = 1;
@@ -46,8 +51,6 @@ export function RitualScreen() {
   const startedRef = useRef(false);
   // True once the flow has left the ritual (reveal, skip, or failure-bounce) so a late tick can't re-fire.
   const finishedRef = useRef(false);
-  // Mirrors `minDwellPassed` for the setInterval closure (avoids a stale-closure re-read).
-  const minDwellRef = useRef(false);
 
   // The cards are ready once the backgrounded POST /api/readings deposited a non-empty reading.
   const ready = reading !== null && reading.cards.length > 0;
@@ -61,9 +64,8 @@ export function RitualScreen() {
     useSelection.getState().goTo("reveal");
   }).current;
 
-  // Beat timeline: step through the headlines and CYCLE them while we wait, so the shuffle never
-  // freezes on one line during a longer generation. The minimum dwell is marked after the first
-  // full pass — the reveal waits for BOTH that and the cards (it does NOT finish here).
+  // Phrase cadence: CYCLE the headlines while we wait, so the shuffle never freezes on one line
+  // during a longer generation. Purely visual — it does NOT gate the reveal.
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -75,14 +77,7 @@ export function RitualScreen() {
         clearInterval(interval);
         return;
       }
-      setBeat((prev) => {
-        const next = prev + 1;
-        if (next >= RITUAL_BEATS.length && !minDwellRef.current) {
-          minDwellRef.current = true;
-          setMinDwellPassed(true);
-        }
-        return next % RITUAL_BEATS.length; // cycle the phrases while the cards are prepared
-      });
+      setBeat((prev) => (prev + 1) % RITUAL_BEATS.length);
     }, BEAT_MS);
 
     return () => {
@@ -91,7 +86,14 @@ export function RitualScreen() {
     };
   }, []);
 
-  // Reveal once BOTH the ritual has played its minimum AND the cards have landed.
+  // Minimum ritual dwell — a fixed, short window (not tied to the phrase count) so the reveal is
+  // never a flash, but a fast generation isn't held back by a slow phrase cadence.
+  useEffect(() => {
+    const t = setTimeout(() => setMinDwellPassed(true), MIN_DWELL_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Reveal once BOTH the minimum dwell has passed AND the cards have landed.
   useEffect(() => {
     if (ready && minDwellPassed) finish();
   }, [ready, minDwellPassed, finish]);

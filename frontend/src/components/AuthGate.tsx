@@ -53,7 +53,10 @@ export function AuthGate({ children }: AuthGateProps) {
 
   const isError = status === "error";
   return (
-    <main className="relative flex min-h-full flex-col items-center justify-center gap-8 px-9 text-center">
+    <main
+      className="relative flex flex-col items-center justify-center gap-8 px-9 text-center"
+      style={{ minHeight: "var(--tg-viewport-stable-height, 100dvh)" }}
+    >
       <p className="eyebrow">Зеркало Судьбы</p>
 
       <Sigil dimmed={isError} />
