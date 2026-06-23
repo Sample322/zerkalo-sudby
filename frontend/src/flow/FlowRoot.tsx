@@ -99,7 +99,9 @@ export function FlowRoot() {
   return (
     <MotionConfig reducedMotion="never">
       <LazyMotion features={domAnimation}>
-        <AnimatePresence mode="wait" initial={false}>
+        {/* initial enabled so the FIRST app screen also fades+scales in after the auth splash —
+            the one boundary that used to be an abrupt cut; every step change already animates. */}
+        <AnimatePresence mode="wait" initial>
           <m.div
             key={step}
             initial={{ opacity: 0, y: 14, scale: 0.985 }}

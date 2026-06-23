@@ -202,13 +202,68 @@ body {
   }
 }
 
+/* ── Boot/splash magical entrance (AuthGate runs ABOVE LazyMotion → CSS keyframes only) ──
+   A staggered, atmospheric reveal: the title rises, the sigil blooms out of a soft blur, the
+   phrase rises last. Compositor-only (transform/opacity/filter), expo-out, fill-mode both so the
+   elements start hidden and settle visible. Delays are set per-element inline (the stagger). */
+@keyframes zs-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes zs-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(7px);
+  }
+  55% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+.zs-enter-rise,
+.zs-enter-bloom {
+  opacity: 0;
+  will-change: transform, opacity;
+  animation-timing-function: var(--ease-out-expo);
+  animation-fill-mode: both;
+}
+.zs-enter-rise {
+  animation-name: zs-rise;
+  animation-duration: 0.9s;
+}
+.zs-enter-bloom {
+  animation-name: zs-bloom;
+  animation-duration: 1.1s;
+}
+
 /* Respect the OS reduced-motion preference for the ambient loops only — the flow's
-   staged reveals are deliberate (the project ships MotionConfig reducedMotion="never"). */
+   staged reveals are deliberate (the project ships MotionConfig reducedMotion="never").
+   The boot-entrance utilities start at opacity:0, so reduced-motion must also force them
+   visible — otherwise disabling the animation would leave the splash blank. */
 @media (prefers-reduced-motion: reduce) {
   .zs-twinkle,
   .zs-glow,
   .zs-float,
   .zs-spin {
     animation: none !important;
+  }
+  .zs-enter-rise,
+  .zs-enter-bloom {
+    animation: none !important;
+    opacity: 1 !important;
   }
 }

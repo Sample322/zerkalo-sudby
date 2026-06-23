@@ -73,19 +73,28 @@ export function AuthGate({ children }: AuthGateProps) {
       className="relative flex flex-col items-center justify-center gap-8 px-9 text-center"
       style={{ minHeight: "var(--tg-viewport-stable-height, 100dvh)" }}
     >
-      <p className="eyebrow">Зеркало Судьбы</p>
+      {/* Staggered magical entrance (CSS keyframes — this screen is above LazyMotion): the title
+          rises, the sigil blooms out of a soft blur with its glow, the phrase rises last. */}
+      <p className="eyebrow zs-enter-rise" style={{ animationDelay: "0.15s" }}>
+        Зеркало Судьбы
+      </p>
 
-      <Sigil dimmed={isError} />
+      <div className="zs-enter-bloom" style={{ animationDelay: "0.35s" }}>
+        <Sigil dimmed={isError} />
+      </div>
 
       {isError ? (
-        <div className="flex flex-col gap-4">
+        <div className="zs-enter-rise flex flex-col gap-4" style={{ animationDelay: "0.55s" }}>
           <h1 className="font-display metal-text text-[28px] leading-tight">Зеркало затуманилось</h1>
           <p className="text-lg leading-relaxed" style={{ color: "var(--color-mist)" }}>
             Колода не узнала тебя. Открой ритуал из&nbsp;Telegram, чтобы зеркало отразило твой путь.
           </p>
         </div>
       ) : (
-        <p className="text-xl italic" style={{ color: "var(--deck-soft)" }}>
+        <p
+          className="text-xl italic zs-enter-rise"
+          style={{ color: "var(--deck-soft)", animationDelay: "0.75s" }}
+        >
           Зеркало вглядывается в&nbsp;тебя…
         </p>
       )}
