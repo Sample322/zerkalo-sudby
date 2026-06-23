@@ -54,6 +54,8 @@ export const REVERSED_EXPLAINER =
 export const ONBOARDING_CTA = "Сделать первый расклад";
 export const ONBOARDING_SKIP = "Пропустить";
 export const ONBOARDING_NEXT = "Далее";
+// Replay entry on the question step — re-run the intro/atmosphere/reversed-cards explainer on demand.
+export const ONBOARDING_REPLAY = "Как это работает";
 
 // ---------------------------------------------------------------------------------------
 // Selection screen (HOME-01/02/07).

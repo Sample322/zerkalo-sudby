@@ -8,6 +8,7 @@
 
 import { create } from "zustand";
 import type { Step } from "../flow/steps";
+import { hasSeenOnboarding } from "../hooks/useOnboardingSeen";
 import type { MockReading } from "../reading/types";
 
 /** Min/max bounds for the free-text question (HOME-01 / D-13). Empty is explicitly valid. */
@@ -131,7 +132,11 @@ export const useSelection = create<SelectionState>((set) => ({
 
   question: "",
   reversalsEnabled: false,
-  step: "onboarding",
+  // Decide the FIRST screen synchronously (before paint) from the persisted onboarding flag, so a
+  // returning user never flashes the onboarding for a frame (the FlowRoot effect that corrects it
+  // runs only AFTER the first paint — too late). New users (no flag) still open on onboarding; the
+  // server flag (GET /api/me) reconciles the rare cleared-storage case in FlowRoot.
+  step: hasSeenOnboarding() ? "selection" : "onboarding",
   history: [],
   reading: null,
   startFailure: null,

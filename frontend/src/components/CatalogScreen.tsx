@@ -11,6 +11,7 @@ import { formatRemaining } from "../reading/limitCopy";
 import {
   HISTORY_HEADER,
   LIMIT_LAST_ONE_HINT,
+  ONBOARDING_REPLAY,
   PROFILE_HEADER,
   QUESTION_EMPTY_HELPER,
   QUESTION_PLACEHOLDER,
@@ -306,6 +307,16 @@ export function CatalogScreen() {
               <p className="px-1 text-center text-[15px]" style={{ color: "var(--color-mist-dim)" }}>
                 {questionHint ?? "Можно начать и без вопроса — расклад будет общим."}
               </p>
+              {/* Replay the onboarding intro on demand (it now shows automatically only on the very
+                  first visit). A quiet ghost link so it never competes with the question field. */}
+              <button
+                type="button"
+                onClick={() => goTo("onboarding")}
+                className="mx-auto mt-1 rounded-full px-3 py-1.5 text-[14px] tracking-wide outline-none transition-opacity hover:opacity-100 focus-visible:ring-2"
+                style={{ color: "var(--deck-accent)", opacity: 0.78 }}
+              >
+                ✦ {ONBOARDING_REPLAY}
+              </button>
             </div>
           )}
 
