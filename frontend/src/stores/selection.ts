@@ -18,6 +18,19 @@ export const QUESTION_MAX = 500;
 export type AnswerStyle = "yasny" | "berezhny" | "tainstvenny";
 export const DEFAULT_ANSWER_STYLE: AnswerStyle = "berezhny";
 
+/**
+ * The outcome of a backgrounded reading generation that FAILED (the ritual is shown immediately
+ * on tap; the slow `POST /api/readings` runs underneath it — D «расклад начинается сразу»). The
+ * three kinds mirror createReading's `ReadingError`: `throttle` (429 burst gate → transient
+ * toast), `paywall` (weekly limit → the soft-paywall sheet, carries `resetAt`), `failure` (the
+ * §9.8 «Колода замолчала» band). RitualScreen reads it to bounce back to selection; CatalogScreen
+ * reads it on return to surface the right affordance, then clears it.
+ */
+export type StartFailure =
+  | { kind: "throttle" }
+  | { kind: "paywall"; resetAt?: string | null }
+  | { kind: "failure" };
+
 /** Discriminated result of validating the question text (pure, React-free). */
 export type QuestionValidity =
   | { status: "valid" }
@@ -51,6 +64,12 @@ export interface SelectionState {
    */
   reading: MockReading | null;
   /**
+   * Set when a backgrounded generation rejects (the ritual runs while `POST /api/readings` is in
+   * flight). `null` while pending or after a success. RitualScreen reads it to bounce out of the
+   * ritual; CatalogScreen surfaces the matching toast/sheet/band on return, then clears it.
+   */
+  startFailure: StartFailure | null;
+  /**
    * Which past reading the detail view (`readingDetail` step) renders (Phase 5, D-02/D-10).
    * Set by the History list when a list-item card is tapped, then `goTo("readingDetail")`.
    * `null` when no detail is open. 05-06 reads this to fetch + render the immutable reading
@@ -68,6 +87,8 @@ export interface SelectionState {
   startReadingAgain: () => void;
   /** Deposit (or clear) the freshly-built mock reading; touches ONLY `reading`. */
   setReading: (reading: MockReading | null) => void;
+  /** Record (or clear) a backgrounded-generation failure; touches ONLY `startFailure`. */
+  setStartFailure: (failure: StartFailure | null) => void;
   /** Set which past reading the detail view renders (Phase 5); touches ONLY `detailReadingId`. */
   setDetailReadingId: (id: string | null) => void;
 }
@@ -113,6 +134,7 @@ export const useSelection = create<SelectionState>((set) => ({
   step: "onboarding",
   history: [],
   reading: null,
+  startFailure: null,
   detailReadingId: null,
 
   // Clamp at the upper bound so stored text never exceeds QUESTION_MAX (HOME-01).
@@ -142,6 +164,9 @@ export const useSelection = create<SelectionState>((set) => ({
 
   // Cross-plan writer/reader seam — mutates ONLY `reading`.
   setReading: (reading) => set({ reading }),
+
+  // Backgrounded-generation failure seam — mutates ONLY `startFailure`.
+  setStartFailure: (startFailure) => set({ startFailure }),
 
   // Phase-5 writer/reader seam — mutates ONLY `detailReadingId` (which past reading the
   // detail view renders). HistoryScreen writes it before goTo("readingDetail"); 05-06 reads it.

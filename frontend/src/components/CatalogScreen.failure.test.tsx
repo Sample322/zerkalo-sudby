@@ -76,6 +76,7 @@ beforeEach(() => {
     step: "selection",
     history: [],
     reading: null,
+    startFailure: null,
   });
   // Default: the seam rejects (the generation-failure path). Individual tests override.
   createReadingMock.mockReset();
@@ -123,13 +124,15 @@ describe("CatalogScreen — D-08 failure UX (Повторить + Сменить
     expect(BANNED_BRAND_TOKENS.test(text)).toBe(false);
   });
 
-  // [test_no_advance_on_failure]
-  test("the CTA does NOT advance to ritual on failure (stays on selection)", async () => {
+  // [test_no_advance_on_failure] — the ritual is entered immediately on tap now, but a failed
+  // generation NEVER yields a reading (so it never reaches reveal/result); the user lands back on
+  // the §9.8 band. (The ritual→selection bounce is exercised in RitualScreen's own test; here, in
+  // isolation, we assert the no-reading + band contract.)
+  test("a failed generation never produces a reading and surfaces the §9.8 band", async () => {
     const { getByText, getByRole } = renderWithClient(<CatalogScreen />);
     await tapStart(getByRole);
 
     await waitFor(() => expect(getByText(READING_ERROR)).toBeTruthy());
-    expect(useSelection.getState().step).toBe("selection");
     expect(useSelection.getState().reading).toBeNull();
   });
 
@@ -202,12 +205,10 @@ describe("CatalogScreen — D-08 failure UX (Повторить + Сменить
 
     fireEvent.click(getByRole("button", { name: "Сменить колоду" }));
 
-    // The failure copy is dismissed; the user is back on the live selection screen.
+    // The failure copy is dismissed and the deck step is shown again to pick a different deck.
     await waitFor(() => expect(queryByText(READING_ERROR)).toBeNull());
-    // D-04: the question is preserved; the user stays on selection (deck re-selectable).
-    expect(useSelection.getState().question).toBe(QUESTION);
-    expect(useSelection.getState().step).toBe("selection");
-    // The decks carousel is available again to pick a different deck.
     expect(getByText("Колода 1")).toBeTruthy();
+    // D-04: the question is preserved.
+    expect(useSelection.getState().question).toBe(QUESTION);
   });
 });

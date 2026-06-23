@@ -33,14 +33,22 @@ const BEAT_TRANSITION = { duration: 0.6, ease: "easeInOut" as const };
 
 export function RitualScreen() {
   const reading = useSelection((s) => s.reading);
+  const startFailure = useSelection((s) => s.startFailure);
 
   // The current beat index (0..RITUAL_BEATS.length-1). Drives the crossfade headline.
   const [beat, setBeat] = useState(0);
+  // True once the beat timeline has played its minimum (all beats shown). The reveal waits for
+  // BOTH this and the cards, so the ritual always plays in full — never a flash, even if the
+  // backgrounded generation finished first.
+  const [minDwellPassed, setMinDwellPassed] = useState(false);
 
   // Guard against React StrictMode's dev double-mount firing two timelines (AuthGate pattern).
   const startedRef = useRef(false);
-  // True once the timeline has completed (via timer or skip) so a late tick/skip can't re-fire.
+  // True once the flow has left the ritual (reveal, skip, or failure-bounce) so a late tick can't re-fire.
   const finishedRef = useRef(false);
+
+  // The cards are ready once the backgrounded POST /api/readings deposited a non-empty reading.
+  const ready = reading !== null && reading.cards.length > 0;
 
   // Complete the ritual: fire the completion haptic once, then advance to reveal (READ-07).
   // Idempotent; `goTo` read at call-time (getState) so this callback stays stable.
@@ -48,10 +56,11 @@ export function RitualScreen() {
     if (finishedRef.current) return;
     finishedRef.current = true;
     haptic.notify("success");
-    const goTo = useSelection.getState().goTo;
-    goTo("reveal");
+    useSelection.getState().goTo("reveal");
   }).current;
 
+  // Beat timeline: step through the headlines, then HOLD on the last one and mark the minimum
+  // dwell passed — do NOT finish here, the reveal waits for the cards to arrive.
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -63,8 +72,8 @@ export function RitualScreen() {
         const next = prev + 1;
         if (next >= RITUAL_BEATS.length) {
           clearInterval(interval);
-          finish();
-          return prev;
+          setMinDwellPassed(true);
+          return RITUAL_BEATS.length - 1; // hold the last beat while we wait
         }
         return next;
       });
@@ -74,10 +83,25 @@ export function RitualScreen() {
       active = false;
       clearInterval(interval);
     };
-  }, [finish]);
+  }, []);
 
-  // Tap-to-skip: a tap-anywhere completion, but ONLY once the first beat has passed (D-08).
-  const canSkip = beat >= SKIP_UNLOCK_BEAT;
+  // Reveal once BOTH the ritual has played its minimum AND the cards have landed.
+  useEffect(() => {
+    if (ready && minDwellPassed) finish();
+  }, [ready, minDwellPassed, finish]);
+
+  // Generation failed underneath the ritual → leave the ritual; the selection screen surfaces the
+  // reason (throttle toast / paywall sheet / §9.8 band) on return.
+  useEffect(() => {
+    if (!startFailure || finishedRef.current) return;
+    finishedRef.current = true;
+    haptic.notify("error");
+    useSelection.getState().goTo("selection");
+  }, [startFailure]);
+
+  // Tap-to-skip: a tap-anywhere completion, but ONLY after the first beat (D-08) AND once the
+  // cards are ready — skipping earlier would land on an empty reveal.
+  const canSkip = beat >= SKIP_UNLOCK_BEAT && ready;
   const handleSkip = () => {
     if (!canSkip) return;
     finish();

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 
@@ -20,7 +20,12 @@ import {
   READING_RETRY,
   START_CTA,
 } from "../reading/copy";
-import { questionValidity, useSelection, type AnswerStyle } from "../stores/selection";
+import {
+  questionValidity,
+  useSelection,
+  type AnswerStyle,
+  type StartFailure,
+} from "../stores/selection";
 import { useDeckTheme } from "../theme/useDeckTheme";
 import { DeckCard } from "./DeckCard";
 import { PaywallSheet } from "./PaywallSheet";
@@ -71,7 +76,25 @@ const ANSWER_STYLE_OPTIONS: { key: AnswerStyle; label: string; hint: string }[] 
   { key: "tainstvenny", label: "Таинственный", hint: "Образно, голосом оракула, с метафорами." },
 ];
 
-const PAGE_TRANSITION = { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const };
+const PAGE_TRANSITION = { duration: 0.42, ease: [0.16, 1, 0.3, 1] as const };
+
+// Direction-aware step slide: forward (`dir=1`) glides the next page in from the right and the
+// old one out to the left; back (`dir=-1`) mirrors it. `custom` is threaded to the exiting child
+// by AnimatePresence so both halves agree on the direction (compositor-only: x + opacity).
+const STEP_VARIANTS = {
+  enter: (dir: number) => ({ opacity: 0, x: 26 * dir }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: -26 * dir }),
+};
+
+/** Map a createReading rejection onto the store's StartFailure (surfaced after the ritual). */
+function classifyStartFailure(err: unknown): StartFailure {
+  if (err instanceof ReadingError && err.kind === "throttle") return { kind: "throttle" };
+  if (err instanceof ReadingError && err.kind === "paywall") {
+    return { kind: "paywall", resetAt: err.resetAt ?? null };
+  }
+  return { kind: "failure" };
+}
 
 export function CatalogScreen() {
   useDeckTheme(); // selecting a deck re-themes the whole surface (UI-02)
@@ -88,6 +111,8 @@ export function CatalogScreen() {
   const setAnswerStyle = useSelection((s) => s.setAnswerStyle);
   const setQuestion = useSelection((s) => s.setQuestion);
   const setReading = useSelection((s) => s.setReading);
+  const startFailure = useSelection((s) => s.startFailure);
+  const setStartFailure = useSelection((s) => s.setStartFailure);
   const goTo = useSelection((s) => s.goTo);
 
   const decksQuery = useDecks();
@@ -108,6 +133,7 @@ export function CatalogScreen() {
   const [wizardStep, setWizardStep] = useState<WizardStep>(() =>
     spreadSlug ? "style" : deckSlug ? "spread" : topic ? "deck" : "question",
   );
+  const [dir, setDir] = useState(1);
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
@@ -117,32 +143,50 @@ export function CatalogScreen() {
   const selectedSpread = spreadsQuery.data?.find((s) => s.slug === spreadSlug);
   const stepIndex = WIZARD_ORDER.indexOf(wizardStep);
 
-  function goToStep(step: WizardStep): void {
+  // Every step is confirmed with «Далее» (D: no auto-advance on a choice); the button is enabled
+  // only once the step's required selection exists (the question step is optional, always ready).
+  const stepReady: Record<WizardStep, boolean> = {
+    question: true,
+    topic: Boolean(topic),
+    deck: Boolean(deckSlug),
+    spread: Boolean(spreadSlug),
+    style: Boolean(spreadSlug),
+  };
+
+  // `direction` drives the slide (forward = +1, back = -1) so the page transition reads as motion
+  // through the wizard, not a jump-cut.
+  function goToStep(step: WizardStep, direction: number = 1): void {
+    setDir(direction);
     setStartError(false);
     setWizardStep(step);
   }
 
+  function goNext(): void {
+    if (stepIndex < WIZARD_ORDER.length - 1) goToStep(WIZARD_ORDER[stepIndex + 1], 1);
+  }
+
   function back(): void {
-    if (stepIndex > 0) goToStep(WIZARD_ORDER[stepIndex - 1]);
+    if (stepIndex > 0) goToStep(WIZARD_ORDER[stepIndex - 1], -1);
   }
 
-  // Auto-advance on a discrete choice (D: «каждый выбор = переход на след. страницу»); the
-  // selection is preserved in the store, so going back shows it highlighted and re-picking
-  // re-advances.
-  function pickTopic(slug: string): void {
-    setTopic(slug);
-    goToStep("deck");
-  }
-  function pickDeck(slug: string): void {
-    setDeck(slug);
-    goToStep("spread");
-  }
-  function pickSpread(slug: string): void {
-    setSpread(slug);
-    goToStep("style");
-  }
+  // Surface a backgrounded-generation failure when the ritual bounces back here (real flow) or
+  // when it rejected while this screen is still mounted (isolated). One effect routes each kind to
+  // its affordance, then clears the flag so it fires once. The limit was NOT consumed → retry is free.
+  useEffect(() => {
+    if (!startFailure) return;
+    if (startFailure.kind === "throttle") {
+      setThrottleOpen(true);
+    } else if (startFailure.kind === "paywall") {
+      setPaywallResetAt(startFailure.resetAt ?? null);
+      setPaywallOpen(true);
+    } else {
+      setStartError(true);
+    }
+    setIsStarting(false);
+    setStartFailure(null);
+  }, [startFailure, setStartFailure]);
 
-  async function handleStart() {
+  function handleStart() {
     if (isStarting || !selectedSpread || !topic || !deckSlug || !spreadSlug) return;
     // Pre-emptive paywall — skipped for the unlimited allowlist (admin + testers never pre-block).
     if (!unlimited && freeLeft === 0) {
@@ -150,35 +194,38 @@ export function CatalogScreen() {
       setPaywallOpen(true);
       return;
     }
+
+    const params = {
+      question: question.trim().length === 0 ? null : question, // D-13: empty => general
+      topic,
+      deckSlug,
+      spreadSlug,
+      reversalsEnabled,
+      positions: selectedSpread.positions,
+      // RU labels for the result meta (the slugs go to the backend; these go on screen).
+      deckTitle: decksQuery.data?.find((d) => d.slug === deckSlug)?.title,
+      spreadTitle: selectedSpread.title,
+      topicLabel: TOPICS.find((t) => t.slug === topic)?.label,
+      answerStyle,
+    };
+
+    // Show the ritual IMMEDIATELY (the wait is now FILLED by the shuffle, not a blank screen), then
+    // run the slow POST underneath it. RitualScreen advances to reveal when `reading` lands, or
+    // bounces back here on `startFailure`. The promise closure outlives this screen's unmount —
+    // it only touches the global store.
     setIsStarting(true);
     setStartError(false);
-    try {
-      const reading = await createReading({
-        question: question.trim().length === 0 ? null : question, // D-13: empty => general
-        topic,
-        deckSlug,
-        spreadSlug,
-        reversalsEnabled,
-        positions: selectedSpread.positions,
-        // RU labels for the result meta (the slugs go to the backend; these go on screen).
-        deckTitle: decksQuery.data?.find((d) => d.slug === deckSlug)?.title,
-        spreadTitle: selectedSpread.title,
-        topicLabel: TOPICS.find((t) => t.slug === topic)?.label,
-        answerStyle,
+    setStartFailure(null);
+    setReading(null);
+    goTo("ritual");
+
+    createReading(params)
+      .then((reading) => {
+        useSelection.getState().setReading(reading);
+      })
+      .catch((err) => {
+        useSelection.getState().setStartFailure(classifyStartFailure(err));
       });
-      setReading(reading);
-      goTo("ritual");
-    } catch (err) {
-      if (err instanceof ReadingError && err.kind === "throttle") {
-        setThrottleOpen(true);
-      } else if (err instanceof ReadingError && err.kind === "paywall") {
-        setPaywallResetAt(err.resetAt ?? null);
-        setPaywallOpen(true);
-      } else {
-        setStartError(true);
-      }
-      setIsStarting(false);
-    }
   }
 
   const isEmptyQuestion = question.trim().length === 0;
@@ -232,12 +279,14 @@ export function CatalogScreen() {
         <h1 className="font-display metal-text text-[30px] leading-tight">{STEP_TITLE[wizardStep]}</h1>
       </div>
 
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence mode="wait" initial={false} custom={dir}>
         <m.section
           key={wizardStep}
-          initial={{ opacity: 0, x: 18 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -18 }}
+          custom={dir}
+          variants={STEP_VARIANTS}
+          initial="enter"
+          animate="center"
+          exit="exit"
           transition={PAGE_TRANSITION}
           className="mt-8 flex flex-1 flex-col"
         >
@@ -263,7 +312,7 @@ export function CatalogScreen() {
           {wizardStep === "topic" && (
             <div className="flex flex-wrap justify-center gap-3">
               {TOPICS.map((t) => (
-                <TopicChip key={t.slug} topic={t.slug} label={t.label} active={topic === t.slug} onSelect={pickTopic} />
+                <TopicChip key={t.slug} topic={t.slug} label={t.label} active={topic === t.slug} onSelect={setTopic} />
               ))}
             </div>
           )}
@@ -274,7 +323,7 @@ export function CatalogScreen() {
               isError={decksQuery.isError}
               decks={decksQuery.data}
               selected={deckSlug}
-              onPick={pickDeck}
+              onPick={setDeck}
             />
           )}
 
@@ -286,7 +335,7 @@ export function CatalogScreen() {
               selected={spreadSlug}
               recommendedSlug={recommendation.data?.recommended_spread.slug}
               recommendation={recommendation.data}
-              onSelect={pickSpread}
+              onSelect={setSpread}
             />
           )}
 
@@ -296,8 +345,8 @@ export function CatalogScreen() {
         </m.section>
       </AnimatePresence>
 
-      {/* Footer CTA — «Далее» on the question step; «Начать расклад» (+ limits) on the final style
-          step. Topic/deck/spread steps auto-advance on a choice, so they have no footer button. */}
+      {/* Footer CTA — every step confirms with «Далее» (disabled until its choice is made), except
+          the final style step, which shows «Начать расклад» (+ the remaining-count / failure band). */}
       <div
         className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-xl px-5 pt-3"
         style={{
@@ -306,12 +355,15 @@ export function CatalogScreen() {
           maxHeight: "var(--tg-viewport-stable-height, 100dvh)",
         }}
       >
-        {wizardStep === "question" && (
+        {wizardStep !== "style" && (
           <m.button
             type="button"
             whileTap={{ scale: 0.97 }}
-            onClick={() => goToStep("topic")}
-            className="pill-primary w-full py-4 text-[18px] outline-none focus-visible:ring-2"
+            disabled={!stepReady[wizardStep]}
+            aria-disabled={!stepReady[wizardStep]}
+            onClick={goNext}
+            className="pill-primary w-full py-4 text-[18px] outline-none transition-all focus-visible:ring-2 disabled:opacity-40"
+            style={stepReady[wizardStep] ? undefined : { boxShadow: "none", filter: "saturate(0.6)" }}
           >
             Далее
           </m.button>
@@ -327,10 +379,7 @@ export function CatalogScreen() {
             unlimited={unlimited}
             onStart={handleStart}
             onRetry={handleStart}
-            onChangeDeck={() => {
-              setStartError(false);
-              goToStep("deck");
-            }}
+            onChangeDeck={() => goToStep("deck", -1)}
           />
         )}
       </div>

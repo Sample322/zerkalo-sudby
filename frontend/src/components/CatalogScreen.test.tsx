@@ -110,6 +110,7 @@ beforeEach(() => {
     step: "selection",
     history: [],
     reading: null,
+    startFailure: null,
   });
   vi.stubGlobal(
     "fetch",
@@ -139,15 +140,17 @@ afterEach(() => {
 test("walks the wizard: topic → deck (re-themes) → spread, rendering each step's options + the recommendation", async () => {
   const { getByText, getAllByText, getByRole } = renderWithClient(<CatalogScreen />);
 
-  // Question step is first → advance; topic step → pick a topic (auto-advances to the deck step).
+  // Question step is first → «Далее»; topic step → pick a topic, then «Далее» to the deck step.
   fireEvent.click(getByRole("button", { name: "Далее" }));
   fireEvent.click(getByText("Любовь"));
+  fireEvent.click(getByRole("button", { name: "Далее" }));
 
-  // Deck step: every deck renders; selecting one flips the root data-deck (UI-02) + advances.
+  // Deck step: every deck renders; selecting one flips the root data-deck (UI-02). «Далее» advances.
   await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
   for (const deck of DECKS) expect(getByText(deck.title)).toBeTruthy();
   fireEvent.click(getByText("Колода 1"));
   await waitFor(() => expect(document.documentElement.dataset.deck).toBe("deck_1"));
+  fireEvent.click(getByRole("button", { name: "Далее" }));
 
   // Spread step: every spread renders + the recommendation reason (SPREAD-04, brand-safe).
   // "Расклад 0" appears twice (recommendation banner + list) → getAllByText.
@@ -157,18 +160,21 @@ test("walks the wizard: topic → deck (re-themes) → spread, rendering each st
   expect(BANNED_BRAND_TOKENS.test(REASON)).toBe(false);
 });
 
-// Walk the wizard question → topic → deck → spread → style (each choice auto-advances; each step
-// awaits its own data). Leaves the user on the final style step where «Начать расклад» lives.
+// Walk the wizard question → topic → deck → spread → style. Each step is confirmed with «Далее»
+// (no auto-advance); each step awaits its own data. Leaves the user on the final style step.
 async function walkToStyle(
   getByText: (t: string) => HTMLElement,
   getByRole: (role: string, opts: { name: string }) => HTMLElement,
 ) {
-  fireEvent.click(getByRole("button", { name: "Далее" }));
-  fireEvent.click(getByText("Любовь"));
+  fireEvent.click(getByRole("button", { name: "Далее" })); // question → topic
+  fireEvent.click(getByText("Любовь")); // pick topic
+  fireEvent.click(getByRole("button", { name: "Далее" })); // topic → deck
   await waitFor(() => expect(getByText("Колода 0")).toBeTruthy());
-  fireEvent.click(getByText("Колода 0"));
+  fireEvent.click(getByText("Колода 0")); // pick deck
+  fireEvent.click(getByRole("button", { name: "Далее" })); // deck → spread
   await waitFor(() => expect(getByText("Расклад 1")).toBeTruthy());
-  fireEvent.click(getByText("Расклад 1"));
+  fireEvent.click(getByText("Расклад 1")); // pick spread
+  fireEvent.click(getByRole("button", { name: "Далее" })); // spread → style
   await waitFor(() => expect(getByText("Бережный")).toBeTruthy());
 }
 
@@ -183,11 +189,11 @@ test("the wizard's final step offers the 3 answer styles + an enabled «Нача
   expect((getByRole("button", { name: "Начать расклад" }) as HTMLButtonElement).disabled).toBe(false);
 });
 
-test("HOME-07/D-05: «Начать расклад» on the final step builds the reading via createReading, writes it to the store `reading` slot BEFORE advancing to ritual", async () => {
+test("HOME-07/D-05: «Начать расклад» enters the ritual IMMEDIATELY, then deposits the reading underneath it (no wait before the shuffle)", async () => {
   useSelection.setState({ question: "Что меня ждёт в отношениях этой осенью?" });
 
-  // Record the ORDER of (reading, step) transitions so we can prove setReading runs before
-  // the step changes to "ritual" (the downstream 03-04/05/06 contract).
+  // Record the ORDER of (reading, step) transitions to prove the ritual is entered with the
+  // reading STILL NULL — the shuffle starts on tap, the slow POST runs underneath it.
   const ritualEntrySnapshot: { readingWasSet: boolean }[] = [];
   const unsubscribe = useSelection.subscribe((state) => {
     if (state.step === "ritual") {
@@ -199,10 +205,14 @@ test("HOME-07/D-05: «Начать расклад» on the final step builds the
   await walkToStyle(getByText, getByRole);
 
   fireEvent.click(getByRole("button", { name: "Начать расклад" }));
+  // The ritual is entered right away — at that instant the reading is NOT yet built.
   await waitFor(() => expect(useSelection.getState().step).toBe("ritual"));
+  expect(ritualEntrySnapshot[0].readingWasSet).toBe(false);
 
+  // The backgrounded createReading then lands the reading into the store (ritual → reveal is
+  // RitualScreen's job, exercised in its own test).
+  await waitFor(() => expect(useSelection.getState().reading).not.toBeNull());
   const reading = useSelection.getState().reading;
-  expect(reading).not.toBeNull();
   expect(reading?.question).toBe("Что меня ждёт в отношениях этой осенью?");
   // The result meta carries the RU labels (the slugs go to the backend; the human titles go on
   // screen) — never the English slugs. We walked Любовь / Колода 0 / Расклад 1.
@@ -212,10 +222,6 @@ test("HOME-07/D-05: «Начать расклад» on the final step builds the
   expect(reading?.cards).toHaveLength(1);
   expect(reading?.cards[0]?.positionTitle).toBe("Суть");
   expect(reading?.summary).toBeTruthy();
-
-  // Ordering guard: at the moment step first became "ritual", the reading was ALREADY set.
-  expect(ritualEntrySnapshot.length).toBeGreaterThan(0);
-  expect(ritualEntrySnapshot[0].readingWasSet).toBe(true);
 
   unsubscribe();
 });

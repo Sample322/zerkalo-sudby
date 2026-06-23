@@ -61,6 +61,7 @@ beforeEach(() => {
     step: "ritual",
     history: ["selection"],
     reading: FAKE_READING,
+    startFailure: null,
   });
   // The telegram seam no-ops outside Telegram; spy on it to assert completion fires the haptic.
   vi.stubGlobal("window", window);
@@ -144,4 +145,38 @@ test("completion invokes haptic.notify('success') (READ-07 completion haptic)", 
 test("renders nothing-broken: the ritual canvas mounts with the first beat copy", () => {
   const { getByText } = renderRitual();
   expect(getByText(RITUAL_BEATS[0])).toBeTruthy();
+});
+
+test("a pending reading HOLDS the ritual; depositing the reading then advances to reveal", () => {
+  // No reading yet (the backgrounded POST is still in flight) — the ritual must NOT advance alone.
+  useSelection.setState({ reading: null });
+  renderRitual();
+
+  // Play past every beat: the ritual holds on the last beat, still on the ritual step (no cards).
+  act(() => {
+    vi.advanceTimersByTime(RITUAL_BEATS.length * 1000 + 50);
+  });
+  expect(useSelection.getState().step).toBe("ritual");
+
+  // The generation lands → the ritual now advances to reveal (the wait was filled by the shuffle).
+  act(() => {
+    useSelection.setState({ reading: FAKE_READING });
+  });
+  expect(useSelection.getState().step).toBe("reveal");
+});
+
+test("a generation failure bounces out of the ritual back to selection", () => {
+  useSelection.setState({ reading: null });
+  renderRitual();
+
+  act(() => {
+    vi.advanceTimersByTime(1000); // a beat in
+  });
+  expect(useSelection.getState().step).toBe("ritual");
+
+  // The backgrounded POST rejected → leave the ritual; the selection screen surfaces the reason.
+  act(() => {
+    useSelection.setState({ startFailure: { kind: "failure" } });
+  });
+  expect(useSelection.getState().step).toBe("selection");
 });
