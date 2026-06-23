@@ -1,10 +1,43 @@
-import type { CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
 import * as m from "motion/react-m";
 
 import { CardArt } from "../CardArtFallback";
 import { haptic } from "../../lib/telegram";
 import { EASE, SPRING } from "../../lib/motion";
 import type { MockReadingCard } from "../../reading/types";
+
+/**
+ * A subtle gold spark burst at the just-revealed card (lazy `@tsparticles/confetti` → its own
+ * chunk, never in the initial bundle). Tuned to a quiet astral sparkle, not casino confetti:
+ * few particles, gold/lilac, small scalar. No-op when the element isn't laid out (jsdom/tests),
+ * and `disableForReducedMotion` honours the OS preference.
+ */
+function fireSparks(el: HTMLButtonElement | null): void {
+  if (!el || typeof window === "undefined") return;
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return; // not painted (tests) → skip entirely
+  const x = ((r.left + r.width / 2) / window.innerWidth) * 100;
+  const y = ((r.top + r.height / 2) / window.innerHeight) * 100;
+  import("@tsparticles/confetti")
+    .then(({ confetti }) =>
+      confetti({
+        position: { x, y },
+        count: 16,
+        spread: 70,
+        startVelocity: 16,
+        gravity: 0.55,
+        decay: 0.92,
+        ticks: 70,
+        scalar: 0.7,
+        shapes: ["circle", "star"],
+        colors: ["#e5d3a3", "#c9a45c", "#d8c7e0"],
+        disableForReducedMotion: true,
+      }),
+    )
+    .catch(() => {
+      /* confetti chunk failed / unsupported — the flip + edge-glow already carry the reveal */
+    });
+}
 
 interface FlipCardProps {
   /** The card to reveal (only the name is needed for the face's accessible label). */
@@ -31,8 +64,10 @@ const FACE: CSSProperties = {
 // prop (Pitfall 2). A light haptic fires once the flip settles. The 120×192 button meets the
 // ≥44px tap floor.
 export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
+  const btnRef = useRef<HTMLButtonElement>(null);
   return (
     <button
+      ref={btnRef}
       type="button"
       onClick={onFlip}
       aria-pressed={flipped}
@@ -51,7 +86,10 @@ export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
         animate={{ rotateY: flipped ? 180 : 0, y: flipped ? -6 : 0 }}
         transition={SPRING.card}
         onAnimationComplete={() => {
-          if (flipped) haptic.impact("light");
+          if (flipped) {
+            haptic.impact("light");
+            fireSparks(btnRef.current);
+          }
         }}
         style={{ ...SIZE, position: "relative", transformStyle: "preserve-3d" }}
       >

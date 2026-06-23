@@ -20,6 +20,7 @@ import { haptic } from "../../lib/telegram";
 import { useSelection } from "../../stores/selection";
 import { RITUAL_BEATS, RITUAL_SKIP } from "../../reading/copy";
 import { CardArt } from "../CardArtFallback";
+import { DeckShuffle } from "./DeckShuffle";
 import { Particles } from "./Particles";
 
 /** Phrase cadence (ms) — how slowly the ritual headlines crossfade while we wait. Decoupled from
@@ -154,6 +155,12 @@ export function RitualScreen() {
         animate={{ opacity: [0.4, 0.75, 0.4], scale: [0.92, 1.08, 0.92] }}
         transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
       />
+
+      {/* GSAP deck shuffle — the ritual centrepiece (lazy-loaded chunk; calm fan→gather loop, a
+          static fan on reduced-motion). Sits above the beat headline. */}
+      <div className="relative z-10 mb-2">
+        <DeckShuffle />
+      </div>
 
       {/* The beat headline — nested AnimatePresence keyed on the beat index for the crossfade. */}
       <div className="relative z-10 flex min-h-[7rem] items-center justify-center">
