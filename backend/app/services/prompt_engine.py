@@ -234,6 +234,17 @@ def build_user_block(
     parts.append(f"Расклад: {spread.title}")
     parts.append(f"Количество карт: {card_count}")
 
+    # Hard anchor (Core Value): guarantee the whole reading answers the user's CONCRETE question,
+    # not generic life advice — independent of the (admin-editable) task templates below. Only when
+    # a question was asked; a general reading stays anchored to the topic via question_line.
+    if question and question.strip():
+        parts.append("")
+        parts.append(
+            "ГЛАВНОЕ ТРЕБОВАНИЕ: весь расклад — и каждая карта, и общий итог — должен быть прямым, "
+            "конкретным ответом на вопрос пользователя выше. Явно называй его ситуацию своими словами "
+            "и говори по существу заданного вопроса, а не общими фразами о жизни."
+        )
+
     # Per-card §17 context, anchored by position_index (Pitfall 3).
     parts.append("")
     parts.append("Карты расклада:")

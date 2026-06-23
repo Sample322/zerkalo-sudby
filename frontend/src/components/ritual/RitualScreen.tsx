@@ -46,6 +46,8 @@ export function RitualScreen() {
   const startedRef = useRef(false);
   // True once the flow has left the ritual (reveal, skip, or failure-bounce) so a late tick can't re-fire.
   const finishedRef = useRef(false);
+  // Mirrors `minDwellPassed` for the setInterval closure (avoids a stale-closure re-read).
+  const minDwellRef = useRef(false);
 
   // The cards are ready once the backgrounded POST /api/readings deposited a non-empty reading.
   const ready = reading !== null && reading.cards.length > 0;
@@ -59,8 +61,9 @@ export function RitualScreen() {
     useSelection.getState().goTo("reveal");
   }).current;
 
-  // Beat timeline: step through the headlines, then HOLD on the last one and mark the minimum
-  // dwell passed — do NOT finish here, the reveal waits for the cards to arrive.
+  // Beat timeline: step through the headlines and CYCLE them while we wait, so the shuffle never
+  // freezes on one line during a longer generation. The minimum dwell is marked after the first
+  // full pass — the reveal waits for BOTH that and the cards (it does NOT finish here).
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -68,14 +71,17 @@ export function RitualScreen() {
     let active = true;
     const interval = setInterval(() => {
       if (!active) return;
+      if (finishedRef.current) {
+        clearInterval(interval);
+        return;
+      }
       setBeat((prev) => {
         const next = prev + 1;
-        if (next >= RITUAL_BEATS.length) {
-          clearInterval(interval);
+        if (next >= RITUAL_BEATS.length && !minDwellRef.current) {
+          minDwellRef.current = true;
           setMinDwellPassed(true);
-          return RITUAL_BEATS.length - 1; // hold the last beat while we wait
         }
-        return next;
+        return next % RITUAL_BEATS.length; // cycle the phrases while the cards are prepared
       });
     }, BEAT_MS);
 

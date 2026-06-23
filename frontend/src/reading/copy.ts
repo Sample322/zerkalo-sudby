@@ -68,10 +68,17 @@ export const START_CTA = "Начать расклад";
 
 // ---------------------------------------------------------------------------------------
 // Ritual prep (READ-07/D-08) — 3 beats + skip + the reveal-entry line.
+// The ritual headlines crossfade one per ~second and CYCLE while the reading is still being
+// prepared, so the shuffle never freezes on a single line during a longer wait (D «надписей мало,
+// анимация останавливается»). Brand-safe (SAFE-06) + non-fatalistic.
 export const RITUAL_BEATS: readonly string[] = [
-  "Колода слышит вопрос…",
-  "Карты перемешиваются…",
-  "Три знака уже рядом…",
+  "Колода слышит твой вопрос…",
+  "Карты приходят в движение…",
+  "Шёпот колоды становится тише…",
+  "Узор расклада складывается…",
+  "Скрытое выходит к свету…",
+  "Три знака уже ищут тебя…",
+  "Колода почти готова ответить…",
 ] as const;
 
 export const RITUAL_SKIP = "Пропустить";
