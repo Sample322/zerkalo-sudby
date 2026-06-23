@@ -152,6 +152,57 @@ body {
     border: 1px solid color-mix(in srgb, var(--deck-soft) 34%, transparent);
     border-radius: 999px;
   }
+
+  /* The question field — a calm glass surface whose metal hairline blooms into a soft gold/astral
+     glow on focus (animated border + shadow, no layout props). */
+  .ritual-input {
+    transition:
+      border-color 240ms var(--ease-out-expo),
+      box-shadow 240ms var(--ease-out-expo);
+  }
+  .ritual-input:focus,
+  .ritual-input:focus-visible {
+    outline: none;
+    border-color: color-mix(in srgb, var(--deck-accent) 60%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--deck-accent) 55%, transparent),
+      0 0 28px -6px color-mix(in srgb, var(--deck-glow) 70%, transparent),
+      inset 0 0 24px -12px color-mix(in srgb, var(--deck-glow) 60%, transparent);
+  }
+
+  /* Primary ritual CTA, alive — a slow breathing halo behind the pill (compositor-only ::after,
+     opacity+scale), so the «начать расклад» moment feels like it's waiting to be summoned. */
+  .cta-glow {
+    position: relative;
+    isolation: isolate;
+  }
+  .cta-glow::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    z-index: -1;
+    border-radius: 999px;
+    background: radial-gradient(
+      62% 130% at 50% 50%,
+      color-mix(in srgb, var(--deck-glow) 55%, transparent),
+      transparent 70%
+    );
+    opacity: 0.4;
+    pointer-events: none;
+    animation: zs-cta-breathe 3.4s var(--ease-out-expo) infinite;
+  }
+}
+
+@keyframes zs-cta-breathe {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.66;
+    transform: scale(1.03);
+  }
 }
 
 /* ── Atmosphere + reveal keyframes ────────────────────────────────────────── */
@@ -265,5 +316,8 @@ body {
   .zs-enter-bloom {
     animation: none !important;
     opacity: 1 !important;
+  }
+  .cta-glow::after {
+    animation: none !important;
   }
 }

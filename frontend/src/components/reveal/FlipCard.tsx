@@ -3,6 +3,7 @@ import * as m from "motion/react-m";
 
 import { CardArt } from "../CardArtFallback";
 import { haptic } from "../../lib/telegram";
+import { EASE, SPRING } from "../../lib/motion";
 import type { MockReadingCard } from "../../reading/types";
 
 interface FlipCardProps {
@@ -47,8 +48,8 @@ export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
       }}
     >
       <m.div
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 26 }}
+        animate={{ rotateY: flipped ? 180 : 0, y: flipped ? -6 : 0 }}
+        transition={SPRING.card}
         onAnimationComplete={() => {
           if (flipped) haptic.impact("light");
         }}
@@ -101,8 +102,9 @@ export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
           <span style={{ position: "absolute", bottom: 9, right: 10, fontSize: 11, color: "color-mix(in srgb, var(--deck-accent) 70%, transparent)" }}>✦</span>
         </div>
 
-        {/* Front (the card face, reused from CardArt) at 180deg. */}
-        <div aria-hidden="true" style={{ ...FACE, transform: "rotateY(180deg)" }}>
+        {/* Front (the card face, reused from CardArt) at 180deg. Overflow-clipped so the shimmer
+            sweep stays within the card silhouette. */}
+        <div aria-hidden="true" style={{ ...FACE, transform: "rotateY(180deg)", overflow: "hidden" }}>
           <CardArt src={null} alt={card.name} />
           {/* Edge-glow = opacity of a pre-rendered accent border (compositor-only). */}
           <div
@@ -115,6 +117,28 @@ export function FlipCard({ card, flipped, onFlip }: FlipCardProps) {
               boxShadow: "0 0 22px -2px color-mix(in srgb, var(--deck-glow) 70%, transparent)",
               opacity: flipped ? 1 : 0,
               transition: "opacity 280ms cubic-bezier(0.16, 1, 0.3, 1)",
+              pointerEvents: "none",
+            }}
+          />
+          {/* Shimmer — a single diagonal light sweep just after the flip settles (transform/opacity
+              only, blended for a metal-leaf gleam). One-shot, gated on `flipped`. */}
+          <m.div
+            aria-hidden="true"
+            initial={false}
+            animate={
+              flipped
+                ? { x: ["-140%", "140%"], opacity: [0, 0.85, 0] }
+                : { x: "-140%", opacity: 0 }
+            }
+            transition={flipped ? { duration: 0.7, delay: 0.32, ease: EASE.softOut } : { duration: 0.2 }}
+            style={{
+              position: "absolute",
+              top: -4,
+              bottom: -4,
+              width: "55%",
+              background:
+                "linear-gradient(105deg, transparent, color-mix(in srgb, var(--deck-soft) 70%, transparent), transparent)",
+              mixBlendMode: "screen",
               pointerEvents: "none",
             }}
           />

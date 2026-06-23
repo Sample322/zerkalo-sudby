@@ -5,7 +5,7 @@ import * as m from "motion/react-m";
 import { useDecks } from "../hooks/useDecks";
 import { useMe } from "../hooks/useMe";
 import { useRecommendation, useSpreads } from "../hooks/useSpreads";
-import { getContentSafeAreaInsets, getSafeAreaInsets } from "../lib/telegram";
+import { getContentSafeAreaInsets, getSafeAreaInsets, haptic } from "../lib/telegram";
 import { createReading, ReadingError } from "../reading/createReading";
 import { formatRemaining } from "../reading/limitCopy";
 import {
@@ -163,11 +163,31 @@ export function CatalogScreen() {
   }
 
   function goNext(): void {
+    haptic.selection();
     if (stepIndex < WIZARD_ORDER.length - 1) goToStep(WIZARD_ORDER[stepIndex + 1], 1);
   }
 
   function back(): void {
     if (stepIndex > 0) goToStep(WIZARD_ORDER[stepIndex - 1], -1);
+  }
+
+  // Each discrete choice fires a soft selection haptic (UI-03 — premium tactile feedback). The
+  // store setter still owns the actual selection; this only adds the felt confirmation.
+  function pickTopic(slug: string): void {
+    haptic.selection();
+    setTopic(slug);
+  }
+  function pickDeck(slug: string): void {
+    haptic.selection();
+    setDeck(slug);
+  }
+  function pickSpread(slug: string): void {
+    haptic.selection();
+    setSpread(slug);
+  }
+  function pickStyle(style: AnswerStyle): void {
+    haptic.selection();
+    setAnswerStyle(style);
   }
 
   // Surface a backgrounded-generation failure when the ritual bounces back here (real flow) or
@@ -218,6 +238,7 @@ export function CatalogScreen() {
     setStartError(false);
     setStartFailure(null);
     setReading(null);
+    haptic.impact("medium"); // the ritual begins — a weightier tap than a selection
     goTo("ritual");
 
     createReading(params)
@@ -301,7 +322,7 @@ export function CatalogScreen() {
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder={QUESTION_PLACEHOLDER}
                 rows={4}
-                className="panel w-full resize-none p-5 text-[19px] italic leading-relaxed outline-none placeholder:not-italic focus-visible:ring-2"
+                className="ritual-input panel w-full resize-none p-5 text-[19px] italic leading-relaxed outline-none placeholder:not-italic"
                 style={{ color: "var(--deck-soft)" }}
               />
               <p className="px-1 text-center text-[15px]" style={{ color: "var(--color-mist-dim)" }}>
@@ -323,7 +344,7 @@ export function CatalogScreen() {
           {wizardStep === "topic" && (
             <div className="flex flex-wrap justify-center gap-3">
               {TOPICS.map((t) => (
-                <TopicChip key={t.slug} topic={t.slug} label={t.label} active={topic === t.slug} onSelect={setTopic} />
+                <TopicChip key={t.slug} topic={t.slug} label={t.label} active={topic === t.slug} onSelect={pickTopic} />
               ))}
             </div>
           )}
@@ -334,7 +355,7 @@ export function CatalogScreen() {
               isError={decksQuery.isError}
               decks={decksQuery.data}
               selected={deckSlug}
-              onPick={setDeck}
+              onPick={pickDeck}
             />
           )}
 
@@ -346,12 +367,12 @@ export function CatalogScreen() {
               selected={spreadSlug}
               recommendedSlug={recommendation.data?.recommended_spread.slug}
               recommendation={recommendation.data}
-              onSelect={setSpread}
+              onSelect={pickSpread}
             />
           )}
 
           {wizardStep === "style" && (
-            <StyleStep selected={answerStyle} onSelect={setAnswerStyle} />
+            <StyleStep selected={answerStyle} onSelect={pickStyle} />
           )}
         </m.section>
       </AnimatePresence>
@@ -629,7 +650,9 @@ function SpreadFooter({
         disabled={!ready || isStarting}
         onClick={onStart}
         aria-disabled={!ready || isStarting}
-        className="pill-primary w-full px-4 py-4 text-[18px] outline-none transition-all focus-visible:ring-2 disabled:opacity-40"
+        className={`pill-primary w-full px-4 py-4 text-[18px] outline-none transition-all focus-visible:ring-2 disabled:opacity-40${
+          ready && !isStarting ? " cta-glow" : ""
+        }`}
         style={ready ? undefined : { boxShadow: "none", filter: "saturate(0.6)" }}
       >
         {START_CTA}
