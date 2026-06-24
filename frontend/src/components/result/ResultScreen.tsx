@@ -1,9 +1,11 @@
+import { Fragment } from "react";
 import { stagger } from "motion/react";
 import * as m from "motion/react-m";
 
 import { useSelection } from "../../stores/selection";
 import { useReadingDetail, useReadingsList } from "../../hooks/useReadings";
 import { mapReadingOutToMock } from "../../reading/createReading";
+import { EASE } from "../../lib/motion";
 import { getSafeAreaInsets } from "../../lib/telegram";
 import { CardArt } from "../CardArtFallback";
 import {
@@ -105,19 +107,22 @@ function ReadingBody({ reading: r, fadeCards }: ReadingBodyProps) {
         ))}
       </section>
 
-      {/* One glass card per drawn card. */}
+      {/* One glass card per drawn card, woven together by the «нить смысла» (READ-09): a thin
+          glowing thread + ✦ node draws between consecutive cards, so the spread reads as one
+          connected message, not a stack of separate blocks. */}
       <m.section
-        className="grid gap-5"
+        className="flex flex-col"
         variants={fadeCards ? fadeContainer : undefined}
         initial={fadeCards ? "rest" : undefined}
         animate={fadeCards ? "reveal" : undefined}
       >
-        {r.cards.map((card) => (
-          <m.article
-            key={`${card.positionTitle}|${card.name}`}
-            className="panel flex flex-col gap-3 p-4"
-            variants={fadeCards ? fadeItem : undefined}
-          >
+        {r.cards.map((card, i) => (
+          <Fragment key={`${card.positionTitle}|${card.name}`}>
+            {i > 0 && <MeaningThread />}
+            <m.article
+              className="panel flex flex-col gap-3 p-4"
+              variants={fadeCards ? fadeItem : undefined}
+            >
             <div className="flex items-start gap-4">
               <CardArt src={null} alt={card.name} width={92} />
               <div className="flex flex-col gap-1">
@@ -139,7 +144,8 @@ function ReadingBody({ reading: r, fadeCards }: ReadingBodyProps) {
             <p className="text-[15px] italic" style={{ color: "color-mix(in srgb, var(--deck-glow) 78%, var(--deck-soft))" }}>
               {card.deckAccent}
             </p>
-          </m.article>
+            </m.article>
+          </Fragment>
         ))}
       </m.section>
 
@@ -258,6 +264,43 @@ export function ResultScreen() {
         </m.button>
       </div>
     </main>
+  );
+}
+
+/**
+ * «Нить смысла» — a thin glowing thread + ✦ node that links one card to the next (READ-09). The
+ * line draws downward (scaleY from the top) and the node blooms in; compositor-only and driven by
+ * its own `animate` (independent of the card fade), so it reveals in both the live and the
+ * reopened-detail views. Decorative → aria-hidden.
+ */
+function MeaningThread() {
+  return (
+    <div aria-hidden="true" className="relative mx-auto flex h-11 w-px items-center justify-center">
+      <m.span
+        className="absolute inset-0"
+        style={{
+          transformOrigin: "top",
+          background:
+            "linear-gradient(to bottom, transparent, color-mix(in srgb, var(--deck-accent) 65%, transparent), transparent)",
+        }}
+        initial={{ scaleY: 0, opacity: 0 }}
+        animate={{ scaleY: 1, opacity: 1 }}
+        transition={{ duration: 0.55, ease: EASE.softOut }}
+      />
+      <m.span
+        className="relative font-display"
+        style={{
+          fontSize: 12,
+          color: "var(--deck-accent)",
+          textShadow: "0 0 12px color-mix(in srgb, var(--deck-glow) 75%, transparent)",
+        }}
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 0.92, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.18, ease: EASE.softOut }}
+      >
+        ✦
+      </m.span>
+    </div>
   );
 }
 
