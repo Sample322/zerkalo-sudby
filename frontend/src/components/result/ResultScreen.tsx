@@ -45,15 +45,16 @@ const fadeItem = {
   reveal: { opacity: 1, y: 0 },
 };
 
-// The tableau «на столе»: cards drop in with a stagger + a small per-card tilt (custom) so the
-// spread reads as physical cards laid on a ritual table, not a flat row.
+// The tableau «на столе»: the card faces drop in with a stagger so the spread settles onto the
+// felt as one composition. Kept upright + label-free (positions read in the blocks below) so it
+// stays clean on a 360px phone.
 const tableauContainer = {
   rest: {},
   reveal: { transition: { delayChildren: stagger(0.1) } },
 };
 const tableauItem = {
   rest: { opacity: 0, y: 18 },
-  reveal: (rot: number) => ({ opacity: 1, y: 0, rotate: rot }),
+  reveal: { opacity: 1, y: 0 },
 };
 
 /**
@@ -138,6 +139,9 @@ function ReadingBody({ reading: r, fadeCards }: ReadingBodyProps) {
               className="panel flex flex-col gap-2 p-4"
               variants={fadeCards ? fadeItem : undefined}
             >
+              <span className="eyebrow" style={{ color: "var(--color-mist-dim)" }}>
+                {card.positionTitle}
+              </span>
               <h2 className="font-display metal-text text-[21px] leading-tight">{card.name}</h2>
               <span className="eyebrow" style={{ color: "var(--color-mist-dim)", letterSpacing: "0.16em" }}>
                 {ORIENTATION_LABELS[card.orientation]}
@@ -280,11 +284,11 @@ export function ResultScreen() {
  * position label beneath; the detailed words live in the reading blocks below. Compositor-only.
  */
 function CardTableau({ cards }: { cards: MockReading["cards"] }) {
-  const mid = (cards.length - 1) / 2;
-  const faceWidth = cards.length > 3 ? 74 : 94;
+  const faceWidth = cards.length === 1 ? 108 : cards.length <= 3 ? 84 : 64;
+  const shadowWidth = Math.round(faceWidth * 0.82);
   return (
     <m.section
-      className="panel-altar relative flex flex-wrap items-end justify-center gap-3 overflow-hidden px-4 py-6"
+      className="panel-altar relative flex flex-wrap items-end justify-center gap-4 overflow-hidden px-4 pb-7 pt-6"
       variants={tableauContainer}
       initial="rest"
       animate="reveal"
@@ -295,30 +299,30 @@ function CardTableau({ cards }: { cards: MockReading["cards"] }) {
         className="absolute left-1/2 top-0 h-px w-32 -translate-x-1/2"
         style={{ background: "linear-gradient(90deg, transparent, var(--deck-accent), transparent)" }}
       />
-      {/* The table line the cards rest upon. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-8"
-        style={{
-          bottom: 50,
-          height: 1,
-          background:
-            "linear-gradient(90deg, transparent, color-mix(in srgb, var(--deck-accent) 40%, transparent), transparent)",
-        }}
-      />
-      {cards.map((card, i) => (
+      {cards.map((card) => (
         <m.div
           key={`${card.positionTitle}|${card.name}`}
-          custom={(i - mid) * 3}
           variants={tableauItem}
-          transition={{ duration: 0.6, ease: EASE.softOut }}
-          className="relative z-10 flex flex-col items-center gap-2"
-          style={{ transformOrigin: "bottom center" }}
+          transition={{ duration: 0.55, ease: EASE.softOut }}
+          className="relative"
         >
           <CardArt src={null} alt={card.positionTitle} glyph={card.name.charAt(0)} width={faceWidth} />
-          <span className="eyebrow max-w-[7rem] text-center" style={{ color: "var(--color-mist-dim)" }}>
-            {card.positionTitle}
-          </span>
+          {/* Contact shadow — grounds the card on the felt so it reads as lying on the table. */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: -9,
+              transform: "translateX(-50%)",
+              width: shadowWidth,
+              height: 11,
+              borderRadius: "50%",
+              background: "radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 72%)",
+              filter: "blur(3px)",
+              pointerEvents: "none",
+            }}
+          />
         </m.div>
       ))}
     </m.section>
