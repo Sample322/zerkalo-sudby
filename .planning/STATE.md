@@ -3,8 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-06-16T10:09:22.280Z"
+last_updated: "2026-06-27T17:42:20.186Z"
 last_activity: 2026-06-16
 progress:
   total_phases: 8
@@ -159,7 +158,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-15T20:24:22.792Z
-Stopped at: Phase 6 UI-SPEC approved
-Resume file: None
+Last session: 2026-06-27T17:42:20.177Z
+Stopped at: Phase 7 context gathered (payments → ЮKassa)
+Resume file: .planning/phases/07-telegram-stars-payments/07-CONTEXT.md
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)
