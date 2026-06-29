@@ -58,6 +58,12 @@ class LimitsOut(BaseModel):
     # True for the admin/tester allowlist (UNLIMITED_TELEGRAM_IDS): the FE then never pre-blocks on
     # the weekly cap and shows «Безлимит» instead of a count. Defaults False for every normal user.
     unlimited: bool = False
+    # ЮKassa subscription window (Phase 7, D-08/D-12): lets the shop render «активна до DD.MM».
+    # Defaults inactive/None so GET /api/me is shape-complete NOW; Plan 05 makes ``project_limits``
+    # async + session-aware and fills these from the live ``Subscription`` window. The defaults are
+    # intentional placeholders — the column-backed truth arrives in Plan 05, not here.
+    subscription_active: bool = False
+    subscription_period_end: datetime | None = None
 
 
 class SettingsOut(BaseModel):

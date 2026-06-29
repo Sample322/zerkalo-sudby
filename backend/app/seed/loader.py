@@ -32,6 +32,7 @@ from app.models import (
     Deck,
     DeckCard,
     DeckSpreadCompatibility,
+    Product,
     PromptTemplate,
     SpreadPosition,
     SpreadType,
@@ -211,12 +212,16 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
     cards = _load("cards.json")
     prompts = _load("prompts.json")
     compatibility = _load("compatibility.json")
+    # Purchasable catalog (Phase 7, D-15): packs + subscription. No FK deps → upsert by slug
+    # alongside the other top-level catalog tables; RUB prices live in ``stars_price`` (A1).
+    products = _load("products.json")
 
     await upsert_by_slug(session, Topic, topics)
     await upsert_by_slug(session, Deck, decks)
     await upsert_by_slug(session, Card, cards)
     await _upsert_spreads(session, spreads)
     await upsert_by_slug(session, PromptTemplate, prompts)
+    await upsert_by_slug(session, Product, products)
     # Compatibility needs deck + spread ids, so it runs AFTER both are upserted.
     compat_count = await _upsert_compatibility(session, compatibility)
     # deck_cards is the per-deck draw pool — needs deck + card ids, so it runs last.
@@ -231,6 +236,7 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
         "deck_cards": deck_card_count,
         "prompt_templates": len(prompts),
         "deck_spread_compatibility": compat_count,
+        "products": len(products),
     }
 
 

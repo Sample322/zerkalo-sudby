@@ -187,6 +187,15 @@ def project_limits(row: UserLimits | None, telegram_id: int) -> LimitsOut | None
     testers, ``UNLIMITED_TELEGRAM_IDS``). For an unlimited user with no row we still surface the
     flag (a synthetic zeroed projection) so the FE never pre-blocks them; a normal user with no
     row projects to ``None`` (unchanged behaviour).
+
+    The Phase-7 subscription window fields (``subscription_active`` / ``subscription_period_end``)
+    default to inactive/None on BOTH branches here: the synthetic-unlimited projection sets them
+    explicitly, and the row branch inherits the schema defaults (``UserLimits`` has no such
+    columns yet). NOTE (D-08): Plan 05 makes this function async + session-aware and fills these
+    two from the live ``Subscription`` window (updating BOTH the ``/api/me`` and
+    ``/api/auth/telegram`` call sites). In THIS plan they only need to EXIST + default so
+    ``GET /api/me`` is shape-complete and the shop FE can render — the sync signature is
+    deliberately unchanged (that migration is Plan 05's explicit scope).
     """
     unlimited = settings.is_unlimited(telegram_id)
     if row is None:
@@ -199,6 +208,8 @@ def project_limits(row: UserLimits | None, telegram_id: int) -> LimitsOut | None
             subscription_spreads_limit=0,
             subscription_spreads_used=0,
             unlimited=True,
+            subscription_active=False,
+            subscription_period_end=None,
         )
     return LimitsOut.model_validate(row).model_copy(update={"unlimited": unlimited})
 

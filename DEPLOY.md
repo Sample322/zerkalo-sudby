@@ -66,6 +66,32 @@ Telegram client
 |-----------|-------|
 | `VITE_API_BASE` | url A (the backend origin), e.g. `https://zerkalo-backend.timeweb.cloud` |
 
+## ЮKassa (YooKassa) payments — Phase 7
+
+The payments rail is **ЮKassa direct v3 API** (RUB), not Telegram Stars (provider pivot, D-01).
+Two owner-side steps are required for live payments (the app builds + tests fully in **test mode**
+with the sandbox shop id/secret — no live account needed for CI):
+
+1. **Backend secrets** — set in the backend app env (boot fails fast if absent):
+
+   | Var | Value |
+   |-----|-------|
+   | `YOOKASSA_SHOP_ID` | shopId from the ЮKassa dashboard → Settings → Shop |
+   | `YOOKASSA_SECRET_KEY` | secret key from the ЮKassa dashboard → Integration → API keys |
+   | `YOOKASSA_WEBHOOK_IPS` | optional; comma-separated CIDR/IP override of the published ЮKassa ranges |
+
+2. **Register the webhook** in the ЮKassa dashboard → Integration → HTTP notifications, pointing at
+   the deployed backend (**url A**):
+
+   ```
+   https://<backend>/api/payments/yookassa/webhook
+   ```
+
+   Subscribe to `payment.succeeded`, `payment.canceled`, and `refund.succeeded`. ЮKassa webhooks are
+   **unsigned** — the backend defends by IP-allowlist + re-fetching each object by id and granting
+   only on the API-confirmed `succeeded` status (never the webhook body). Migration **0004** (the
+   ЮKassa columns) auto-applies on boot via the entrypoint, same as 0002/0003.
+
 ## First-test verification (from `.planning/phases/06-free-limits-soft-paywall/06-HUMAN-UAT.md`)
 
 Once live, confirm: real reading renders per-deck (Phase 4 live-UAT), history persists (Phase 5),
