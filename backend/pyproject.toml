@@ -28,6 +28,13 @@ dependencies = [
     "openai>=1.55,<2",
     # Bounded retry + per-attempt timeout around the single LLM call. github.com/jd/tenacity
     "tenacity>=9,<10",
+    # ЮKassa (YooKassa) v3 REST client — Phase 7 (Payments, provider pivot Stars→ЮKassa, D-01).
+    # Human-approved during the Package Legitimacy checkpoint (07-RESEARCH §Package Legitimacy
+    # Audit: official YooMoney SDK 3.11.0, 2026-06-26, slopcheck [OK], registry-confirmed; the
+    # unofficial async forks async_yookassa/aioyookassa are REJECTED — money path). The SDK is
+    # sync (requests-based); calls are wrapped in anyio.to_thread off the event loop (Plan 03).
+    # github.com/yoomoney/yookassa-sdk-python
+    "yookassa==3.11.*",
 ]
 
 [project.optional-dependencies]

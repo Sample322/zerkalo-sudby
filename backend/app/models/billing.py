@@ -1,15 +1,27 @@
 """Billing aggregate: ``user_limits`` (§13.11), ``products`` (§13.12), ``payments``
 (§13.13), ``subscriptions`` (§13.14).
 
+**Provider pivot (Phase 7, D-01):** the owner replaced the Telegram Stars rail with
+**ЮKassa (YooKassa) direct v3 API** in RUB. The Stars-era columns stay (additive
+migration 0004 only flips the server-defaults for NEW rows: ``payments.provider``
+``telegram_stars``→``yookassa``, ``payments.currency`` ``XTR``→``RUB`` — D-02), and the
+ЮKassa surface is carried by the new provider-agnostic columns below.
+
 - ``user_limits``: the per-user quota state — free weekly counter (Postgres is the source
   of truth, Redis is a fast mirror) + paid/subscription balances.
-- ``products``: purchasable packs / subscription (Telegram Stars). ``product_type`` ENUM.
-- ``payments``: every Stars transaction. ``payload`` is **UNIQUE** and
-  ``telegram_payment_charge_id`` is indexed so Phase-7 payment idempotency is
-  DB-guaranteed (threat T-02-02); ``raw_update`` JSONB keeps the full audit trail
-  (threat T-02-03). ``status`` ENUM.
-- ``subscriptions``: the entitlement window (DB is the source of truth, not Telegram).
-  ``status`` ENUM.
+- ``products``: purchasable packs / subscription. ``product_type`` ENUM. **A1 (Phase 7):**
+  ``stars_price`` now holds the price as an **integer in RUBLES** (e.g. ``299`` ⇒ ``299``),
+  formatted ``"{:.2f}"`` (``"299.00"``) by the service charge-helper at ЮKassa-call time —
+  NOT kopecks, NOT Telegram Stars. The column name is kept (lowest-churn, additive plan).
+- ``payments``: every transaction. ``payload`` is **UNIQUE** and the ЮKassa
+  ``provider_payment_id`` is **UNIQUE**-indexed so payment idempotency is DB-guaranteed
+  (threats T-02-02 / T-07-IDOR / T-07-REPLAY — the exactly-once grant backstop);
+  ``raw_update`` JSONB keeps the full audit trail (threat T-02-03). ``status`` ENUM. The
+  legacy ``telegram_payment_charge_id`` index is retained but unused under ЮKassa.
+- ``subscriptions``: the entitlement window (DB is the source of truth, not the provider —
+  D-08). ``status`` ENUM. ``telegram_payment_charge_id`` is now **nullable** so a ЮKassa
+  subscription insert (which has no Telegram charge id — it has a saved
+  ``payment_method_id`` instead) is legal.
 
 Timestamp columns follow TZ exactly: ``user_limits`` has only ``updated_at``; ``payments``
 has ``created_at``/``paid_at``/``refunded_at`` (no ``updated_at``); ``products`` and
@@ -94,15 +106,31 @@ class Payment(UUIDPrimaryKeyMixin, Base):
     product_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("products.id", ondelete="RESTRICT"), index=True
     )
+    # D-02: server-defaults flipped to the ЮKassa provider/currency for NEW rows (migration
+    # 0004). Existing Stars-era rows keep their old values (no data migration — no real payments).
     provider: Mapped[str] = mapped_column(
-        String, default="telegram_stars", server_default="telegram_stars"
+        String, default="yookassa", server_default="yookassa"
     )
-    currency: Mapped[str] = mapped_column(String, default="XTR", server_default="XTR")
+    currency: Mapped[str] = mapped_column(String, default="RUB", server_default="RUB")
     amount: Mapped[int] = mapped_column(Integer)
     payload: Mapped[str] = mapped_column(String, unique=True)
+    # Legacy Stars charge id — retained (indexed) but unused under ЮKassa; the provider-agnostic
+    # id below is the ЮKassa source of truth.
     telegram_payment_charge_id: Mapped[str | None] = mapped_column(
         String, nullable=True, index=True
     )
+    # --- ЮKassa surface (Phase 7, D-04/D-06). All nullable (additive; a CREATED row is written
+    # before the SDK call, then provider_payment_id/confirmation_url are filled from the response). ---
+    # The ЮKassa payment id — UNIQUE so a redelivered webhook grants exactly once (T-07-REPLAY).
+    provider_payment_id: Mapped[str | None] = mapped_column(
+        String, unique=True, index=True, nullable=True
+    )
+    # The ЮKassa-hosted payment page URL (confirmation.confirmation_url) the FE opens via openLink.
+    confirmation_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    # The per-attempt Idempotence-Key sent to ЮKassa (uuid4) — audit + retry-safe (Pitfall 5).
+    idempotence_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    # A saved ЮKassa payment method id (set when a pack also saves a method; subscriptions use it).
+    payment_method_id: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[PaymentStatus] = mapped_column(
         payment_status_enum,
         default=PaymentStatus.CREATED,
@@ -124,7 +152,20 @@ class Subscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     product_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("products.id", ondelete="RESTRICT"), index=True
     )
-    telegram_payment_charge_id: Mapped[str] = mapped_column(String)
+    # D-08: now NULLABLE — a ЮKassa subscription has no Telegram charge id (it has a saved
+    # payment_method_id instead). Migration 0004 drops the old NOT NULL.
+    telegram_payment_charge_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # --- ЮKassa recurring surface (Phase 7, D-08). The saved method + the deterministic-key
+    # bookkeeping for merchant-initiated renewals (ЮKassa does NOT auto-charge — Pattern 4). ---
+    # The saved ЮKassa payment_method_id reused for every renewal charge.
+    payment_method_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # The ЮKassa payment id of the most recent (first or renewal) charge for this subscription.
+    provider_payment_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # When the last successful charge landed (renewal bookkeeping / dunning).
+    last_charge_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    # Monotonic period counter — the renewal Idempotence-Key is ``renew:{sub_id}:{period_index}``
+    # (Pitfall 5: deterministic per period so a retry is a safe no-op, the next period a new key).
+    period_index: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     status: Mapped[SubscriptionStatus] = mapped_column(
         subscription_status_enum,
         default=SubscriptionStatus.ACTIVE,

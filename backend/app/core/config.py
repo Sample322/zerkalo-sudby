@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str  # postgresql+asyncpg://user:pass@postgres:5432/db
     REDIS_URL: str  # redis://redis:6379/0
     JWT_SECRET: str
+    # ЮKassa (YooKassa) v3 credentials — HTTP Basic (shop id + secret). Required, NO default, so
+    # the process refuses to start without them (INFRA-04 / T-07-SECRET-LEAK — never defaulted,
+    # never logged, never crosses a response schema). Source: ЮKassa dashboard (D-01).
+    YOOKASSA_SHOP_ID: str
+    YOOKASSA_SECRET_KEY: str
 
     # --- LLM provider keys: at least ONE is required (enforced below). ---
     # ANTHROPIC_API_KEY → the CLAUDE.md-default provider (anthropic SDK messages.parse).
@@ -51,7 +56,10 @@ class Settings(BaseSettings):
     # --- Optional / tunable ---
     JWT_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7-day session token
     INITDATA_MAX_AGE_SECONDS: int = 86400  # 24h initData freshness window
-    WEBHOOK_SECRET: str | None = None  # X-Telegram-Bot-Api-Secret-Token (Phase 7)
+    # Reserved Telegram bot-api secret header — NOT used by ЮKassa (the provider pivot, D-01:
+    # ЮKassa webhooks are unsigned → defended by IP-allowlist + re-fetch, not a header secret).
+    # Left in place (harmless) for a possible future bot wiring.
+    WEBHOOK_SECRET: str | None = None
     LOG_LEVEL: str = "INFO"
     # Optional error-tracking DSN (INFRA-05). Unset => Sentry init is a strict no-op;
     # full dashboards/alerting are deferred to Phase 8 (RESEARCH Open Question #4).
@@ -63,6 +71,12 @@ class Settings(BaseSettings):
     # JWT — no cookies). Empty => CORS middleware is NOT installed (same-origin / dev).
     # NoDecode + split avoids the JSON-decode footgun, same as ADMIN_TELEGRAM_IDS.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = []
+
+    # --- ЮKassa webhook source allowlist (optional override) ---
+    # Comma-separated CIDR ranges / IPs ЮKassa delivers webhooks from. Empty => the service uses
+    # its built-in published default ranges (A5). Re-fetch-by-id (Pattern 3) is the real guard;
+    # this is defence-in-depth (T-07-WEBHOOK-FORGE). Same NoDecode split as CORS_ORIGINS.
+    YOOKASSA_WEBHOOK_IPS: Annotated[list[str], NoDecode] = []
 
     @field_validator("ADMIN_TELEGRAM_IDS", "UNLIMITED_TELEGRAM_IDS", mode="before")
     @classmethod
@@ -95,6 +109,18 @@ class Settings(BaseSettings):
         """
         if isinstance(v, str):
             return [o.strip().rstrip("/") for o in v.split(",") if o.strip()]
+        return v
+
+    @field_validator("YOOKASSA_WEBHOOK_IPS", mode="before")
+    @classmethod
+    def _parse_webhook_ips(cls, v: object) -> object:
+        """Split a comma-separated env string into a list of CIDR/IP strings.
+
+        Accepts ``"185.71.76.0/27,77.75.153.0/25"`` -> ``[...]``. Already-parsed lists pass
+        through. Empty/whitespace entries are dropped (NoDecode opt-out, same as CORS_ORIGINS).
+        """
+        if isinstance(v, str):
+            return [n.strip() for n in v.split(",") if n.strip()]
         return v
 
     @model_validator(mode="after")
