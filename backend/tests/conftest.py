@@ -42,6 +42,14 @@ _TEST_ENV_DEFAULTS = {
     "JWT_SECRET": "test-jwt-secret-not-for-production",
     "ANTHROPIC_API_KEY": "test-anthropic-key",
     "ADMIN_TELEGRAM_IDS": "111,222",
+    # Phase-7 (ЮKassa) fail-fast config secrets (threat T-07-SECRET-LEAK: test-only dummies,
+    # NEVER real credentials, never logged). Plan 02 adds ``YOOKASSA_SHOP_ID`` /
+    # ``YOOKASSA_SECRET_KEY`` as required (no-default) settings; they must be present in the env
+    # BEFORE ``app.core.config`` instantiates ``Settings()`` at import, or every test that imports
+    # an app module would fail collection. The real ЮKassa surface is never reached — see
+    # ``tests/integration/fakes_payments.py`` (FakeYooKassa is the only ЮKassa client in the suite).
+    "YOOKASSA_SHOP_ID": "test_shop",
+    "YOOKASSA_SECRET_KEY": "test_secret",
 }
 for _key, _value in _TEST_ENV_DEFAULTS.items():
     os.environ.setdefault(_key, _value)

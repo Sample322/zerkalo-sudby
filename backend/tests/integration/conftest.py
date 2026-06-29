@@ -31,6 +31,7 @@ from app.schemas.reading import (
     SafetyCategory,
     SafetyVerdict,
 )
+from tests.integration.fakes_payments import FakeYooKassa
 
 
 @pytest.fixture
@@ -166,6 +167,40 @@ class FakeSafety:
 def fake_safety() -> FakeSafety:
     """Default ``normal`` ``FakeSafety``. Tests rebuild ``FakeSafety(category=...)`` as needed."""
     return FakeSafety()
+
+
+# ---------------------------------------------------------------------------------------
+# Wave-0 ЮKassa fixture (Phase 7) — the no-real-charge payment-client seam.
+#
+# ``FakeYooKassa`` (tests/integration/fakes_payments.py) is the ONLY ЮKassa surface the suite
+# ever touches: no test reaches the live ЮKassa host and nothing imports the real ЮKassa SDK
+# (threat T-07-TEST-LIVE; asserted by a grep gate). It is re-exported here next to FakeLLM/
+# FakeSafety so payment tests import all the fakes from one place
+# (``from tests.integration.conftest import FakeYooKassa``).
+#
+# HOW PLAN 03/04 WIRE IT (the established dependency_overrides seam):
+#   The real payment service (``services/payments.py``, Plan 03) takes its ЮKassa client via a
+#   constructor param defaulting to the real SDK wrapper — exactly like ``ReadingService(safety=...,
+#   llm=...)``. The router exposes a ``get_payment_service`` dependency (mirroring
+#   ``get_reading_service``); a test overrides it to inject a service built with this fake::
+#
+#       fake = FakeYooKassa(succeeded=True)
+#       app.dependency_overrides[get_payment_service] = lambda: PaymentService(yookassa=fake)
+#
+#   The webhook/create/refund routes then run end-to-end with zero network. Construct the fake with
+#   ``succeeded=False`` / ``next_status="canceled"`` to drive the no-grant branches, and assert the
+#   deterministic recurring key + server-recomputed amount via ``fake.recorded_calls``.
+# ---------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fake_yookassa() -> FakeYooKassa:
+    """Default success ``FakeYooKassa`` (re-fetch returns ``succeeded``).
+
+    Tests rebuild ``FakeYooKassa(succeeded=False)`` / ``FakeYooKassa(next_status="canceled")`` /
+    ``FakeYooKassa(refund_status=...)`` as needed to exercise the no-grant and refund branches.
+    """
+    return FakeYooKassa()
 
 
 async def _ensure_deck_cards(session: AsyncSession) -> int:
