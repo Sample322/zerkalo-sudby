@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-28T19:24:59.633Z"
-last_activity: 2026-06-16
+last_updated: "2026-06-29T10:02:58.897Z"
+last_activity: 2026-06-29
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 38
-  completed_plans: 31
+  completed_plans: 32
   percent: 75
 ---
 
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Один и тот же вопрос ощущается по-разному в разных колодах — красивый мистический ритуал в Telegram, дающий глубокий, но бережный ответ.
-**Current focus:** Phase 06 — free-limits-soft-paywall
+**Current focus:** Phase 7 — telegram-stars-payments
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
+Phase: 7 (telegram-stars-payments) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-06-16
+Last activity: 2026-06-29
 
-Progress: [██████████] 97%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [██████████] 97%
 | Phase 06 P01 | 11 | 3 tasks | 11 files |
 | Phase 06 P02 | 12min | 3 tasks | 4 files |
 | Phase 06 P03 | 4min | 2 tasks | 4 files |
+| Phase 07 P01 | 19min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 6 (Plan 02): FE limit-block contract (Plan 04) = HTTP 200 ReadingOut with reason=='paywall' + reset_at=week_start+7d; throttle (Plan 03) is a separate 429 {kind:'throttle'} GATE 0 (D-08, never conflated). determine_access free->subscription->paid; only FREE populated, sub/paid = Phase-7 seam.
 - [Phase ?]: 06-03: Redis throttle band locked at 60s window / cap 5 (D-07) — real 30s+ user never throttled; single fixed window, two-tier spacing deferred
 - [Phase ?]: 06-03: throttle_gate is GATE 0 on POST /readings only — keys off JWT user.id (T-06), not the DB session, so 429 short-circuits before any Postgres txn
+- [Phase 07]: 07-01: ЮKassa Wave-0 RED substrate — FakeYooKassa is the ONLY ЮKassa surface in the suite (no real SDK import, no live host; grep gate asserts it, T-07-TEST-LIVE), injected via a get_payment_service dependency_overrides seam mirroring get_reading_service. 14 named xfail tests are the green targets: Plan 03 service (grant-on-refetched-succeeded, THE idempotent-redelivery no-double-grant, no-grant-on-unconfirmed, deterministic recurring key renew:<sub>:<period>, refund recon), Plan 04 routes (GET /products active-only, create→confirmation_url + NO grant, server-recomputed price + inactive 4xx, webhook re-fetch + IP-gate, refund require_admin), Plan 05 gate (sub+paid bucket consume + correct-bucket refund on honest fail, free→sub→paid D-11). Tests live under tests/integration/ (NOT top-level frontmatter path) to reuse auth_session/seeded_catalog/fake_safety + test_readings_flow helpers; future symbols (PaymentService/get_payment_service/app.api.payments) imported INSIDE test bodies so collection never errors. YOOKASSA_SHOP_ID/SECRET_KEY added to _TEST_ENV_DEFAULTS so Plan-02 fail-fast config imports under test. Suite 84 pass/91 skip/3 xpass, exit 0; both grep gates clean. Method names the service tests resolve defensively (handle_payment_succeeded/handle_webhook_event, charge_renewal/renew_subscription, handle_refund_succeeded) are Plan 03's to finalize.
 
 ### Pending Todos
 
@@ -158,7 +160,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-28T19:24:59.623Z
+Last session: 2026-06-29T09:59:57.718Z
 Stopped at: Phase 7 planned (7 plans, ЮKassa) — ready to execute
-Resume file: .planning/phases/07-telegram-stars-payments/07-01-PLAN.md
+Resume file: None
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)
