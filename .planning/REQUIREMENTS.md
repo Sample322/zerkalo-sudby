@@ -90,12 +90,12 @@
 
 ### Payments (PAY)
 
-- [ ] **PAY-01**: API списка продуктов/тарифов (GET /api/products): пакеты 1/3/10 раскладов + подписка
-- [ ] **PAY-02**: Создание invoice link для Telegram Stars (XTR) с `payload` (user_id, product_id, purchase_type, idempotency_key)
+- [x] **PAY-01**: API списка продуктов/тарифов (GET /api/products): пакеты 1/3/10 раскладов + подписка
+- [x] **PAY-02**: Создание invoice link для Telegram Stars (XTR) с `payload` (user_id, product_id, purchase_type, idempotency_key)
 - [ ] **PAY-03**: Обработка `pre_checkout_query` (ответ <10s): проверка продукта, активности тарифа, неиспользованности payload
 - [ ] **PAY-04**: На `successful_payment` — сохранить платёж + `telegram_payment_charge_id`, выдать `paid_spreads_balance` или подписку, обновить entitlements
 - [ ] **PAY-05**: Идемпотентность: `payload`/`charge_id` UNIQUE; доступ выдаётся только после подтверждённой оплаты; повторные апдейты не дублируют выдачу
-- [ ] **PAY-06**: Подписка «Лунный доступ» — нативный recurring Stars (`subscription_period=2592000`) + серверное 30-дневное entitlement-окно; продление по `is_recurring`; отмена через `editUserStarSubscription`
+- [x] **PAY-06**: Подписка «Лунный доступ» — нативный recurring Stars (`subscription_period=2592000`) + серверное 30-дневное entitlement-окно; продление по `is_recurring`; отмена через `editUserStarSubscription`
 - [ ] **PAY-07**: Обработка refunds (`refundStarPayment`, окно 21 день): платёж → refunded, при необходимости уменьшить доступ
 - [ ] **PAY-08**: UI тарифов и успешной оплаты; понятные сообщения об ошибке (звёзды не списаны / доступ не выдан)
 
@@ -240,12 +240,12 @@
 | LIMIT-03 | Phase 6 — Free Limits & Soft Paywall | Complete |
 | LIMIT-04 | Phase 6 — Free Limits & Soft Paywall | Complete |
 | LIMIT-05 | Phase 6 — Free Limits & Soft Paywall | Complete |
-| PAY-01 | Phase 7 — Telegram Stars Payments | Pending |
-| PAY-02 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-01 | Phase 7 — Telegram Stars Payments | Complete |
+| PAY-02 | Phase 7 — Telegram Stars Payments | Complete |
 | PAY-03 | Phase 7 — Telegram Stars Payments | Pending |
 | PAY-04 | Phase 7 — Telegram Stars Payments | Pending |
 | PAY-05 | Phase 7 — Telegram Stars Payments | Pending |
-| PAY-06 | Phase 7 — Telegram Stars Payments | Pending |
+| PAY-06 | Phase 7 — Telegram Stars Payments | Complete |
 | PAY-07 | Phase 7 — Telegram Stars Payments | Pending |
 | PAY-08 | Phase 7 — Telegram Stars Payments | Pending |
 | SAFE-01 | Phase 4 — Real Personal Reading (KEYSTONE) | Complete |

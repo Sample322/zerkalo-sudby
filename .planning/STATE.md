@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-29T10:02:58.897Z"
+last_updated: "2026-06-29T10:25:55.983Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 38
-  completed_plans: 32
+  completed_plans: 33
   percent: 75
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 7 (telegram-stars-payments) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-06-29
 
-Progress: [████████░░] 84%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [████████░░] 84%
 | Phase 06 P02 | 12min | 3 tasks | 4 files |
 | Phase 06 P03 | 4min | 2 tasks | 4 files |
 | Phase 07 P01 | 19min | 2 tasks | 6 files |
+| Phase 07 P02 | 9 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,11 @@ Recent decisions affecting current work:
 - [Phase ?]: 06-03: Redis throttle band locked at 60s window / cap 5 (D-07) — real 30s+ user never throttled; single fixed window, two-tier spacing deferred
 - [Phase ?]: 06-03: throttle_gate is GATE 0 on POST /readings only — keys off JWT user.id (T-06), not the DB session, so 429 short-circuits before any Postgres txn
 - [Phase 07]: 07-01: ЮKassa Wave-0 RED substrate — FakeYooKassa is the ONLY ЮKassa surface in the suite (no real SDK import, no live host; grep gate asserts it, T-07-TEST-LIVE), injected via a get_payment_service dependency_overrides seam mirroring get_reading_service. 14 named xfail tests are the green targets: Plan 03 service (grant-on-refetched-succeeded, THE idempotent-redelivery no-double-grant, no-grant-on-unconfirmed, deterministic recurring key renew:<sub>:<period>, refund recon), Plan 04 routes (GET /products active-only, create→confirmation_url + NO grant, server-recomputed price + inactive 4xx, webhook re-fetch + IP-gate, refund require_admin), Plan 05 gate (sub+paid bucket consume + correct-bucket refund on honest fail, free→sub→paid D-11). Tests live under tests/integration/ (NOT top-level frontmatter path) to reuse auth_session/seeded_catalog/fake_safety + test_readings_flow helpers; future symbols (PaymentService/get_payment_service/app.api.payments) imported INSIDE test bodies so collection never errors. YOOKASSA_SHOP_ID/SECRET_KEY added to _TEST_ENV_DEFAULTS so Plan-02 fail-fast config imports under test. Suite 84 pass/91 skip/3 xpass, exit 0; both grep gates clean. Method names the service tests resolve defensively (handle_payment_succeeded/handle_webhook_event, charge_renewal/renew_subscription, handle_refund_succeeded) are Plan 03's to finalize.
+- [Phase ?]: 07-02: ЮKassa data+config foundation — additive reversible migration 0004 (provider_payment_id UNIQUE/indexed/nullable = T-07-REPLAY exactly-once backstop, confirmation_url, idempotence_key, payment_method_id on payments; payment_method_id/provider_payment_id/last_charge_at/period_index on subscriptions; telegram_payment_charge_id made NULLABLE so a ЮKassa sub insert is legal D-08; provider/currency server_defaults flipped telegram_stars/XTR->yookassa/RUB for NEW rows D-02, zero data migration). down_revision=0003, reversed in downgrade().
+- [Phase ?]: 07-02: A1 LOCKED — products.stars_price holds an INTEGER in RUBLES (column name kept, lowest-churn additive); ProductOut exposes it as price_rub via validation_alias; the '{:.2f}' ЮKassa formatter is Plan-03's service helper (NOT kopecks, NOT Stars).
+- [Phase ?]: 07-02: CreatePaymentIn carries product_slug ONLY (extra=forbid + NO amount/price field) — server-recompute posture (T-07-AMOUNT) enforced at the schema boundary, asserted by a Wave-0 test. schemas/payment.py also exports ProductOut/CreatePaymentOut/RefundIn/WebhookEnvelope (webhook reads object[id] only, body status never trusted).
+- [Phase ?]: 07-02: YOOKASSA_SHOP_ID/SECRET_KEY are fail-fast required config (no default, like JWT_SECRET — Settings() raises at import without them) + optional YOOKASSA_WEBHOOK_IPS (CORS-style NoDecode split). yookassa==3.11.* locked behind the approved Task-1 legitimacy gate (official YooMoney SDK; async forks rejected). WEBHOOK_SECRET noted unused by ЮKassa.
+- [Phase ?]: 07-02: LimitsOut gains subscription_active + subscription_period_end defaulting inactive/None NOW (shape-complete GET /api/me for the shop); project_limits sets them on the synthetic-unlimited branch with its SYNC signature deliberately unchanged — Plan 05 owns the async/session-aware migration that fills them from the live Subscription window (both /api/me + /api/auth/telegram call sites). 4 products seeded (pack_1=69/pack_3=169/pack_10=449/sub_moon=299·30д RUB, SAFE-06). Suite 84pass/91skip/3xpass preserved.
 
 ### Pending Todos
 
@@ -160,7 +166,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-29T09:59:57.718Z
-Stopped at: Phase 7 planned (7 plans, ЮKassa) — ready to execute
+Last session: 2026-06-29T10:25:55.973Z
+Stopped at: Completed 07-02-PLAN.md (ЮKassa data+config foundation)
 Resume file: None
 Next: 05-07-PLAN.md (FE Profile/Settings — the last Wave-4 / Phase-5 plan; sibling to 05-06, zero overlap)
