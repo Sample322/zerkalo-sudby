@@ -36,7 +36,11 @@ findings:
   warning: 7
   info: 6
   total: 15
-status: issues_found
+status: resolved_partial
+resolution:
+  fixed: [CR-01, CR-02, WR-01, WR-02, WR-04, WR-05]
+  deferred: [WR-03, WR-06, WR-07, IN-01, IN-02, IN-03, IN-04, IN-05, IN-06]
+  resolved_date: 2026-07-03
 ---
 
 # Phase 7: Code Review Report
@@ -44,7 +48,25 @@ status: issues_found
 **Reviewed:** 2026-07-03
 **Depth:** standard
 **Files Reviewed:** 26
-**Status:** issues_found
+**Status:** resolved_partial — both blockers + the 4 real warnings fixed; low-severity items deferred
+
+## Resolution (2026-07-03)
+
+Fixed inline (each with a regression test + atomic commit):
+- **CR-01** (`73b26ee`) — the consume-gate now consults the live ACTIVE+unexpired `Subscription`
+  window; a lapsed count bucket is lazily zeroed and re-picked (→ PAID/NONE). Test:
+  `test_subscription_lapsed_window_is_not_unlimited`.
+- **CR-02** (`113d9f4`) — admin refund reconciles ONLY on a confirmed `succeeded` refund (money-first
+  ordering kept; `refund.succeeded` webhook is the crash-window redrive). Test:
+  `test_admin_refund_pending_does_not_claw_back`.
+- **WR-01/02/04/05** (`964f63a`) — renew re-asserts ACTIVE before charging; window extends from
+  `max(now, current_period_end)`; ShopTariffs subscription-success requires `subscription_period_end`
+  to move; webhook IP-gates BEFORE body-parse (403 for forged, no 422 storm).
+
+Deferred (low severity, logged below): **WR-03** (legacy `telegram_payment_charge_id` renewal
+fallback), **WR-06** (`_FREE_WEEKLY_LIMIT` magic number duplicated vs the model default), **WR-07**
+(`MeResponse`→`AuthResponse` cast in the poll cache write), **IN-01..06** (dead
+`PRE_CHECKOUT_APPROVED`/`WEBHOOK_SECRET`, unlogged no-ops, magic timings, XFF trust note).
 
 ## Summary
 
