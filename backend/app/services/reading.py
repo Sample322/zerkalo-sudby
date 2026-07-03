@@ -132,12 +132,13 @@ WINDOW = timedelta(days=7)
 
 
 class Bucket(enum.StrEnum):
-    """Which access bucket the next reading should spend (LIMIT-04, D-06).
+    """Which access bucket the next reading should spend (LIMIT-04, D-06, D-11).
 
     Order is **free → subscription → paid** (spend expiring buckets first, preserve the permanent
-    ``paid_spreads_balance`` last). This phase only ever returns ``FREE`` or ``NONE`` — the
-    ``SUBSCRIPTION``/``PAID`` arms are the Phase-7 seam (those balances are 0 until then), built so
-    Phase 7 fills them in behind the same enum with no re-architecture.
+    ``paid_spreads_balance`` last). Phase 6 populated only ``FREE``/``NONE``; **Phase 7 fills the
+    ``SUBSCRIPTION`` and ``PAID`` arms** behind the same enum (the atomic consume/refund per bucket)
+    so a ЮKassa-granted pack or subscription is spendable through the exact same gate — no
+    re-architecture, just the seams the module was built to accept.
     """
 
     FREE = "free"
@@ -279,6 +280,10 @@ class ReadingService:
         #    folded in) BEFORE any draw; None ⇒ exhausted within a fresh window ⇒ soft paywall, NO draw.
         unlimited = settings.is_unlimited(user.telegram_id)
         remaining: int | None
+        # The bucket actually consumed by the gate — threaded to the honest-fail refund so a
+        # sub/paid failure refunds THAT bucket, never free (D-11, T-07-REFUND-WRONG-BUCKET). None
+        # for the unlimited allowlist (nothing consumed → nothing to refund).
+        consumed_bucket: Bucket | None = None
         if unlimited:
             remaining = None
         else:
@@ -291,8 +296,7 @@ class ReadingService:
                     reason="paywall",
                     reset_at=self._compute_reset_at(limits.week_start if limits else None),
                 )
-            used, limit = gate
-            remaining = max(0, limit - used)
+            consumed_bucket, remaining = gate
 
         # 3. CSPRNG draw + persist pending + immutable reading_cards.
         # D-09 / PROF-02: the draw's reversals come from the PERSISTED user flag (default ON,
@@ -339,9 +343,16 @@ class ReadingService:
         except LLMGenerationError as exc:
             # HONEST FAIL (D-09): the slot was already consumed by the gate, so REFUND it here
             # (Pitfall 2 — keeps READ-10 "limit never consumed on failure"); no templated
-            # stand-in, soft §9.8 body. The refund runs in-transaction inside _honest_fail.
+            # stand-in, soft §9.8 body. The refund runs in-transaction inside _honest_fail and is
+            # routed to the bucket ACTUALLY consumed (free/sub/paid, D-11) via ``consumed_bucket``.
             return await self._honest_fail(
-                session, reading, user, limits, exc, refund=not unlimited
+                session,
+                reading,
+                user,
+                limits,
+                exc,
+                refund=not unlimited,
+                consumed_bucket=consumed_bucket,
             )
 
         # 6. Brand guard — LOG + FLAG only (never fail the reading; RESEARCH Open Question 2).
@@ -689,33 +700,124 @@ class ReadingService:
         row = (await session.execute(stmt)).first()  # None ⇒ no slot ⇒ paywall
         return (row[0], row[1]) if row is not None else None
 
+    @staticmethod
+    async def _consume_subscription_atomic(
+        session: AsyncSession, user_id: object, now: datetime
+    ) -> bool:
+        """Atomically consume one SUBSCRIPTION unit — window-gated per the Plan-03 D-09 contract.
+
+        A subscription is **WINDOW-GATED, NOT count-gated**: the real bound is the 30-day window
+        (``Subscription.current_period_end``, selected by ``determine_access`` before we get here),
+        and Plan 03's grant sets ``subscription_spreads_limit = SUBSCRIPTION_WINDOW_UNLIMITED`` +
+        resets ``subscription_spreads_used = 0`` each period. This count-atomic conditional
+        ``UPDATE … WHERE subscription_spreads_used < subscription_spreads_limit … RETURNING`` exists
+        ONLY so the PostgreSQL row lock serializes concurrent reads (the same exactly-once discipline
+        the free bucket uses) — inside a live window the ``_used < _limit`` invariant the grant
+        guarantees is always satisfiable, so this never blocks a real subscriber. Mirrors
+        ``_consume_free_atomic``: "no slot" is the RETURNING row being absent (``.first() is None``),
+        never a rowcount.
+
+        Does NOT re-import or re-define ``SUBSCRIPTION_WINDOW_UNLIMITED`` (owned by
+        ``services/payments.py``, D-09); the gate relies solely on the ``_used < _limit`` invariant
+        the grant writes. Returns ``True`` when a unit was consumed, ``False`` when none was available.
+        """
+        row = (
+            await session.execute(
+                update(UserLimits)
+                .where(
+                    UserLimits.user_id == user_id,
+                    UserLimits.subscription_spreads_used
+                    < UserLimits.subscription_spreads_limit,
+                )
+                .values(
+                    subscription_spreads_used=UserLimits.subscription_spreads_used + 1
+                )
+                .returning(
+                    UserLimits.subscription_spreads_used,
+                    UserLimits.subscription_spreads_limit,
+                )
+            )
+        ).first()
+        return row is not None
+
+    @staticmethod
+    async def _consume_paid_atomic(
+        session: AsyncSession, user_id: object, now: datetime
+    ) -> int | None:
+        """Atomically decrement one PAID spread — the permanent balance spent LAST (D-11).
+
+        A single conditional ``UPDATE … WHERE paid_spreads_balance > 0 … RETURNING`` (mirrors
+        ``_consume_free_atomic``): the PG row lock serializes concurrent reads so the balance can
+        never over-spend at the boundary (T-07-OVERSPEND). "No slot" is the absent RETURNING row
+        (``.first() is None``), never a rowcount. Returns the **post-decrement** balance on a
+        consumed spread (so the caller can surface it as ``remaining_limits``), ``None`` when the
+        balance was already 0.
+        """
+        row = (
+            await session.execute(
+                update(UserLimits)
+                .where(
+                    UserLimits.user_id == user_id,
+                    UserLimits.paid_spreads_balance > 0,
+                )
+                .values(paid_spreads_balance=UserLimits.paid_spreads_balance - 1)
+                .returning(UserLimits.paid_spreads_balance)
+            )
+        ).first()
+        return row[0] if row is not None else None
+
     async def _consume_free_gate(
         self,
         session: AsyncSession,
         user: User,
         limits: UserLimits | None,
         now: datetime,
-    ) -> tuple[int, int] | None:
+    ) -> tuple[Bucket, int | None] | None:
         """Pick the bucket (``determine_access``) and run its atomic consume — the create-path gate.
 
-        This phase only the FREE bucket is populated, so the gate routes ``Bucket.FREE`` to the
-        atomic ``_consume_free_atomic`` (which self-handles stale/first-ever/exhausted) and treats
-        every other bucket as "no slot" (``None`` → paywall). The ``SUBSCRIPTION``/``PAID`` arms are
-        the Phase-7 seam: Phase 7 adds their atomic consume statements here behind the same enum,
-        falling through to them when ``determine_access`` returns those buckets.
+        Routes each bucket to its own atomic consume, in the D-11 order **free → subscription →
+        paid** (``determine_access`` already returns them in that priority):
+
+          * ``Bucket.FREE`` → ``_consume_free_atomic`` (self-handles stale/first-ever/exhausted) →
+            ``(FREE, remaining)`` where ``remaining = max(0, limit - used)`` (the free display value);
+          * ``Bucket.SUBSCRIPTION`` → ``_consume_subscription_atomic`` (window-gated per the Plan-03
+            D-09 contract) → ``(SUBSCRIPTION, None)`` (a count is meaningless — the window, not a
+            number, is the bound; the FE shows «безлимит», so no remaining count is surfaced);
+          * ``Bucket.PAID`` → ``_consume_paid_atomic`` → ``(PAID, new_balance)`` (the post-decrement
+            paid balance as the remaining value);
+          * ``Bucket.NONE`` → ``None`` (paywall).
+
+        Each arm is an atomic conditional ``UPDATE … RETURNING`` — never a ``SELECT``-then-``UPDATE``
+        and never a rowcount ("no slot" is always the absent RETURNING row); the PG row lock is the
+        cross-connection serialization (T-07-OVERSPEND, the verified Phase-6 free-quota control). The
+        returned ``Bucket`` tag is threaded out so ``create_reading`` can route the honest-fail refund
+        to the bucket that was ACTUALLY consumed (Task 2 / T-07-REFUND-WRONG-BUCKET).
 
         A MISSING ``user_limits`` row (``limits is None``) is **fail-closed** → ``None`` (paywall):
         D-02 guarantees a row at auth, so a missing row is anomalous, and granting a free reading on
-        a missing row would re-open the Phase-4 "no row → unlimited" gap. Returns ``(used, limit)``
-        on a consumed slot, ``None`` otherwise.
+        a missing row would re-open the Phase-4 "no row → unlimited" gap. Returns ``None`` when the
+        selected bucket had no slot (a lost race at the boundary falls through to paywall).
         """
         if limits is None:
             return None
         bucket = determine_access(limits, now)
         if bucket is Bucket.FREE:
-            return await self._consume_free_atomic(session, user.id, now)
-        # SUBSCRIPTION / PAID are Phase-7 seams (their balances are 0 this phase, so determine_access
-        # never returns them here); NONE → exhausted. Either way: no slot this phase → paywall.
+            consumed = await self._consume_free_atomic(session, user.id, now)
+            if consumed is None:
+                return None
+            used, limit = consumed
+            return (Bucket.FREE, max(0, limit - used))
+        if bucket is Bucket.SUBSCRIPTION:
+            if await self._consume_subscription_atomic(session, user.id, now):
+                # Window-gated: no meaningful count to surface (the window is the bound, D-09).
+                return (Bucket.SUBSCRIPTION, None)
+            return None
+        if bucket is Bucket.PAID:
+            new_balance = await self._consume_paid_atomic(session, user.id, now)
+            if new_balance is None:
+                return None
+            return (Bucket.PAID, new_balance)
+        # Bucket.NONE → exhausted across every bucket → soft paywall (no draw).
         return None
 
     @staticmethod
@@ -732,6 +834,58 @@ class ReadingService:
             .where(UserLimits.user_id == user_id)
             .values(free_used_this_week=UserLimits.free_used_this_week - 1)
         )
+
+    @staticmethod
+    async def _refund_subscription(session: AsyncSession, user_id: object) -> None:
+        """Compensating refund of one SUBSCRIPTION unit after a post-consume honest fail (D-11).
+
+        Mirrors ``_refund_free``: an atomic ``UPDATE … subscription_spreads_used -= 1`` in the SAME
+        transaction as the consume, before the soft-body return, so the net counter is unchanged and
+        READ-10 holds for a subscription-paid attempt that honest-fails. (Because the subscription is
+        window-gated, this is bookkeeping symmetry — the window still bounds access — but it keeps
+        the count consistent so the gate's concurrency invariant never drifts.)
+        """
+        await session.execute(
+            update(UserLimits)
+            .where(UserLimits.user_id == user_id)
+            .values(
+                subscription_spreads_used=UserLimits.subscription_spreads_used - 1
+            )
+        )
+
+    @staticmethod
+    async def _refund_paid(session: AsyncSession, user_id: object) -> None:
+        """Compensating refund of one PAID spread after a post-consume honest fail (D-11, READ-10).
+
+        Mirrors ``_refund_free``: an atomic ``UPDATE … paid_spreads_balance += 1`` in the SAME
+        transaction as the consume, before the soft-body return, so a paid-paid attempt that
+        honest-fails gives the permanent spread back (net unchanged) — refunding the paid bucket, NOT
+        free (T-07-REFUND-WRONG-BUCKET). The gate only decrements a positive balance, so the give-back
+        is always to a balance that was just spent.
+        """
+        await session.execute(
+            update(UserLimits)
+            .where(UserLimits.user_id == user_id)
+            .values(paid_spreads_balance=UserLimits.paid_spreads_balance + 1)
+        )
+
+    async def _refund_consumed_bucket(
+        self, session: AsyncSession, user_id: object, bucket: Bucket | None
+    ) -> None:
+        """Route a compensating refund to the bucket that was ACTUALLY consumed (D-11, Task 2).
+
+        FREE → ``_refund_free``, SUBSCRIPTION → ``_refund_subscription``, PAID → ``_refund_paid``.
+        ``None`` (unlimited allowlist — nothing was consumed) and ``Bucket.NONE`` (paywall — never
+        reaches an honest fail) are a no-op: refunding a bucket that was not spent is exactly the bug
+        this routing guards (T-07-REFUND-WRONG-BUCKET).
+        """
+        if bucket is Bucket.FREE:
+            await self._refund_free(session, user_id)
+        elif bucket is Bucket.SUBSCRIPTION:
+            await self._refund_subscription(session, user_id)
+        elif bucket is Bucket.PAID:
+            await self._refund_paid(session, user_id)
+        # None / Bucket.NONE → nothing consumed → nothing to refund.
 
     @staticmethod
     def _compute_reset_at(week_start: datetime | None) -> datetime | None:
@@ -1046,14 +1200,18 @@ class ReadingService:
         exc: LLMGenerationError,
         *,
         refund: bool = True,
+        consumed_bucket: Bucket | None = None,
     ) -> ReadingOut:
-        """Honest fail (D-09): status=FAILED, REFUND the consumed slot, log row, soft body.
+        """Honest fail (D-09): status=FAILED, REFUND the consumed bucket, log row, soft body.
 
-        The free slot was already consumed by the atomic gate (Pattern 1), so this REFUNDS it
-        (``free_used_this_week -= 1`` in the same transaction, Pitfall 2) to keep the counter net
-        unchanged — READ-04/10 "retry is free / limit never consumed on failure". Does NOT assemble
-        any templated stand-in reading from base meanings (D-09). The truncated ``generation_error``
-        is stored server-side for debugging and never crosses the response boundary (T-04-27).
+        The gate consumed a slot from ``consumed_bucket`` BEFORE the draw (Pattern 1), so this
+        REFUNDS THAT bucket (free → ``free_used -= 1``, subscription → ``subscription_used -= 1``,
+        paid → ``paid_balance += 1``) in the same transaction (Pitfall 2) to keep the net counter
+        unchanged — READ-04/10 "retry is free / limit never consumed on failure" — and, crucially,
+        to refund the bucket that was actually spent, never free by default (D-11,
+        T-07-REFUND-WRONG-BUCKET). Does NOT assemble any templated stand-in reading from base
+        meanings (D-09). The truncated ``generation_error`` is stored server-side for debugging and
+        never crosses the response boundary (T-04-27).
         """
         reading.status = ReadingStatus.FAILED
         reading.generation_error = self._truncate_error(exc)
@@ -1066,10 +1224,11 @@ class ReadingService:
                 error=self._truncate_error(exc),
             )
         )
-        # Compensating refund of the gate's consume — skipped for the unlimited allowlist
-        # (``refund=False``), whose gate never consumed, so there is nothing to give back.
+        # Compensating refund of the gate's consume, routed to the bucket ACTUALLY consumed —
+        # skipped for the unlimited allowlist (``refund=False``), whose gate never consumed, so
+        # there is nothing to give back.
         if refund and limits is not None:
-            await self._refund_free(session, user.id)
+            await self._refund_consumed_bucket(session, user.id, consumed_bucket)
             await session.refresh(limits)  # reflect the refunded counter in the returned remaining
         await session.commit()
         logger.warning(
