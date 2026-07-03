@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 5: History & Profile** - User revisits, reopens, and soft-deletes past readings, and manages profile/settings (completed 2026-06-14)
 - [x] **Phase 6: Free Limits & Soft Paywall** - User is bounded to 3 free readings/week with a deterministic reset and an honest paywall (completed 2026-06-16)
-- [ ] **Phase 7: Telegram Stars Payments** - User buys reading packs or a recurring subscription via Stars to unlock more readings
+- [x] **Phase 7: Telegram Stars Payments** - User buys reading packs or a recurring subscription (ЮKassa direct, RUB — Stars pivoted, D-01) to unlock more readings
 - [ ] **Phase 8: Admin, Analytics, Polish & Deploy** - Operators run the product without code; the app ships polished and legally cleared on timeweb.cloud
 
 ## Phase Details
@@ -226,7 +226,7 @@ Plans:
   4. The subscription is a native recurring Stars subscription (`subscription_period=2592000`) backed by a server-side 30-day entitlement window; renewals (`is_recurring`) extend it idempotently and cancellation keeps access until period end; refunds (21-day window) flip the payment to refunded and adjust access
   5. The user sees clear tariff and success UI, and on failure gets an understandable message that stars were not charged / access was not granted
 
-**Plans**: TBD
+**Plans**: 7 plans (07-01 RED tests · 07-02 data/config · 07-03 money-path service · 07-04 consume-gate buckets · 07-05 HTTP API + /api/me window · 07-06 APScheduler renewal sweep · 07-07 shop UI) — all Complete 2026-07-03. NB: provider pivoted Telegram Stars → ЮKassa direct (RUB, D-01); the goal/criteria text above predates the pivot — 07-CONTEXT.md is authoritative.
 **UI hint**: yes
 
 ### Phase 8: Admin, Analytics, Polish & Deploy
@@ -259,5 +259,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Real Personal Reading (KEYSTONE) | 6/6 | Complete    | 2026-06-13 |
 | 5. History & Profile | 7/7 | Complete    | 2026-06-14 |
 | 6. Free Limits & Soft Paywall | 4/4 | Complete    | 2026-06-16 |
-| 7. Telegram Stars Payments | 6/7 | In Progress|  |
+| 7. Telegram Stars Payments | 7/7 | Complete    | 2026-07-03 |
 | 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |
