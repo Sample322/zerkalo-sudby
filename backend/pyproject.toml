@@ -35,6 +35,13 @@ dependencies = [
     # sync (requests-based); calls are wrapped in anyio.to_thread off the event loop (Plan 03).
     # github.com/yoomoney/yookassa-sdk-python
     "yookassa==3.11.*",
+    # In-process recurring-renewal scheduler — Phase 7 (Payments, PAY-06). Human-approved during
+    # the Package Legitimacy checkpoint (07-06 Task 1; 07-RESEARCH §Package Legitimacy Audit:
+    # APScheduler 3.11.x, github.com/agronholm/apscheduler, maintainer agronholm, 3.x since 2015,
+    # Py3.12 ✓, slopcheck [OK]). Broker-FREE — respects the Celery/RQ/Arq ban (D-08); the daily
+    # AsyncIOScheduler sweep triggers merchant-initiated ЮKassa charges (ЮKassa does not auto-charge).
+    # A timeweb-cron hitting one endpoint is the documented swap if the deploy scales past 1 instance.
+    "APScheduler>=3.11,<4",
 ]
 
 [project.optional-dependencies]

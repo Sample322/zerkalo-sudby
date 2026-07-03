@@ -588,6 +588,37 @@ class PaymentService:
         )
         await session.flush()
 
+    # ------------------------------------------------------------------ due sweep (Plan 06)
+
+    async def find_due_subscriptions(
+        self,
+        session: AsyncSession,
+        *,
+        now: datetime | None = None,
+        grace_days: int = 0,
+    ) -> list[Subscription]:
+        """Select ACTIVE subscriptions due for renewal (``current_period_end <= now + grace``).
+
+        The service owns the sweep query so the scheduler job (Plan 06) is a thin loop. ONLY ACTIVE
+        subscriptions are due — a CANCELED / EXPIRED / PAYMENT_FAILED row is NEVER re-charged (cancel
+        keeps access to period end via the gate, D-10, but the sweep must not renew it). ``now`` is
+        tz-aware (``current_period_end`` is ``TIMESTAMP(timezone=True)``, A1); ``grace_days`` widens
+        the window so a subscription about to lapse is picked up on the daily tick. Read-only + atomic.
+        """
+        cutoff = (now or datetime.now(UTC)) + timedelta(days=grace_days)
+        return list(
+            (
+                await session.execute(
+                    select(Subscription).where(
+                        Subscription.status == SubscriptionStatus.ACTIVE,
+                        Subscription.current_period_end <= cutoff,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
     # ------------------------------------------------------------------ recurring renewal (Pattern 4)
 
     async def renew_subscription(

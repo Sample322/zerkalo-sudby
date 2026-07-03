@@ -20,6 +20,7 @@ from app.core.db import engine
 from app.core.errors import unhandled_exception_handler
 from app.core.logging import configure_logging
 from app.core.redis import redis_client
+from app.core.scheduler import shutdown_scheduler, start_scheduler
 from app.core.sentry import init_sentry
 
 logger = logging.getLogger("app")
@@ -29,11 +30,15 @@ logger = logging.getLogger("app")
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     init_sentry()  # no-op unless SENTRY_DSN is set (INFRA-05)
+    # In-process recurring-renewal sweep (PAY-06). start_scheduler never raises into boot — a
+    # scheduler failure is logged + swallowed, and the lazy consume-gate stays the correctness floor.
+    start_scheduler()
     logger.info("startup", extra={"event": "lifespan.startup"})
     try:
         yield
     finally:
         logger.info("shutdown", extra={"event": "lifespan.shutdown"})
+        shutdown_scheduler()
         await engine.dispose()
         await redis_client.aclose()
 
