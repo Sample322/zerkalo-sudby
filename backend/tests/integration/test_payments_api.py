@@ -242,9 +242,15 @@ async def test_webhook_grants_on_refetched_succeeded(
         )
     ).scalar_one()
     product = await _make_product(auth_session, slug="pack_3", spreads_amount=3)
-    auth_session.add(
-        UserLimits(user_id=user.id, free_weekly_limit=3, free_used_this_week=3)
-    )
+    # ``authenticate`` already created the user_limits row (D-02 _ensure_user_limits), so UPDATE it
+    # to the exhausted-free precondition rather than inserting a duplicate (which would violate
+    # uq_user_limits_user_id). The grant asserts paid_spreads_balance, not the free counter.
+    limits_row = (
+        await auth_session.execute(
+            select(UserLimits).where(UserLimits.user_id == user.id)
+        )
+    ).scalar_one()
+    limits_row.free_used_this_week = 3
     auth_session.add(
         Payment(
             user_id=user.id,
@@ -307,9 +313,15 @@ async def test_webhook_idempotent_and_ip_gated(
         )
     ).scalar_one()
     product = await _make_product(auth_session, slug="pack_3", spreads_amount=3)
-    auth_session.add(
-        UserLimits(user_id=user.id, free_weekly_limit=3, free_used_this_week=3)
-    )
+    # ``authenticate`` already created the user_limits row (D-02 _ensure_user_limits), so UPDATE it
+    # to the exhausted-free precondition rather than inserting a duplicate (which would violate
+    # uq_user_limits_user_id). The grant asserts paid_spreads_balance, not the free counter.
+    limits_row = (
+        await auth_session.execute(
+            select(UserLimits).where(UserLimits.user_id == user.id)
+        )
+    ).scalar_one()
+    limits_row.free_used_this_week = 3
     auth_session.add(
         Payment(
             user_id=user.id,

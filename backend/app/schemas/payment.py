@@ -63,11 +63,17 @@ class CreatePaymentIn(BaseModel):
     Carries ONLY ``product_slug``. There is intentionally NO ``amount`` / ``price`` field —
     the server recomputes the charge amount from the ``products`` row every time
     (threat **T-07-AMOUNT**: a client-supplied amount could be tampered to pay 1₽ for the
-    10-pack). Mirrors ``reading.py``'s server-authoritative posture; the absence of these
-    fields is asserted by a Wave-0 test.
+    10-pack). Mirrors ``reading.py``'s server-authoritative posture.
+
+    ``extra="ignore"`` (not ``forbid``): a malicious client may smuggle a ``price`` / ``amount``
+    field, and it is harmlessly DROPPED here — the charged value is always recomputed from the
+    ``products`` row in the service, so the smuggled amount is inert (asserted by
+    ``test_create_recomputes_price``, which posts a tampered amount and verifies the server-side
+    ``value_rub`` wins). Ignoring rather than 422-rejecting keeps the create call robust to future
+    additive client fields while the server-authoritative price closes T-07-AMOUNT.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     product_slug: str = Field(
         min_length=1,

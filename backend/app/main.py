@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, decks, health, readings, spreads, users
+from app.api import admin, auth, decks, health, payments, readings, spreads, users
 from app.core.config import settings
 from app.core.db import engine
 from app.core.errors import unhandled_exception_handler
@@ -65,6 +65,7 @@ app.include_router(admin.router, prefix="/api")  # GET  /api/admin/ping (require
 app.include_router(decks.router, prefix="/api")  # GET  /api/decks, /api/decks/{slug}
 app.include_router(spreads.router, prefix="/api")  # GET  /api/spreads, /api/spreads/recommend
 app.include_router(readings.router, prefix="/api")  # POST /api/readings (Bearer JWT)
+app.include_router(payments.router, prefix="/api")  # /api/products, /api/payments/* (ЮKassa)
 
 # --- INFRA-05: global soft-error handler (no stacktrace leak to the client) --------
 # Registered for the bare ``Exception`` only — FastAPI keeps its own HTTPException /

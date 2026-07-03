@@ -29,7 +29,7 @@ async def get_me(
     limits = await get_user_limits(session, current_user.id)
     return MeResponse(
         user=current_user,
-        limits=project_limits(limits, current_user.telegram_id),
+        limits=await project_limits(session, limits, current_user.telegram_id),
         settings=current_user,
         is_admin=settings.is_admin(current_user.telegram_id),
     )

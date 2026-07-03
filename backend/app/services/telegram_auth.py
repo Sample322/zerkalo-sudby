@@ -32,7 +32,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import encode_jwt
-from app.models.billing import UserLimits
+from app.models.billing import Subscription, UserLimits
+from app.models.enums import SubscriptionStatus
 from app.models.user import User
 from app.schemas.auth import LimitsOut
 
@@ -180,22 +181,50 @@ async def get_user_limits(session: AsyncSession, user_id) -> UserLimits | None:
     ).scalar_one_or_none()
 
 
-def project_limits(row: UserLimits | None, telegram_id: int) -> LimitsOut | None:
-    """Project a limits row into ``LimitsOut`` with the unlimited-allowlist flag set.
+async def _active_subscription_end(
+    session: AsyncSession, user_id
+) -> datetime | None:
+    """Return the live subscription-window end for the user, or ``None`` when there is no active one.
+
+    The single source of the D-08 subscription window: an ACTIVE ``Subscription`` whose
+    ``current_period_end`` is still in the future. ``current_period_end`` is tz-AWARE
+    (``TIMESTAMP(timezone=True)``, Phase-7 A1) so the comparison uses a tz-aware ``datetime.now(UTC)``
+    — a naive ``now`` would make asyncpg refuse the mixed-tz compare. A CANCELED row still inside its
+    window is deliberately NOT surfaced here: cancel keeps access via the gate (D-10), but the
+    "subscription active" badge reflects a live, auto-renewing ACTIVE window only.
+    """
+    now = datetime.now(UTC)
+    return (
+        (
+            await session.execute(
+                select(Subscription.current_period_end).where(
+                    Subscription.user_id == user_id,
+                    Subscription.status == SubscriptionStatus.ACTIVE,
+                    Subscription.current_period_end > now,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+
+async def project_limits(
+    session: AsyncSession, row: UserLimits | None, telegram_id: int
+) -> LimitsOut | None:
+    """Project a limits row into ``LimitsOut`` with the unlimited flag + live subscription window.
 
     Shared by ``/api/auth/telegram`` + ``/api/me`` so both carry ``unlimited`` (admin + invited
     testers, ``UNLIMITED_TELEGRAM_IDS``). For an unlimited user with no row we still surface the
     flag (a synthetic zeroed projection) so the FE never pre-blocks them; a normal user with no
     row projects to ``None`` (unchanged behaviour).
 
-    The Phase-7 subscription window fields (``subscription_active`` / ``subscription_period_end``)
-    default to inactive/None on BOTH branches here: the synthetic-unlimited projection sets them
-    explicitly, and the row branch inherits the schema defaults (``UserLimits`` has no such
-    columns yet). NOTE (D-08): Plan 05 makes this function async + session-aware and fills these
-    two from the live ``Subscription`` window (updating BOTH the ``/api/me`` and
-    ``/api/auth/telegram`` call sites). In THIS plan they only need to EXIST + default so
-    ``GET /api/me`` is shape-complete and the shop FE can render — the sync signature is
-    deliberately unchanged (that migration is Plan 05's explicit scope).
+    ASYNC + SESSION-AWARE (D-08, Plan 05): for a real limits row it additionally reads the user's
+    live ``Subscription`` window (``_active_subscription_end``) and fills
+    ``subscription_active`` / ``subscription_period_end`` so the shop can render «активна до DD.MM».
+    The no-row + synthetic-unlimited branches need no lookup (no ``user_id`` to key on) and keep the
+    inactive/None defaults. BOTH call sites (``users.py`` ``get_me`` + ``auth.py`` ``auth_telegram``)
+    ``await`` this and pass their in-scope ``session``.
     """
     unlimited = settings.is_unlimited(telegram_id)
     if row is None:
@@ -211,7 +240,15 @@ def project_limits(row: UserLimits | None, telegram_id: int) -> LimitsOut | None
             subscription_active=False,
             subscription_period_end=None,
         )
-    return LimitsOut.model_validate(row).model_copy(update={"unlimited": unlimited})
+
+    period_end = await _active_subscription_end(session, row.user_id)
+    return LimitsOut.model_validate(row).model_copy(
+        update={
+            "unlimited": unlimited,
+            "subscription_active": period_end is not None,
+            "subscription_period_end": period_end,
+        }
+    )
 
 
 __all__ = [

@@ -45,7 +45,7 @@ async def auth_telegram(
     return AuthResponse(
         access_token=token,
         user=user,
-        limits=project_limits(limits, user.telegram_id),
+        limits=await project_limits(session, limits, user.telegram_id),
         settings=user,
         is_admin=settings.is_admin(user.telegram_id),
     )
