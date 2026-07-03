@@ -550,7 +550,6 @@ class PaymentService:
         """
         now = datetime.now(UTC)
         days = product.subscription_days or 30
-        period_end = now + timedelta(days=days)
 
         sub = (
             await session.execute(
@@ -563,15 +562,23 @@ class PaymentService:
                 product_id=product.id,
                 status=SubscriptionStatus.ACTIVE,
                 current_period_start=now,
-                current_period_end=period_end,
+                current_period_end=now + timedelta(days=days),
                 period_index=0,
             )
             session.add(sub)
         else:
+            # WR-02: extend from the LATER of ``now`` and the existing end so an early re-buy /
+            # renewal never DISCARDS unused remaining time (a flat ``now + days`` would shrink a
+            # window the user already paid for). A lapsed window (end < now) restarts from now.
+            base = (
+                sub.current_period_end
+                if sub.current_period_end is not None and sub.current_period_end > now
+                else now
+            )
             sub.product_id = product.id
             sub.status = SubscriptionStatus.ACTIVE
             sub.current_period_start = now
-            sub.current_period_end = period_end
+            sub.current_period_end = base + timedelta(days=days)
         sub.provider_payment_id = provider_payment_id
         sub.last_charge_at = now
         if payment_method_id is not None:
@@ -644,6 +651,18 @@ class PaymentService:
             )
         ).scalar_one_or_none()
         if product is None:
+            return
+
+        # WR-01: a concurrent self-serve cancel may have flipped this row between the sweep's
+        # due-select and now (the cancel commits in the API request's session, not the sweep's).
+        # Re-assert ACTIVE from the committed state before charging so a CANCELED / EXPIRED /
+        # PAYMENT_FAILED subscription is never re-charged.
+        current_status = (
+            await session.execute(
+                select(Subscription.status).where(Subscription.id == subscription.id)
+            )
+        ).scalar_one_or_none()
+        if current_status is not SubscriptionStatus.ACTIVE:
             return
 
         next_period = (subscription.period_index or 0) + 1

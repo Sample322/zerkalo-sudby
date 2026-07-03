@@ -65,6 +65,7 @@ export function ShopTariffs({ variant = "sheet", onClose }: ShopTariffsProps) {
 
     const isSub = product.product_type === "subscription";
     const prevBalance = me?.limits?.paid_spreads_balance ?? 0;
+    const prevPeriodEnd = me?.limits?.subscription_period_end ?? null;
 
     let confirmationUrl: string;
     try {
@@ -90,7 +91,11 @@ export function ShopTariffs({ variant = "sheet", onClose }: ShopTariffsProps) {
       void (async () => {
         const granted = await pollMe((meData) =>
           isSub
-            ? Boolean(meData?.limits?.subscription_active)
+            ? // WR-04: require the window to MOVE — a re-buy while a subscription is already active
+              // must not false-succeed on the already-true `subscription_active` flag (mirrors the
+              // pack's `balance > prevBalance` delta). A fresh subscribe moves null → a date.
+              Boolean(meData?.limits?.subscription_active) &&
+              (meData?.limits?.subscription_period_end ?? null) !== prevPeriodEnd
             : (meData?.limits?.paid_spreads_balance ?? 0) > prevBalance,
         );
         setFlow({

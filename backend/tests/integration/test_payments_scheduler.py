@@ -204,3 +204,34 @@ async def test_sweep_isolates_per_subscription_failure(auth_session: AsyncSessio
     assert sub_fail.status is SubscriptionStatus.PAYMENT_FAILED
     # The sweep processed both and did not propagate the failure.
     assert summary["due"] >= 2
+
+
+async def test_renew_skips_concurrently_canceled_subscription(
+    auth_session: AsyncSession,
+) -> None:
+    """WR-01: a cancel that lands after the sweep selected the row (ACTIVE) must skip the charge.
+
+    ``find_due_subscriptions`` selects ACTIVE rows, but a self-serve cancel can flip the row between
+    that select and the per-row charge (the cancel commits in the API request's session). ``renew_
+    subscription`` re-asserts ACTIVE from the committed state before charging, so a canceled row is
+    never re-charged. Here we flip the row to CANCELED after seeding it, then charge → no ЮKassa call.
+    """
+    from app.services.payments import PaymentService
+
+    fake = FakeYooKassa(succeeded=True)
+    svc = PaymentService(yookassa=fake)
+    user = await _make_user(auth_session)
+    product = await _make_sub_product(auth_session, "lunar_sweep")
+    now = datetime.now(UTC)
+    sub = await _make_sub(
+        auth_session, user=user, product=product,
+        status=SubscriptionStatus.ACTIVE, period_end=now - timedelta(hours=1),
+    )
+    # Simulate the concurrent cancel landing after the sweep's ACTIVE select.
+    sub.status = SubscriptionStatus.CANCELED
+    await auth_session.flush()
+
+    await svc.renew_subscription(auth_session, sub)
+
+    # The re-assert-ACTIVE guard skipped the canceled row — no charge was attempted.
+    assert not any(c[0] == "create_payment" for c in fake.recorded_calls)

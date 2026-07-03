@@ -137,23 +137,37 @@ def _client_ip(request: Request) -> str:
 @router.post("/payments/yookassa/webhook")
 async def yookassa_webhook(
     request: Request,
-    envelope: WebhookEnvelope,
     session: AsyncSession = Depends(get_session),
     service: PaymentService = Depends(get_payment_service),
 ) -> Response:
     """ЮKassa notification sink (UNSIGNED) — IP-gated + re-fetch-before-grant (PAY-04/05).
 
     ЮKassa does not sign webhooks, so authenticity rests on two controls: this IP allowlist (a
-    cheap reject of any non-ЮKassa source BEFORE the re-fetch / grant work — T-07-WEBHOOK-FORGE /
-    T-07-WEBHOOK-DOS) and the service's re-fetch-by-id (D-05 — the body ``status`` is NEVER trusted
-    for a grant; the handler passes the envelope on to the body-status-blind service dispatcher).
-    ALWAYS returns 200 on a handled OR duplicate event so ЮKassa stops redelivering (T-07-REPLAY);
-    only a genuine processing failure returns 500 so ЮKassa retries.
+    cheap reject of any non-ЮKassa source BEFORE any body-parse / re-fetch / grant work —
+    T-07-WEBHOOK-FORGE / T-07-WEBHOOK-DOS) and the service's re-fetch-by-id (D-05 — the body
+    ``status`` is NEVER trusted for a grant; the handler passes the envelope on to the
+    body-status-blind service dispatcher). ALWAYS returns 200 on a handled OR duplicate event so
+    ЮKassa stops redelivering (T-07-REPLAY); only a genuine processing failure returns 500 so ЮKassa
+    retries.
+
+    WR-05: the body is parsed HERE (not as a typed FastAPI param) so the IP-gate runs FIRST — a
+    forged / malformed body from a non-ЮKassa source is a cheap 403, never a 422 that FastAPI would
+    raise (from body validation) before the gate could reject it, and never a retry-storm.
     """
-    ip = _client_ip(request)
-    if not is_from_yookassa(ip):
-        # Cheap reject before any re-fetch / DB grant work (defence-in-depth; re-fetch is the guard).
+    if not is_from_yookassa(_client_ip(request)):
+        # Cheap reject before any body-parse / re-fetch / DB grant work (re-fetch is the real guard).
         return Response(status_code=status.HTTP_403_FORBIDDEN)
+
+    try:
+        envelope = WebhookEnvelope.model_validate(await request.json())
+    except Exception:  # noqa: BLE001 - malformed body from an allowlisted source: log + ack, no retry.
+        # A handled 200 (ЮKassa stops redelivering garbage), NOT a 422 retry-storm. A forged/malformed
+        # body from a NON-ЮKassa IP already 403'd above.
+        logger.warning(
+            "yookassa_webhook_unparseable",
+            extra={"event": "payment.webhook_unparseable"},
+        )
+        return Response(status_code=status.HTTP_200_OK)
 
     try:
         await service.handle_webhook_event(session, envelope.model_dump())
