@@ -739,21 +739,29 @@ class PaymentService:
         """Admin-triggered refund + reconciliation (PAY-07, Pattern 6, T-07-REFUND-OVERCREDIT).
 
         Calls ``Refund.create`` for the payment's provider id (full amount by default; ``amount_rub``
-        allows a partial), then reconciles: flip the payment to REFUNDED + adjust access by the
-        GRANTED ENTITLEMENT (never RUB). Reconciliation is idempotent (the conditional
-        ``WHERE status=PAID`` flip no-ops on a second call). The webhook ``refund.succeeded`` path
-        reaches the same ``_reconcile_refund`` after re-fetching the refund.
+        allows a partial). Reconciles (flip REFUNDED + claw back the GRANTED ENTITLEMENT, never RUB)
+        ONLY when ЮKassa confirms the refund actually **succeeded** (CR-02): a ``pending`` / failed
+        refund must NOT revoke access, else the user could lose access AND — if it never settles —
+        their money. Money-FIRST ordering is deliberate (the refund is initiated before any local
+        state change, protecting the user) and the deterministic ``refund:<provider_id>``
+        Idempotence-Key makes a retried admin refund a safe ЮKassa no-op. When the refund settles
+        later, ЮKassa fires ``refund.succeeded`` → the webhook re-fetches the refund and runs the SAME
+        idempotent ``_reconcile_refund`` (the crash-window redrive: if this process dies between the
+        ЮKassa call and the local commit, the webhook still reconciles exactly once).
         """
         provider_id = payment.provider_payment_id or payment.telegram_payment_charge_id
         if provider_id is None:
             return
         value = format_rub(amount_rub if amount_rub is not None else payment.amount)
-        await self._client.create_refund(
+        refund = await self._client.create_refund(
             payment_id=provider_id,
             value_rub=value,
             idempotence_key=f"refund:{provider_id}",
         )
-        await self._reconcile_refund(session, payment)
+        # Only claw access back on a CONFIRMED succeeded refund; a pending one is reconciled by the
+        # refund.succeeded webhook when it settles (never revoke access on an unconfirmed refund).
+        if _obj_get(refund, "status") == "succeeded":
+            await self._reconcile_refund(session, payment)
 
     async def _handle_refund_succeeded(
         self, session: AsyncSession, object_id: str

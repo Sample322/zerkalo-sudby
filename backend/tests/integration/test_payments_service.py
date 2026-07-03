@@ -357,3 +357,44 @@ async def test_refund_recon_flips_status_and_adjusts_access(
     assert refreshed.refunded_at is not None
     # Access clawed back: the 3 granted spreads are removed.
     assert await _paid_balance(auth_session, user) == 0
+
+
+async def test_admin_refund_pending_does_not_claw_back(
+    auth_session: AsyncSession, seeded_catalog: dict
+) -> None:
+    """CR-02: an admin refund whose ЮKassa refund is NOT yet ``succeeded`` must NOT revoke access.
+
+    ``refund_payment`` initiates the refund at ЮKassa (money-first, protecting the user) but reconciles
+    — flipping REFUNDED + clawing back the granted spreads — ONLY on a confirmed ``succeeded`` refund.
+    A ``pending`` refund leaves the payment PAID and the balance intact; the ``refund.succeeded``
+    webhook reconciles (idempotently) when it settles. Revoking access on an unconfirmed refund would
+    risk the user losing both access and money.
+    """
+    from app.models import Payment
+
+    fake = FakeYooKassa(refund_status="pending")  # ЮKassa refund not yet final
+    service = _make_service(fake)
+    user = await _make_user(auth_session, paid_balance=3)
+    product = await _make_product(auth_session, slug="pack_3", spreads_amount=3)
+    payment = Payment(
+        user_id=user.id,
+        product_id=product.id,
+        provider="yookassa",
+        currency="RUB",
+        amount=169,
+        payload=f"pay-{uuid.uuid4()}",
+        provider_payment_id=f"pay_pending_{uuid.uuid4().hex[:8]}",
+        status=PaymentStatus.PAID,
+    )
+    auth_session.add(payment)
+    await auth_session.flush()
+
+    await service.refund_payment(auth_session, payment)
+
+    refreshed = (
+        await auth_session.execute(select(Payment).where(Payment.id == payment.id))
+    ).scalar_one()
+    # Refund initiated at ЮKassa, but NOT reconciled locally until it succeeds.
+    assert refreshed.status is PaymentStatus.PAID  # not flipped to REFUNDED on a pending refund
+    assert await _paid_balance(auth_session, user) == 3  # access NOT clawed back yet
+    assert any(c[0] == "create_refund" for c in fake.recorded_calls)  # the refund WAS initiated
