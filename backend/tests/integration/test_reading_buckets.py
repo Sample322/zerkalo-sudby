@@ -18,14 +18,14 @@ clean-skip without Postgres (via ``seeded_catalog`` → ``auth_session`` → ``_
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User, UserLimits
-from app.models.enums import ReadingStatus
+from app.models import Product, Subscription, User, UserLimits
+from app.models.enums import ProductType, ReadingStatus, SubscriptionStatus
 from app.schemas.reading import ReadingCreate
 from app.services.llm import LLMService
 from tests.integration.conftest import FakeLLM, FakeSafety
@@ -52,12 +52,19 @@ async def _make_user_with_buckets(
     subscription_limit: int = 0,
     subscription_used: int = 0,
     paid_balance: int = 0,
+    subscription_window: datetime | None = None,
 ) -> User:
     """Insert a user + ``user_limits`` with the FREE bucket exhausted and the sub/paid buckets set.
 
     The free bucket is exhausted in a FRESH window (``week_start=now``, ``free_used==free_limit``)
     so ``determine_access`` cannot return FREE and the gate must fall through to the sub/paid bucket
     the test populates.
+
+    ``subscription_window`` (CR-01): when set, ALSO insert an ACTIVE ``Subscription`` with
+    ``current_period_end = subscription_window`` (a real subscriber has BOTH the ``UserLimits`` count
+    bucket AND a backing ``subscriptions`` row — the gate now consults the row's window, not just the
+    count). A future window is live; a past window is lapsed. Left ``None`` → no ``Subscription`` row,
+    modelling a stale count bucket with no live window (the exact CR-01 unlimited-forever state).
     """
     user = User(telegram_id=int(uuid.uuid4().int % 1_000_000_000))
     session.add(user)
@@ -73,6 +80,28 @@ async def _make_user_with_buckets(
             paid_spreads_balance=paid_balance,
         )
     )
+    if subscription_window is not None:
+        product = Product(
+            slug=f"sub_test_{uuid.uuid4().hex[:8]}",
+            title="Тест подписка",
+            product_type=ProductType.SUBSCRIPTION,
+            stars_price=299,
+            spreads_amount=None,
+            subscription_days=30,
+            is_active=True,
+        )
+        session.add(product)
+        await session.flush()
+        now = datetime.now(UTC)
+        session.add(
+            Subscription(
+                user_id=user.id,
+                product_id=product.id,
+                status=SubscriptionStatus.ACTIVE,
+                current_period_start=now - timedelta(days=1),
+                current_period_end=subscription_window,
+            )
+        )
     await session.flush()
     return user
 
@@ -103,8 +132,13 @@ async def test_subscription_bucket_consumed_when_active(
     """
     from app.services.reading import Bucket, ReadingService, determine_access
 
+    # A REAL subscriber has both the count bucket AND a live ACTIVE window (grant writes both).
     user = await _make_user_with_buckets(
-        auth_session, free_used=3, subscription_limit=10, subscription_used=0
+        auth_session,
+        free_used=3,
+        subscription_limit=10,
+        subscription_used=0,
+        subscription_window=datetime.now(UTC) + timedelta(days=30),
     )
     # Sanity: the pure policy already selects SUBSCRIPTION (the seam exists; the consume does not).
     assert determine_access(await _limits(auth_session, user)) is Bucket.SUBSCRIPTION
@@ -117,6 +151,47 @@ async def test_subscription_bucket_consumed_when_active(
     limits = await _limits(auth_session, user)
     assert limits.subscription_spreads_used == 1  # consumed from the subscription bucket
     assert limits.free_used_this_week == 3  # free untouched (was already exhausted)
+
+
+# ---------------------------------------------------------------------------------------
+# CR-01 — a lapsed subscription window is NOT unlimited: the stale count bucket is zeroed.
+# ---------------------------------------------------------------------------------------
+
+
+async def test_subscription_lapsed_window_is_not_unlimited(
+    auth_session: AsyncSession, fake_safety: FakeSafety, seeded_catalog: dict
+) -> None:
+    """A subscriber whose window has LAPSED does not read for free forever (CR-01, revenue bug).
+
+    The grant pins ``subscription_spreads_limit = SUBSCRIPTION_WINDOW_UNLIMITED`` and nothing zeroes
+    it on natural expiry / failed renewal / cancel-then-lapse. ``determine_access`` (count-only) would
+    keep picking SUBSCRIPTION forever. The gate must consult the live window: with the window in the
+    PAST and no paid balance, the reading is a PAYWALL (not COMPLETED), and the stale count bucket is
+    lazily ZEROED so it is never spent again.
+    """
+    from app.services.reading import Bucket, ReadingService, determine_access
+
+    huge = 1_000_000_000
+    user = await _make_user_with_buckets(
+        auth_session,
+        free_used=3,
+        subscription_limit=huge,
+        subscription_used=0,
+        paid_balance=0,
+        subscription_window=datetime.now(UTC) - timedelta(hours=1),  # lapsed
+    )
+    # The count-only pure policy is fooled (this is exactly the CR-01 trap the gate must catch).
+    assert determine_access(await _limits(auth_session, user)) is Bucket.SUBSCRIPTION
+
+    indices = await _spread_position_indices(auth_session, _REQ.spread_slug)
+    service = ReadingService(safety=fake_safety, llm=FakeLLM(_output_for_indices(indices)))
+    result = await service.create_reading(auth_session, user, _REQ)
+
+    # No live window + no paid balance → soft paywall, NOT a free unlimited reading.
+    assert result.status != ReadingStatus.COMPLETED.value
+    limits = await _limits(auth_session, user)
+    assert limits.subscription_spreads_limit == 0  # stale bucket lazily zeroed (never spent again)
+    assert limits.subscription_spreads_used == 0
 
 
 # ---------------------------------------------------------------------------------------

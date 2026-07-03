@@ -73,10 +73,11 @@ from app.models import (
     ReadingCard,
     SpreadPosition,
     SpreadType,
+    Subscription,
     User,
     UserLimits,
 )
-from app.models.enums import ReadingStatus
+from app.models.enums import ReadingStatus, SubscriptionStatus
 from app.schemas.reading import (
     ClassifyResult,
     ReadingCardOut,
@@ -801,6 +802,20 @@ class ReadingService:
         if limits is None:
             return None
         bucket = determine_access(limits, now)
+        # CR-01: ``determine_access`` sees only ``UserLimits`` (no window column), so it picks
+        # SUBSCRIPTION on the count bucket alone — which the grant pins at ``SUBSCRIPTION_WINDOW_
+        # UNLIMITED``. The REAL bound is ``Subscription.current_period_end``, and NOTHING zeroes the
+        # bucket on natural expiry / failed renewal / cancel-then-lapse. Without this guard a lapsed
+        # subscriber would read forever. When the count bucket is picked but no live ACTIVE+unexpired
+        # window exists, lazily zero the bucket (mirrors the free lazy-reset — idempotent) and re-pick
+        # the bucket WITHOUT the expired subscription (→ PAID if any paid balance, else NONE/paywall).
+        if bucket is Bucket.SUBSCRIPTION and not await self._subscription_window_live(
+            session, user.id, now
+        ):
+            await self._expire_subscription_bucket(session, user.id)
+            bucket = (
+                Bucket.PAID if (limits.paid_spreads_balance or 0) > 0 else Bucket.NONE
+            )
         if bucket is Bucket.FREE:
             consumed = await self._consume_free_atomic(session, user.id, now)
             if consumed is None:
@@ -819,6 +834,45 @@ class ReadingService:
             return (Bucket.PAID, new_balance)
         # Bucket.NONE → exhausted across every bucket → soft paywall (no draw).
         return None
+
+    @staticmethod
+    async def _subscription_window_live(
+        session: AsyncSession, user_id: object, now: datetime
+    ) -> bool:
+        """True iff the user has an ACTIVE subscription whose window has NOT lapsed (D-09 real bound).
+
+        The subscription entitlement is window-gated (``Subscription.current_period_end``), NOT
+        count-gated — but ``UserLimits`` carries no window column, so the gate must consult the
+        ``subscriptions`` row here. ``current_period_end`` is tz-aware (``TIMESTAMP(timezone=True)``)
+        and ``now`` is tz-aware (``datetime.now(UTC)``), so the compare never mixes naive/aware.
+        """
+        return (
+            await session.execute(
+                select(Subscription.id).where(
+                    Subscription.user_id == user_id,
+                    Subscription.status == SubscriptionStatus.ACTIVE,
+                    Subscription.current_period_end > now,
+                )
+            )
+        ).first() is not None
+
+    @staticmethod
+    async def _expire_subscription_bucket(
+        session: AsyncSession, user_id: object
+    ) -> None:
+        """Zero the D-09 subscription bucket once its window has lapsed (CR-01, idempotent).
+
+        Natural expiry, a failed renewal (→ PAYMENT_FAILED), and a cancel-then-lapse all leave
+        ``subscription_spreads_limit`` at ``SUBSCRIPTION_WINDOW_UNLIMITED`` — only a refund ever zeroed
+        it. This lazy-zero (mirrors the free lazy-reset) fires the first time the gate sees the count
+        bucket without a live window, so the lapsed entitlement is never spent AND ``/api/me`` stops
+        reporting it as spendable. Idempotent: a re-run on an already-zero bucket is a no-op UPDATE.
+        """
+        await session.execute(
+            update(UserLimits)
+            .where(UserLimits.user_id == user_id)
+            .values(subscription_spreads_limit=0, subscription_spreads_used=0)
+        )
 
     @staticmethod
     async def _refund_free(session: AsyncSession, user_id: object) -> None:
