@@ -83,9 +83,32 @@ def upgrade() -> None:
         existing_type=sa.String(),
         nullable=True,
     )
+    # Phase-7 subscription-window timestamps must be tz-AWARE: the grant + recurring renewal write
+    # ``datetime.now(UTC)`` and the consume-gate compares ``current_period_end`` to a tz-aware
+    # ``now`` — asyncpg refuses to mix naive/aware (the bug the recurring path hit). 0001 created
+    # these as ``DateTime`` (naive); convert in place (``last_charge_at`` was already added tz-aware
+    # above). ``USING ... AT TIME ZONE 'UTC'`` interprets any existing naive value as UTC (there are
+    # no live subscription rows yet — additive-only phase).
+    for _col in ("started_at", "current_period_start", "current_period_end", "canceled_at"):
+        op.alter_column(
+            "subscriptions",
+            _col,
+            existing_type=sa.DateTime(),
+            type_=sa.TIMESTAMP(timezone=True),
+            postgresql_using=f"{_col} AT TIME ZONE 'UTC'",
+        )
 
 
 def downgrade() -> None:
+    # --- subscriptions: reverse the tz-aware conversion (back to naive DateTime) ---
+    for _col in ("canceled_at", "current_period_end", "current_period_start", "started_at"):
+        op.alter_column(
+            "subscriptions",
+            _col,
+            existing_type=sa.TIMESTAMP(timezone=True),
+            type_=sa.DateTime(),
+            postgresql_using=f"{_col} AT TIME ZONE 'UTC'",
+        )
     # --- subscriptions: reverse (restore NOT NULL, drop the added columns) ---
     op.alter_column(
         "subscriptions",

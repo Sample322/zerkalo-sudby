@@ -54,6 +54,14 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Pin every async fixture AND test to ONE session-scoped event loop. The integration harness
+# builds a session-scoped engine / connection-pool (the ``_db_ready`` fixture) and the
+# savepoint-isolated ``auth_session`` reuses that pool; without a shared loop scope
+# pytest-asyncio 1.x runs the session fixture on a different loop than the function tests, so
+# asyncpg connections raise "attached to a different loop" RuntimeErrors the moment a test
+# touches the pool. A shared session loop is the documented fix for a shared async DB engine.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

@@ -72,6 +72,7 @@ class FakeYooKassa:
         next_status: str | None = None,
         payment_method_id: str = "pm_test_saved_0001",
         refund_status: str = STATUS_SUCCEEDED,
+        refund_payment_id: str = "pay_test_000001",
     ) -> None:
         # The status ``find_payment`` reports on re-fetch. ``next_status`` (if given) wins so a test
         # can force ``pending``/``canceled`` explicitly; otherwise ``succeeded`` maps to the literal.
@@ -80,6 +81,11 @@ class FakeYooKassa:
         )
         self._payment_method_id = payment_method_id
         self._refund_status = refund_status
+        # The underlying payment id a re-fetched refund object carries (the real ЮKassa refund
+        # object always exposes ``payment_id``). The ``refund.succeeded`` webhook re-fetches the
+        # refund and resolves the payment by THIS id, so the reconciliation can claw access back —
+        # defaults to the conventional first test payment id the seeded PAID payment uses.
+        self._refund_payment_id = refund_payment_id
         # Ordered audit of every call: list[tuple[str, dict[str, Any]]]. Tests assert the
         # deterministic recurring key + the server-recomputed amount from this.
         self.recorded_calls: list[tuple[str, dict[str, Any]]] = []
@@ -185,10 +191,18 @@ class FakeYooKassa:
         )
 
     async def find_refund(self, refund_id: str) -> SimpleNamespace:
-        """Re-fetch a refund by id (the refund-reconciliation re-fetch, Pattern 6)."""
+        """Re-fetch a refund by id (the refund-reconciliation re-fetch, Pattern 6).
+
+        Carries the underlying ``payment_id`` (as a real ЮKassa refund object does) so the webhook
+        reconciliation can resolve the payment to claw access back from — defaults to the conventional
+        first test payment id (overridable via the ``refund_payment_id`` constructor arg).
+        """
         self.recorded_calls.append(("find_refund", {"refund_id": refund_id}))
         return self._refund_object(
-            refund_id, payment_id=None, status=self._refund_status, value_rub="0.00"
+            refund_id,
+            payment_id=self._refund_payment_id,
+            status=self._refund_status,
+            value_rub="0.00",
         )
 
     # ------------------------------------------------------------------ object builders

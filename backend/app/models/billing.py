@@ -162,7 +162,9 @@ class Subscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # The ЮKassa payment id of the most recent (first or renewal) charge for this subscription.
     provider_payment_id: Mapped[str | None] = mapped_column(String, nullable=True)
     # When the last successful charge landed (renewal bookkeeping / dunning).
-    last_charge_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    last_charge_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
     # Monotonic period counter — the renewal Idempotence-Key is ``renew:{sub_id}:{period_index}``
     # (Pitfall 5: deterministic per period so a retry is a safe no-op, the next period a new key).
     period_index: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -171,12 +173,20 @@ class Subscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=SubscriptionStatus.ACTIVE,
         server_default=SubscriptionStatus.ACTIVE.value,
     )
-    started_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
-    current_period_start: Mapped[datetime] = mapped_column(
-        server_default=func.now(), nullable=False
+    # The subscription window timestamps are tz-AWARE (``TIMESTAMP(timezone=True)``): the grant +
+    # renewal write ``datetime.now(UTC)`` and the consume-gate compares ``current_period_end`` to a
+    # tz-aware ``now`` (Phase-7, A1). Bare ``DateTime`` would be tz-NAIVE and asyncpg refuses to mix
+    # naive/aware on insert/compare — matching ``UserLimits.week_start``'s tz-aware anchor.
+    started_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )
-    current_period_end: Mapped[datetime] = mapped_column()
-    canceled_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    current_period_start: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
+    )
+    current_period_end: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    canceled_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
 
 
 __all__ = ["UserLimits", "Product", "Payment", "Subscription"]

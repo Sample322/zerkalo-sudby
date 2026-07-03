@@ -79,21 +79,29 @@ async def _make_product(
     spreads_amount: int | None = 3,
     subscription_days: int | None = None,
 ) -> Product:
-    """Insert an active ``products`` row (the server-authoritative price source, Pitfall 4).
+    """Upsert an active ``products`` row (the server-authoritative price source, Pitfall 4).
 
     ``stars_price`` is repurposed as the RUB price (Assumption A1 — rubles-as-integer); the
     create path recomputes the charged amount from THIS column, never from a client field.
+
+    Idempotent by ``slug``: ``seeded_catalog`` (a sibling fixture this test requests) seeds the
+    real MVP catalog — which since Plan 07-02 includes packs (``pack_3``/``pack_10``) — so a blind
+    INSERT of one of those slugs would violate the UNIQUE ``products.slug``. Reuse-and-overwrite
+    the existing row instead so the test pins the exact price/spreads it asserts on, whether the
+    slug was pre-seeded or is test-local (e.g. ``lunar_access``).
     """
-    product = Product(
-        slug=slug,
-        title=f"Тест {slug}",
-        product_type=product_type,
-        stars_price=price_rub,
-        spreads_amount=spreads_amount,
-        subscription_days=subscription_days,
-        is_active=True,
-    )
-    session.add(product)
+    product = (
+        await session.execute(select(Product).where(Product.slug == slug))
+    ).scalar_one_or_none()
+    if product is None:
+        product = Product(slug=slug)
+        session.add(product)
+    product.title = f"Тест {slug}"
+    product.product_type = product_type
+    product.stars_price = price_rub
+    product.spreads_amount = spreads_amount
+    product.subscription_days = subscription_days
+    product.is_active = True
     await session.flush()
     return product
 
@@ -103,6 +111,39 @@ async def _paid_balance(session: AsyncSession, user: User) -> int:
         await session.execute(select(UserLimits).where(UserLimits.user_id == user.id))
     ).scalar_one()
     return limits.paid_spreads_balance
+
+
+async def _make_created_payment(
+    session: AsyncSession,
+    *,
+    user: User,
+    product: Product,
+    provider_payment_id: str = "pay_test_000001",
+) -> object:
+    """Seed the CREATED ``payments`` row a webhook grant transitions (CREATED -> PAID).
+
+    The grant is a conditional ``UPDATE payments WHERE status=CREATED ... RETURNING`` (the
+    exactly-once race guard) — so a real CREATED row keyed by the provider id the webhook carries
+    must exist for the grant to act on; this is the row ``create_payment`` writes before the user
+    pays. ``provider_payment_id`` defaults to ``SUCCEEDED_EVENT.object.id`` and is stored on the
+    legacy ``telegram_payment_charge_id`` seam (the id column the grant's ``_provider_id_match``
+    resolves), mirroring the api-level webhook test's seed.
+    """
+    from app.models import Payment
+
+    payment = Payment(
+        user_id=user.id,
+        product_id=product.id,
+        provider="yookassa",
+        currency="RUB",
+        amount=product.stars_price,
+        payload=f"pay-{uuid.uuid4()}",
+        telegram_payment_charge_id=provider_payment_id,
+        status=PaymentStatus.CREATED,
+    )
+    session.add(payment)
+    await session.flush()
+    return payment
 
 
 def _make_service(fake: FakeYooKassa) -> object:
@@ -153,6 +194,10 @@ async def test_grant_paid_balance_on_succeeded(
     product = await _make_product(
         auth_session, slug="pack_3", spreads_amount=3, price_rub=169
     )
+    # Seed the CREATED row the grant transitions (the provider id matches SUCCEEDED_EVENT.object.id).
+    # The grant is a conditional CREATED->PAID flip, so it MUST have a real CREATED row to act on —
+    # this is exactly the row create_payment would have written before the webhook arrives.
+    await _make_created_payment(auth_session, user=user, product=product)
 
     # Plan 03 finalizes the entrypoint name; the contract is "handle a payment.succeeded event".
     handle = _resolve(service, "handle_webhook_event", "handle_payment_succeeded")
@@ -199,6 +244,9 @@ async def test_grant_idempotent_on_redelivery(
     service = _make_service(fake)
     user = await _make_user(auth_session, paid_balance=0)
     product = await _make_product(auth_session, slug="pack_3", spreads_amount=3)
+    # Seed the single CREATED row both deliveries target — the conditional CREATED->PAID flip
+    # transitions it once; the redelivery finds it already PAID and grants nothing (exactly-once).
+    await _make_created_payment(auth_session, user=user, product=product)
 
     handle = _resolve(service, "handle_webhook_event", "handle_payment_succeeded")
     await handle(auth_session, SUCCEEDED_EVENT)
