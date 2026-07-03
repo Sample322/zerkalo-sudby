@@ -82,6 +82,14 @@ function stubFetch(): PatchCall[] {
           headers: { "Content-Type": "application/json" },
         });
       }
+      // The embedded ShopTariffs (D-12) fetches the catalog — return an empty shop (these tests
+      // assert identity/toggles/free-count, not tariffs; an empty list renders no buy buttons).
+      if (u.includes("/api/products")) {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       // GET /api/me — reflects any persisted settings change (so the reconcile is honest).
       return new Response(
         JSON.stringify({ ...ME_RESPONSE, settings: { ...serverSettings } }),

@@ -64,6 +64,10 @@ class LimitsOut(BaseModel):
     # intentional placeholders — the column-backed truth arrives in Plan 05, not here.
     subscription_active: bool = False
     subscription_period_end: datetime | None = None
+    # The active subscription's id — the FE needs it to call POST /api/subscriptions/{id}/cancel
+    # (D-10 self-serve cancel). None when there is no active subscription. Plan 05 fills it from the
+    # same live-window query that sets subscription_active/period_end.
+    subscription_id: str | None = None
 
 
 class SettingsOut(BaseModel):

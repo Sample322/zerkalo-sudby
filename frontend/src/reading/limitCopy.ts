@@ -90,3 +90,35 @@ export function formatReset(resetAt: string | Date, now: Date = new Date()): str
 
   return `${reset.getUTCDate()} ${MONTHS_GENITIVE[reset.getUTCMonth()]}`;
 }
+
+// ---------------------------------------------------------------------------------------
+// Phase-7 shop formatters (PAY-01/08). Pure, NaN-guarded — a broken price/hint renders nothing
+// rather than «NaN ₽» (mirrors formatRemaining). SAFE-06: plain «₽ / расклад / день», no brand token.
+
+/** Format a whole-ruble price as «299 ₽» (backend `price_rub` is an integer in rubles, A1). */
+export function formatRub(rub: number): string {
+  if (Number.isNaN(rub)) return "";
+  return `${rub} ₽`;
+}
+
+/** Choose the RU plural of «расклад»: 1 → расклад, 2–4 → расклада, else → раскладов (11–14 excepted). */
+function pluralSpread(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return "раскладов";
+  const mod10 = n % 10;
+  if (mod10 === 1) return "расклад";
+  if (mod10 >= 2 && mod10 <= 4) return "расклада";
+  return "раскладов";
+}
+
+/** The pack per-reading hint «3 расклада» (grammatically-agreed count). Empty on NaN. */
+export function formatSpreads(n: number): string {
+  if (Number.isNaN(n)) return "";
+  return `${n} ${pluralSpread(n)}`;
+}
+
+/** The subscription duration hint «30 дней» (reuses the day pluralizer). Empty on NaN. */
+export function formatDays(n: number): string {
+  if (Number.isNaN(n)) return "";
+  return `${n} ${pluralDay(n)}`;
+}

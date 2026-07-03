@@ -181,23 +181,25 @@ async def get_user_limits(session: AsyncSession, user_id) -> UserLimits | None:
     ).scalar_one_or_none()
 
 
-async def _active_subscription_end(
+async def _active_subscription(
     session: AsyncSession, user_id
-) -> datetime | None:
-    """Return the live subscription-window end for the user, or ``None`` when there is no active one.
+) -> Subscription | None:
+    """Return the user's live (ACTIVE + unexpired) ``Subscription`` row, or ``None``.
 
     The single source of the D-08 subscription window: an ACTIVE ``Subscription`` whose
     ``current_period_end`` is still in the future. ``current_period_end`` is tz-AWARE
     (``TIMESTAMP(timezone=True)``, Phase-7 A1) so the comparison uses a tz-aware ``datetime.now(UTC)``
     — a naive ``now`` would make asyncpg refuse the mixed-tz compare. A CANCELED row still inside its
     window is deliberately NOT surfaced here: cancel keeps access via the gate (D-10), but the
-    "subscription active" badge reflects a live, auto-renewing ACTIVE window only.
+    "subscription active" badge reflects a live, auto-renewing ACTIVE window only. The row is
+    returned whole so the projection can expose both ``current_period_end`` (the badge) and ``id``
+    (the FE's ``POST /api/subscriptions/{id}/cancel`` target).
     """
     now = datetime.now(UTC)
     return (
         (
             await session.execute(
-                select(Subscription.current_period_end).where(
+                select(Subscription).where(
                     Subscription.user_id == user_id,
                     Subscription.status == SubscriptionStatus.ACTIVE,
                     Subscription.current_period_end > now,
@@ -241,12 +243,13 @@ async def project_limits(
             subscription_period_end=None,
         )
 
-    period_end = await _active_subscription_end(session, row.user_id)
+    sub = await _active_subscription(session, row.user_id)
     return LimitsOut.model_validate(row).model_copy(
         update={
             "unlimited": unlimited,
-            "subscription_active": period_end is not None,
-            "subscription_period_end": period_end,
+            "subscription_active": sub is not None,
+            "subscription_period_end": sub.current_period_end if sub else None,
+            "subscription_id": str(sub.id) if sub else None,
         }
     )
 

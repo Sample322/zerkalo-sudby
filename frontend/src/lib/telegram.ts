@@ -38,6 +38,12 @@ interface TelegramWebApp {
   contentSafeAreaInset?: TgInsets;
   /** Haptic feedback engine — absent outside a real device. */
   HapticFeedback?: TelegramHapticFeedback;
+  /** Open an external URL (the ЮKassa-hosted payment page) — Bot API `openLink`. */
+  openLink?: (url: string) => void;
+  /** Subscribe to a WebApp event (Bot API 8.0 `activated`/`deactivated`, etc.). */
+  onEvent?: (eventType: string, handler: () => void) => void;
+  /** Unsubscribe from a WebApp event. */
+  offEvent?: (eventType: string, handler: () => void) => void;
 }
 
 interface TelegramNamespace {
@@ -127,3 +133,36 @@ export const haptic = {
   selection: (): void =>
     window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.(),
 };
+
+/**
+ * Open an external URL — used for the ЮKassa-hosted payment page (`confirmation_url`). The ЮKassa v3
+ * flow is a redirect page (NOT a Telegram Stars invoice — 07-RESEARCH Pitfall 7), so we open the link
+ * directly. Card data lives entirely on the ЮKassa page (PCI stays there, T-07-CARD-DATA). No-op
+ * outside a Telegram WebView (optional-chained), so a plain browser / test never throws.
+ */
+export function openLink(url: string): void {
+  window.Telegram?.WebApp?.openLink?.(url);
+}
+
+/**
+ * Subscribe to the "app came back to the foreground" signal so the shop can poll `GET /api/me` after
+ * the user returns from the ЮKassa page (there is no payment callback — the webhook is the source of
+ * truth, so the client detects return + polls, 07-RESEARCH Pitfall 7). Wires the Telegram Bot API 8.0
+ * `activated` event AND a `visibilitychange`→visible fallback (older clients / plain browser).
+ * Returns an unsubscribe that removes BOTH. `cb` may fire more than once — the caller's poll must be
+ * idempotent.
+ */
+export function onActivated(cb: () => void): () => void {
+  const webApp = window.Telegram?.WebApp;
+  webApp?.onEvent?.("activated", cb);
+
+  const onVisible = (): void => {
+    if (document.visibilityState === "visible") cb();
+  };
+  document.addEventListener("visibilitychange", onVisible);
+
+  return () => {
+    webApp?.offEvent?.("activated", cb);
+    document.removeEventListener("visibilitychange", onVisible);
+  };
+}

@@ -38,6 +38,15 @@ export interface SessionLimits {
    * applies — the catalog skips the pre-emptive paywall and shows «Безлимит» instead of a count.
    */
   unlimited?: boolean;
+  /**
+   * Phase-7 ЮKassa subscription window (backend `LimitsOut`, filled by `project_limits` from the
+   * live ACTIVE subscription). `subscription_active` drives the «активна до …» badge;
+   * `subscription_period_end` is its ISO end; `subscription_id` is the cancel target
+   * (`POST /api/subscriptions/{id}/cancel`, D-10). All absent/null for a non-subscriber.
+   */
+  subscription_active?: boolean;
+  subscription_period_end?: string | null;
+  subscription_id?: string | null;
 }
 
 /** User-facing settings flags. */

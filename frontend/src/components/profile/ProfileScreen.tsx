@@ -13,6 +13,7 @@
 import * as m from "motion/react-m";
 
 import { useMe, usePatchSettings } from "../../hooks/useMe";
+import { useCancelSubscription } from "../../hooks/usePayments";
 import { useSelection } from "../../stores/selection";
 import { getContentSafeAreaInsets } from "../../lib/telegram";
 import type { SessionSettings, SessionUser } from "../../api/auth";
@@ -25,8 +26,22 @@ import {
   SETTINGS_PERSONALIZATION_EXPLAINER,
   SETTINGS_PERSONALIZATION_LABEL,
   SETTINGS_REVERSALS_LABEL,
+  SHOP_BALANCE_LABEL,
+  SHOP_CANCEL_SUB,
+  SHOP_SUB_ACTIVE_PREFIX,
+  SHOP_SUBSCRIPTION_LABEL,
 } from "../../reading/copy";
 import { formatRemaining } from "../../reading/limitCopy";
+import { ShopTariffs } from "../shop/ShopTariffs";
+
+/** Format an ISO subscription end as «DD.MM» for the «активна до …» badge (UTC, locale-free). */
+function formatPeriodEnd(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}.${mm}`;
+}
 
 /** Compose the display name from the Telegram profile, falling back gracefully when absent. */
 function displayName(user: SessionUser): string {
@@ -126,6 +141,7 @@ export function ProfileScreen() {
 
   const { data, isPending, isError } = useMe();
   const patchSettings = usePatchSettings();
+  const cancelSub = useCancelSubscription();
 
   function toggle(flag: keyof SessionSettings, next: boolean): void {
     patchSettings.mutate({ [flag]: next });
@@ -141,6 +157,9 @@ export function ProfileScreen() {
 
     const name = displayName(data.user);
     const settings = data.settings;
+    const limits = data.limits;
+    // A const local so the guard narrows it to `string` inside the cancel button's onClick closure.
+    const subId = limits?.subscription_id ?? null;
 
     return (
       <>
@@ -191,6 +210,40 @@ export function ProfileScreen() {
             </span>
           </section>
         )}
+
+        {/* Баланс / Магазин (D-12) — paid balance, the active-sub badge + cancel, and the tariffs. */}
+        <section aria-label={SHOP_BALANCE_LABEL} className="flex flex-col gap-3">
+          {limits && (
+            <div className="panel flex flex-col gap-1 p-5">
+              <span className="eyebrow" style={{ color: "var(--color-mist-dim)" }}>
+                {SHOP_BALANCE_LABEL}
+              </span>
+              <span className="font-display text-[20px]" style={{ color: "var(--deck-soft)" }}>
+                {limits.paid_spreads_balance}
+              </span>
+              {limits.subscription_active && limits.subscription_period_end && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-[15px]" style={{ color: "var(--deck-accent)" }}>
+                    {SHOP_SUBSCRIPTION_LABEL} — {SHOP_SUB_ACTIVE_PREFIX}
+                    {formatPeriodEnd(limits.subscription_period_end)}
+                  </span>
+                  {subId && (
+                    <m.button
+                      type="button"
+                      whileTap={cancelSub.isPending ? undefined : { scale: 0.96 }}
+                      disabled={cancelSub.isPending}
+                      onClick={() => cancelSub.mutate(subId)}
+                      className="pill-ghost px-4 py-2 text-[14px] outline-none focus-visible:ring-2 disabled:opacity-50"
+                    >
+                      {SHOP_CANCEL_SUB}
+                    </m.button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <ShopTariffs variant="profile" />
+        </section>
 
         {/* The two user-facing toggles (D-07). */}
         <section aria-label="Настройки" className="flex flex-col gap-3">

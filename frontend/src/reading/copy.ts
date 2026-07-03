@@ -210,6 +210,20 @@ export const READING_RETRY = "Повторить";
 export const READING_CHANGE_DECK = "Сменить колоду";
 
 // ---------------------------------------------------------------------------------------
+// Phase 7 — shop / tariffs (PAY-01/08, D-12/D-13). Brand-safe (SAFE-06): zero AI/ИИ/нейросеть/
+// модель, no pressure — «Открыть», never «купи». Honest on failure (D-13): «деньги не списаны».
+export const SHOP_TITLE = "Пополнить колоду";
+export const SHOP_BALANCE_LABEL = "Куплено раскладов";
+export const SHOP_SUBSCRIPTION_LABEL = "Лунный доступ";
+export const SHOP_SUB_ACTIVE_PREFIX = "активна до ";
+export const SHOP_BUY_CTA = "Открыть";
+export const SHOP_SUCCESS = "Доступ открыт";
+export const SHOP_PENDING = "Ждём подтверждение оплаты…";
+export const SHOP_FAILURE =
+  "Оплата не прошла — деньги не списаны, доступ не выдан. Попробуй ещё раз.";
+export const SHOP_CANCEL_SUB = "Отменить продление";
+
+// ---------------------------------------------------------------------------------------
 // Brand-safe building blocks createReading uses to assemble per-card + summary copy.
 export const DECK_ACCENT_PHRASES: readonly string[] = [
   "Колода произносит это тихо, своим языком.",

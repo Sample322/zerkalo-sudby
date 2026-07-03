@@ -19,9 +19,9 @@ import { formatReset } from "../reading/limitCopy";
 import {
   PAYWALL_DISMISS,
   PAYWALL_RESET_LEAD,
-  PAYWALL_SOON_NOTE,
   PAYWALL_TITLE,
 } from "../reading/copy";
+import { ShopTariffs } from "./shop/ShopTariffs";
 
 const SHEET_TRANSITION = { duration: 0.28, ease: [0.16, 1, 0.3, 1] } as const;
 
@@ -88,10 +88,8 @@ export function PaywallSheet({ open, resetAt, onDismiss }: PaywallSheetProps) {
                 </span>
               </p>
 
-              {/* The quiet «скоро ещё» note — no pressure, no price, no button (D-03). */}
-              <p className="text-[16px] italic leading-relaxed" style={{ color: "var(--color-mist-dim)" }}>
-                {PAYWALL_SOON_NOTE}
-              </p>
+              {/* Real tariffs replace the old «скоро» note (D-12): buy → openLink → poll /api/me. */}
+              <ShopTariffs variant="sheet" onClose={onDismiss} />
 
               <div className="flex justify-end">
                 <m.button
