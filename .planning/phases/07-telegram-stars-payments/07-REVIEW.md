@@ -38,9 +38,10 @@ findings:
   total: 15
 status: resolved_partial
 resolution:
-  fixed: [CR-01, CR-02, WR-01, WR-02, WR-04, WR-05]
-  deferred: [WR-03, WR-06, WR-07, IN-01, IN-02, IN-03, IN-04, IN-05, IN-06]
+  fixed: [CR-01, CR-02, WR-01, WR-02, WR-03, WR-04, WR-05, WR-06, WR-07]
+  deferred: [IN-01, IN-02, IN-03, IN-04, IN-05, IN-06]
   resolved_date: 2026-07-03
+  warnings_cleared: 2026-07-05  # WR-03/06/07 fixed in 43e1cb3 (all warnings now closed)
 ---
 
 # Phase 7: Code Review Report
