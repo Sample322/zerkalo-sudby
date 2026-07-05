@@ -4,7 +4,7 @@
     "title": "1 расклад",
     "description": "Один расклад для важного вопроса.",
     "product_type": "one_time_spreads",
-    "stars_price": 69,
+    "stars_price": 10,
     "spreads_amount": 1,
     "subscription_days": null,
     "is_active": true
@@ -14,7 +14,7 @@
     "title": "3 расклада",
     "description": "Три расклада, чтобы вернуться к вопросу не раз.",
     "product_type": "one_time_spreads",
-    "stars_price": 169,
+    "stars_price": 10,
     "spreads_amount": 3,
     "subscription_days": null,
     "is_active": true
@@ -24,7 +24,7 @@
     "title": "10 раскладов",
     "description": "Десять раскладов для тех, кто часто советуется с картами.",
     "product_type": "one_time_spreads",
-    "stars_price": 449,
+    "stars_price": 10,
     "spreads_amount": 10,
     "subscription_days": null,
     "is_active": true
@@ -34,7 +34,7 @@
     "title": "Лунный доступ",
     "description": "Безлимитные расклады на 30 дней.",
     "product_type": "subscription",
-    "stars_price": 299,
+    "stars_price": 10,
     "spreads_amount": null,
     "subscription_days": 30,
     "is_active": true
