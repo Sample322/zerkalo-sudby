@@ -41,9 +41,6 @@ from app.schemas.auth import LimitsOut
 # constant in the code is the canonical warning sign of a broken validator (PITFALLS 1).
 _WEBAPP_DATA_KEY = b"WebAppData"
 
-# Default weekly free allowance for a brand-new user (TZ §13.11; mirrors the model default).
-_FREE_WEEKLY_LIMIT = 3
-
 
 def validate_init_data(init_data: str, bot_token: str, max_age: int) -> dict[str, str]:
     """Validate a raw Telegram ``initData`` query string (two-stage HMAC + freshness).
@@ -159,14 +156,14 @@ async def _ensure_user_limits(session: AsyncSession, user_id) -> None:
     row (threat T-06-01 / Pattern 5). ``week_start`` is deliberately OMITTED so the row is
     created with ``week_start = NULL``: the rolling window anchors on the *first reading*, NOT
     an ISO-Monday date (D-01/D-02). Idempotent — a repeat login is a no-op conflict.
+
+    WR-06: ``free_weekly_limit`` / ``free_used_this_week`` are ALSO omitted — the ``UserLimits``
+    model's ``server_default`` (``3`` / ``0``) is the SINGLE source of the weekly allowance, so the
+    business number lives in exactly one place (no drift between an INSERT constant and the model).
     """
     stmt = (
         pg_insert(UserLimits)
-        .values(
-            user_id=user_id,
-            free_weekly_limit=_FREE_WEEKLY_LIMIT,
-            free_used_this_week=0,
-        )
+        .values(user_id=user_id)
         .on_conflict_do_nothing(index_elements=["user_id"])
     )
     await session.execute(stmt)

@@ -292,7 +292,7 @@ async def test_recurring_charge_uses_deterministic_key(
     sub = Subscription(
         user_id=user.id,
         product_id=product.id,
-        telegram_payment_charge_id="pm_test_saved_0001",  # the saved payment_method_id seam
+        payment_method_id="pm_test_saved_0001",  # WR-03: the ЮKassa saved-card id (not legacy column)
         status=SubscriptionStatus.ACTIVE,
         current_period_start=now - timedelta(days=30),
         current_period_end=now,  # due now → the sweep charges it

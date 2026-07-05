@@ -10,8 +10,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import type { AuthResponse } from "../api/auth";
-import { fetchMe } from "../api/me";
+import { fetchMe, type MeResponse } from "../api/me";
 import {
   cancelSubscription,
   createPayment,
@@ -57,7 +56,7 @@ export function usePollMeUntilGranted() {
 
   return useCallback(
     async (
-      predicate: (me: AuthResponse | undefined) => boolean,
+      predicate: (me: MeResponse | undefined) => boolean,
       opts: { intervalMs?: number; maxAttempts?: number } = {},
     ): Promise<boolean> => {
       const intervalMs = opts.intervalMs ?? POLL_INTERVAL_MS;
@@ -66,7 +65,7 @@ export function usePollMeUntilGranted() {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           const me = await fetchMe();
-          qc.setQueryData<AuthResponse>(ME_KEY, me);
+          qc.setQueryData<MeResponse>(ME_KEY, me);
           if (predicate(me)) return true;
         } catch {
           // Transient network error — keep polling within the budget.

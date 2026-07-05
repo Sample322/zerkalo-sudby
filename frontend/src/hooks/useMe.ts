@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { fetchMe, patchSettings } from "../api/me";
-import type { AuthResponse, SessionSettings } from "../api/auth";
+import { fetchMe, patchSettings, type MeResponse } from "../api/me";
+import type { SessionSettings } from "../api/auth";
 
 /** The single stable profile key — the optimistic settings mutation MUST target this exact
  *  tuple so its cache edits are visible to every `useMe()` reader (the Pattern-4 seam). */
@@ -22,7 +22,7 @@ export function useMe() {
 /** Snapshot carried from `onMutate` → `onError`: the pre-mutation profile, so a failed PATCH
  *  rolls the optimistic toggle back to exactly what the server last confirmed. */
 interface PatchContext {
-  prev: AuthResponse | undefined;
+  prev: MeResponse | undefined;
 }
 
 /**
@@ -41,9 +41,9 @@ export function usePatchSettings() {
     mutationFn: (patch) => patchSettings(patch),
     onMutate: async (patch) => {
       await qc.cancelQueries({ queryKey: ME_KEY });
-      const prev = qc.getQueryData<AuthResponse>(ME_KEY);
+      const prev = qc.getQueryData<MeResponse>(ME_KEY);
       if (prev) {
-        qc.setQueryData<AuthResponse>(ME_KEY, {
+        qc.setQueryData<MeResponse>(ME_KEY, {
           ...prev,
           settings: { ...prev.settings, ...patch },
         });

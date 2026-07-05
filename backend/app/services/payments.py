@@ -667,12 +667,25 @@ class PaymentService:
 
         next_period = (subscription.period_index or 0) + 1
         idempotence_key = f"renew:{subscription.id}:{next_period}"
-        # The saved method: the ЮKassa payment_method_id, falling back to the legacy charge-id column
-        # used as the saved-method seam by some fixtures.
-        saved_method = (
-            subscription.payment_method_id
-            or subscription.telegram_payment_charge_id
-        )
+        # WR-03: the saved card is the ЮKassa ``payment_method_id`` ONLY (set by ``_grant_subscription``
+        # from the first payment's re-fetched ``payment_method.id``). The legacy
+        # ``telegram_payment_charge_id`` is a Stars-era column that NEVER carries a payment-method id
+        # under ЮKassa — reading it as a fallback could send a garbage method to ЮKassa. A ``None``
+        # here means there is no saved card to charge → the subscription is un-renewable → mark
+        # PAYMENT_FAILED but KEEP ``current_period_end`` (access until period end, D-10) and skip ЮKassa.
+        saved_method = subscription.payment_method_id
+        if saved_method is None:
+            subscription.status = SubscriptionStatus.PAYMENT_FAILED
+            await session.commit()
+            logger.warning(
+                "subscription_renewal_no_saved_method",
+                extra={
+                    "event": "payment.renewal_no_method",
+                    "subscription_id": str(subscription.id),
+                    "period_index": next_period,
+                },
+            )
+            return
 
         try:
             created = await self._charge_with_retry(

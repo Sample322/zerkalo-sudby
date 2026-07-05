@@ -21,15 +21,22 @@ export class MeError extends Error {
 }
 
 /**
- * Fetch the authenticated user's profile (PROF-01). Calls `GET /api/me` through the Bearer
- * seam; the server scopes the response to the JWT user (the client never sends a user_id). The
- * body is the same `{user, limits, settings}` shape as the auth response minus the token, so we
- * reuse {@link AuthResponse} — `access_token` is simply absent/ignored on this path.
+ * The `GET /api/me` response shape — the auth projection WITHOUT the token (the backend's
+ * `MeResponse` is `AuthResponse` minus `access_token`). The `["me"]` TanStack cache is typed with
+ * this so its shape is HONEST: no phantom `access_token` a future consumer could be misled by
+ * (WR-07). The auth path (`authenticate`) keeps the full {@link AuthResponse} incl. the token.
  */
-export async function fetchMe(): Promise<AuthResponse> {
+export type MeResponse = Omit<AuthResponse, "access_token">;
+
+/**
+ * Fetch the authenticated user's profile (PROF-01). Calls `GET /api/me` through the Bearer seam;
+ * the server scopes the response to the JWT user (the client never sends a user_id). Returns
+ * {@link MeResponse} — the `{user, limits, settings}` projection without the token.
+ */
+export async function fetchMe(): Promise<MeResponse> {
   const res = await apiFetch("/api/me");
   if (!res.ok) throw new MeError(res.status);
-  return (await res.json()) as AuthResponse;
+  return (await res.json()) as MeResponse;
 }
 
 /**
