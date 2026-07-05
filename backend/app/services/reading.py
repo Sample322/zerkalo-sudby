@@ -640,6 +640,28 @@ class ReadingService:
         return max(0, (limits.free_weekly_limit or 0) - (limits.free_used_this_week or 0))
 
     @staticmethod
+    def _remaining_for_bucket(
+        limits: UserLimits | None, bucket: Bucket | None
+    ) -> int | None:
+        """The ``remaining_limits`` value for the bucket that was consumed (CR-01).
+
+        The honest-fail exit must report the SAME kind of number the SUCCESS exit reports for a given
+        tier, else a paid reading that fails shows the (often 0) FREE count instead of the refunded
+        paid balance. Mirrors ``_consume_gate``'s per-bucket return:
+          * ``FREE`` → the free weekly remaining (``limit - used``);
+          * ``PAID`` → the (post-refund) ``paid_spreads_balance``;
+          * ``SUBSCRIPTION`` → ``None`` (window-gated — no count surfaced, matching success);
+          * ``None`` (unlimited allowlist / no row) → ``None``.
+        """
+        if limits is None or bucket is None:
+            return None
+        if bucket is Bucket.PAID:
+            return max(0, limits.paid_spreads_balance or 0)
+        if bucket is Bucket.SUBSCRIPTION:
+            return None
+        return max(0, (limits.free_weekly_limit or 0) - (limits.free_used_this_week or 0))
+
+    @staticmethod
     async def _consume_free_atomic(
         session: AsyncSession, user_id: object, now: datetime
     ) -> tuple[int, int] | None:
@@ -1281,9 +1303,15 @@ class ReadingService:
         # Compensating refund of the gate's consume, routed to the bucket ACTUALLY consumed —
         # skipped for the unlimited allowlist (``refund=False``), whose gate never consumed, so
         # there is nothing to give back.
+        remaining: int | None = None
         if refund and limits is not None:
             await self._refund_consumed_bucket(session, user.id, consumed_bucket)
-            await session.refresh(limits)  # reflect the refunded counter in the returned remaining
+            # ``refresh`` MUST precede ``commit`` — it reloads the row inside the still-open
+            # transaction so the just-refunded counter is visible (the consume/refund are Core
+            # UPDATEs that bypass this ORM instance). CR-01: report the CONSUMED bucket's remaining
+            # (not always FREE) so the number matches the success exit for that tier.
+            await session.refresh(limits)
+            remaining = self._remaining_for_bucket(limits, consumed_bucket)
         await session.commit()
         logger.warning(
             "reading_honest_fail",
@@ -1292,7 +1320,7 @@ class ReadingService:
         return self._soft_body(
             reading_id=str(reading.id),
             message=SOFT_FAILURE_COPY,
-            remaining=self._remaining(limits) if refund else None,
+            remaining=remaining,
         )
 
     @staticmethod

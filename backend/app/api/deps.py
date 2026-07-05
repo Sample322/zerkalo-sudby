@@ -10,6 +10,8 @@ Re-exports the DB + Redis providers and adds the auth dependencies (RESEARCH Pat
 
 from __future__ import annotations
 
+import uuid
+
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -46,7 +48,19 @@ async def get_current_user(
             status.HTTP_401_UNAUTHORIZED, "invalid token"
         ) from exc
 
-    user = await session.get(User, payload["sub"])
+    # WR-07: a validly-signed token could still carry a missing / non-UUID ``sub`` (a future code
+    # path, a test token, or a tampered-then-resigned token if the secret ever leaked). Validate the
+    # shape here so it maps to a clean 401 — NOT a 500 from ``session.get`` attempting a bad UUID cast
+    # (the module's "any invalid/unknown token yields 401" contract).
+    sub = payload.get("sub")
+    if not sub:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token")
+    try:
+        user_id = uuid.UUID(str(sub))
+    except (ValueError, TypeError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token") from None
+
+    user = await session.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "unknown user")
     return user

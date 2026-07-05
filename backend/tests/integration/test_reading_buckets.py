@@ -262,3 +262,6 @@ async def test_honest_fail_refunds_correct_bucket(
     # Net unchanged on the PAID bucket — the consumed spread was refunded (not a free unit).
     assert limits.paid_spreads_balance == 2
     assert limits.free_used_this_week == 3  # free was never touched (so nothing to refund there)
+    # CR-01: the soft body reports the PAID bucket's remaining (the refunded balance = 2), NOT the
+    # free count (0). The number must match what the SUCCESS path returns for a paid reading.
+    assert result.remaining_limits == 2

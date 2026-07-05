@@ -30,6 +30,7 @@ module constants so they stay tunable without touching the control flow.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -147,8 +148,15 @@ class LLMService:
             timeout=ATTEMPT_TIMEOUT_SECONDS,
         )
         # Access first: a refusal/truncated response may already fail schema validation here.
-        output: ReadingOutput = response.parsed_output
+        output = response.parsed_output
         stop_reason = response.stop_reason or "end_turn"
+        # WR-02: a provider (e.g. the OpenRouter adapter) can return ``parsed_output=None`` on a
+        # schema-empty-but-not-refusal completion (the Anthropic path raises ``ValidationError``
+        # instead). Treat a None / non-``ReadingOutput`` parse as a non-schema outcome → corrective
+        # retry, then honest-fail on exhaustion — NEVER a raw ``TypeError``/500 (D-09 "never a raw
+        # 500 on generation"). This backstops the adapter's own None→refusal mapping.
+        if not isinstance(output, ReadingOutput):
+            raise _NonSchemaStopReason(stop_reason)
         if stop_reason in _NON_SCHEMA_STOP_REASONS:
             # 200 OK but not a trustworthy schema-valid reading → corrective retry (Pitfall 2).
             raise _NonSchemaStopReason(stop_reason)
@@ -184,8 +192,16 @@ class LLMService:
             async for attempt in retrying:
                 with attempt:
                     model = self._model_for_attempt(attempt.retry_state.attempt_number)
-                    return await self._attempt(
-                        model=model, system=system, user_prompt=user_prompt
+                    # WR-01: a SERVICE-level wall-clock backstop. The per-attempt ``timeout`` kwarg
+                    # is delegated to the SDK, but a provider/gateway that ignores or silently caps
+                    # it would hang the FastAPI request. ``asyncio.wait_for`` guarantees the documented
+                    # ATTEMPT_TIMEOUT_SECONDS deadline by raising ``TimeoutError`` (already RETRYABLE →
+                    # corrective retry → honest-fail) regardless of provider behaviour.
+                    return await asyncio.wait_for(
+                        self._attempt(
+                            model=model, system=system, user_prompt=user_prompt
+                        ),
+                        timeout=ATTEMPT_TIMEOUT_SECONDS,
                     )
         except RETRYABLE as exc:
             # Exhausted the corrective retry on a retryable failure → honest-fail signal (D-09).

@@ -82,16 +82,19 @@ class _Messages:
         )
         choice = completion.choices[0]
         message = choice.message
-        # A model refusal yields ``message.refusal`` set + ``parsed`` None — surface it as the
-        # Anthropic "refusal" stop reason so the caller's corrective retry fires (never a fake read).
-        if getattr(message, "refusal", None):
+        parsed = message.parsed
+        # A model refusal (``message.refusal`` set) OR a ``parsed is None`` (the SDK could not coerce
+        # the completion to the schema, but did NOT flag a refusal — WR-02) is a non-schema outcome:
+        # surface it as the Anthropic "refusal" stop reason so the caller's corrective retry fires and,
+        # on exhaustion, honest-fails — never a fake read and never a raw 500.
+        if getattr(message, "refusal", None) or parsed is None:
             stop_reason = "refusal"
         else:
             stop_reason = _FINISH_TO_STOP.get(choice.finish_reason or "stop", "end_turn")
 
         usage = completion.usage
         return _ParsedResponse(
-            parsed_output=message.parsed,
+            parsed_output=parsed,
             stop_reason=stop_reason,
             usage=_Usage(
                 input_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),

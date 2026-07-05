@@ -202,3 +202,23 @@ def test_anthropic_retryable_types_present() -> None:
     assert anthropic.APIStatusError in RETRYABLE
     assert anthropic.APIConnectionError in RETRYABLE
     assert TimeoutError in RETRYABLE
+
+
+async def test_none_parse_honest_fails_not_500() -> None:
+    """WR-02: a ``parsed_output=None`` WITHOUT a refusal flag + a non-schema stop reason (the
+    OpenRouter adapter's failure mode on a completion the SDK couldn't coerce) must honest-fail
+    (``LLMGenerationError``) after the corrective retry — NEVER a raw ``TypeError``/500 (D-09)."""
+    none_response = SimpleNamespace(
+        parsed_output=None,  # the None the pre-fix path returned into the caller → TypeError → 500
+        model=HAIKU_MODEL,
+        stop_reason="end_turn",  # NOT refusal/max_tokens → the old stop-reason check skipped retry
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
+    )
+    parse_mock = AsyncMock(side_effect=[none_response, none_response])
+    service = _make_service(parse_mock)
+
+    with pytest.raises(LLMGenerationError):
+        await service.generate(system="sys", user_prompt="usr")
+
+    # The None parse triggered the corrective retry (not a bare TypeError), then honest-failed.
+    assert parse_mock.await_count == 2

@@ -31,7 +31,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_session, throttle_gate
 from app.models.user import User
 from app.schemas.reading import ReadingCreate, ReadingListItemOut, ReadingOut
-from app.services.reading import ReadingInputError, ReadingService
+from app.services.reading import (
+    FREE_HISTORY_CAP,
+    ReadingInputError,
+    ReadingService,
+)
 
 router = APIRouter(tags=["readings"])
 
@@ -73,7 +77,7 @@ async def create_reading(
 
 @router.get("/readings", response_model=list[ReadingListItemOut])
 async def list_readings(
-    limit: int = Query(10, ge=1, le=10),
+    limit: int = Query(FREE_HISTORY_CAP, ge=1, le=FREE_HISTORY_CAP),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
