@@ -62,19 +62,21 @@ async def throttle_ok(
     *,
     window_s: int = THROTTLE_WINDOW_S,
     burst_cap: int = THROTTLE_BURST_CAP,
+    bucket: str = "reading",
 ) -> bool:
     """Atomic per-user burst check — ``True`` while under the cap, ``False`` once over it.
 
     Keys off the caller-supplied ``user_id`` ONLY (``throttle_gate`` passes the verified JWT
     ``user.id`` — never a request-body field, T-06 spoofing). The key shape is
-    ``throttle:reading:{user_id}`` (per-user). Runs the atomic Lua ``INCR``+conditional-``EXPIRE``,
-    so the TTL is always armed on the first hit (no stranded counter).
+    ``throttle:{bucket}:{user_id}`` (per-user, per-bucket so independent surfaces — ``reading`` vs
+    ``events`` — never share a budget). Runs the atomic Lua ``INCR``+conditional-``EXPIRE``, so the
+    TTL is always armed on the first hit (no stranded counter).
 
     ``decode_responses=True`` on the shared client makes the Lua ``return c`` arrive as a ``str``;
     it is cast with ``int()`` before the comparison.
     """
     count = await _throttle_script(
-        keys=[f"throttle:reading:{user_id}"],
+        keys=[f"throttle:{bucket}:{user_id}"],
         args=[window_s],
     )
     return int(count) <= burst_cap

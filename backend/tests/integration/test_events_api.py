@@ -11,6 +11,7 @@ import uuid
 
 from sqlalchemy import select
 
+from app.api import events as events_module
 from app.core.db import SessionLocal
 from app.models.analytics import AppEvent
 from tests.conftest import TEST_BOT_TOKEN, make_init_data
@@ -73,3 +74,52 @@ async def test_body_cannot_spoof_user_id(auth_client) -> None:
         json={"event_name": "app_opened", "user_id": str(uuid.uuid4())},
     )
     assert resp.status_code == 422
+
+
+# --- SEC-01 hardening: fail-open per-user cap + bounded properties (DoS/bloat guard) ---
+
+
+def test_bounded_drops_oversized_properties() -> None:
+    """`_bounded` keeps small payloads and drops abusive ones (too many keys / too many bytes)."""
+    assert events_module._bounded(None) is None
+    assert events_module._bounded({"deck_slug": "moon"}) == {"deck_slug": "moon"}
+    assert events_module._bounded({str(i): i for i in range(25)}) is None
+    assert events_module._bounded({"x": "y" * 5000}) is None
+
+
+async def test_over_cap_event_is_dropped(auth_client, monkeypatch) -> None:
+    """When the per-user cap is hit, the event is silently dropped (202, no write) — never 429."""
+    token = await _auth(auth_client)
+
+    async def _blocked(*_a: object, **_k: object) -> bool:
+        return False
+
+    monkeypatch.setattr(events_module, "throttle_ok", _blocked)
+    marker = uuid.uuid4().hex
+    resp = await auth_client.post(
+        "/api/events",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"event_name": "deck_selected", "properties": {"m": marker}},
+    )
+    assert resp.status_code == 202
+    rows = await _rows_by_name("deck_selected")
+    assert not any(r.event_properties.get("m") == marker for r in rows)
+
+
+async def test_throttle_error_fails_open(auth_client, monkeypatch) -> None:
+    """A Redis error in the cap check fails OPEN — the event is still written, still 202."""
+    token = await _auth(auth_client)
+
+    async def _boom(*_a: object, **_k: object) -> bool:
+        raise RuntimeError("redis down")
+
+    monkeypatch.setattr(events_module, "throttle_ok", _boom)
+    marker = uuid.uuid4().hex
+    resp = await auth_client.post(
+        "/api/events",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"event_name": "deck_selected", "properties": {"m": marker}},
+    )
+    assert resp.status_code == 202
+    rows = await _rows_by_name("deck_selected")
+    assert any(r.event_properties.get("m") == marker for r in rows)
