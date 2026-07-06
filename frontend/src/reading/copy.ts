@@ -121,6 +121,11 @@ export const RESULT_SOON_BADGE = "скоро";
 // Shown in the meta row when the reading has no question (HOME-02 / D-13).
 export const RESULT_GENERAL = "Общий расклад";
 
+// Share-card (UI-06) — in-voice affordance copy. Privacy-safe: the card never carries the question.
+export const SHARE_BUTTON = "Поделиться раскладом";
+export const SHARE_SAVED_HINT = "Карта сохранена — поделитесь ей из галереи.";
+export const SHARE_FAILED = "Не удалось создать карту. Попробуйте ещё раз.";
+
 // Meta-row labels (тема / колода / расклад / дата / вопрос).
 export const RESULT_LABELS = {
   question: "Вопрос",

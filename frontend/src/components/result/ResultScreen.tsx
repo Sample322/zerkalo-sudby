@@ -3,6 +3,7 @@ import { stagger } from "motion/react";
 import * as m from "motion/react-m";
 
 import { track } from "../../api/events";
+import { ShareCardButton } from "./ShareCardButton";
 import { useSelection } from "../../stores/selection";
 import { useReadingDetail, useReadingsList } from "../../hooks/useReadings";
 import { mapReadingOutToMock } from "../../reading/createReading";
@@ -190,6 +191,7 @@ function ReadingBody({ reading: r, fadeCards }: ReadingBodyProps) {
         >
           {r.summary.closingPhrase}
         </m.p>
+        <ShareCardButton reading={r} />
       </m.section>
     </>
   );
