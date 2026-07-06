@@ -103,3 +103,27 @@ async def test_throttle_short_circuits_before_pg(redis_client: object) -> None:
     blocked = await _throttle_ok(redis_client, user_id, window_s=60, burst_cap=cap)
     assert blocked is False
     assert HTTPException is not None  # the 429 transport the gate raises
+
+
+async def test_throttle_gate_fails_open_on_redis_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P6 review: a Redis OUTAGE must NOT 500 the reading flow — throttle_gate fails OPEN.
+
+    The throttle is a best-effort anti-abuse burst cap, and the weekly free limit is
+    PG-authoritative (enforced downstream). If Redis is unreachable, ``throttle_ok`` raises; the
+    gate must swallow it and ALLOW the reading (return None) rather than propagate a 500 that would
+    block every reading create on a Redis blip. No Redis / no DB needed.
+    """
+    import app.core.redis as redis_mod
+    from app.api.deps import throttle_gate
+    from app.models.user import User
+
+    async def _boom(*_args: object, **_kwargs: object) -> bool:
+        raise ConnectionError("redis down")
+
+    monkeypatch.setattr(redis_mod, "throttle_ok", _boom)
+
+    user = User(telegram_id=987654321)  # throttle_gate only reads user.id — no DB row required
+    # Fail OPEN: returns None (allow), never raises (neither the 429 nor the ConnectionError→500).
+    assert await throttle_gate(user) is None

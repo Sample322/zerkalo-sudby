@@ -10,7 +10,7 @@
 // (opacity + translateY). NO red/alarm hue — a throttle is a gentle "slow down", not an error.
 // The message is the brand-safe copy.ts constant (SAFE-06); a React text node only (T-06-17).
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 
@@ -30,13 +30,19 @@ interface ThrottleToastProps {
 export function ThrottleToast({ open, onDismiss }: ThrottleToastProps) {
   const insets = getContentSafeAreaInsets();
 
-  // Auto-dismiss after the window. Re-armed whenever `open` (re)opens; cleared on unmount/close
-  // so a rapid re-trip (open→open) restarts the timer cleanly with no double-fire.
+  // Ref the latest onDismiss so the auto-dismiss timer depends ONLY on `open` — a parent passing an
+  // inline (non-memoized) onDismiss (CatalogScreen does) would otherwise re-run this effect on every
+  // re-render (the create-reading flow re-renders CatalogScreen a lot), clearing + re-arming the
+  // ~3.75s timer and measuring it from the last render instead of from open. (Same fix as
+  // UndoSnackbar.) Armed exactly once per open; cleared on unmount/close.
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+
   useEffect(() => {
     if (!open) return;
-    const timer = window.setTimeout(onDismiss, THROTTLE_WINDOW_MS);
+    const timer = window.setTimeout(() => onDismissRef.current(), THROTTLE_WINDOW_MS);
     return () => window.clearTimeout(timer);
-  }, [open, onDismiss]);
+  }, [open]);
 
   return (
     <AnimatePresence>

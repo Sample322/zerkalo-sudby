@@ -10,6 +10,7 @@ Re-exports the DB + Redis providers and adds the auth dependencies (RESEARCH Pat
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 import jwt
@@ -22,6 +23,8 @@ from app.core.db import get_session
 from app.core.redis import get_redis
 from app.core.security import decode_jwt
 from app.models.user import User
+
+logger = logging.getLogger("app.deps")
 
 # auto_error=True -> a missing/malformed Authorization header is a 403 from the security
 # scheme itself; an invalid *token* is mapped to 401 below.
@@ -85,7 +88,20 @@ async def throttle_gate(user: User = Depends(get_current_user)) -> None:
     """
     from app.core.redis import throttle_ok
 
-    if not await throttle_ok(user.id):
+    # Fail OPEN on a Redis outage: the throttle is a best-effort ANTI-ABUSE burst cap, not a hard
+    # gate, and the weekly free limit is PG-authoritative (enforced downstream in the consume-gate).
+    # If Redis is unreachable, a raised error here would otherwise 500 EVERY reading create — a
+    # throttle blip must not take down the core product. Allow the reading and log for ops.
+    try:
+        allowed = await throttle_ok(user.id)
+    except Exception:  # noqa: BLE001 - any Redis failure → fail-open (availability > burst cap)
+        logger.warning(
+            "throttle_unavailable_fail_open",
+            extra={"event": "throttle.unavailable", "user_id": str(user.id)},
+        )
+        return
+
+    if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "throttled")
 
 
