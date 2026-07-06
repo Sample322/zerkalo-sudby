@@ -14,7 +14,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, decks, health, payments, readings, spreads, users
+from app.api import (
+    admin,
+    admin_prompts,
+    auth,
+    decks,
+    health,
+    payments,
+    readings,
+    spreads,
+    users,
+)
 from app.core.config import settings
 from app.core.db import engine
 from app.core.errors import unhandled_exception_handler
@@ -67,6 +77,7 @@ app.include_router(health.router)
 app.include_router(auth.router, prefix="/api")  # POST /api/auth/telegram
 app.include_router(users.router, prefix="/api")  # GET  /api/me
 app.include_router(admin.router, prefix="/api")  # GET  /api/admin/ping (require_admin)
+app.include_router(admin_prompts.router, prefix="/api")  # /api/admin/prompts (require_admin, ADMIN-05)
 app.include_router(decks.router, prefix="/api")  # GET  /api/decks, /api/decks/{slug}
 app.include_router(spreads.router, prefix="/api")  # GET  /api/spreads, /api/spreads/recommend
 app.include_router(readings.router, prefix="/api")  # POST /api/readings (Bearer JWT)

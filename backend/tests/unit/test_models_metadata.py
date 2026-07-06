@@ -50,11 +50,26 @@ def _column(table_name: str, column_name: str):
 
 
 def test_key_unique_constraints_declared() -> None:
-    """telegram_id, payments.payload, and every slug column are UNIQUE."""
+    """telegram_id, payments.payload, and every catalog slug are UNIQUE.
+
+    EXCEPT ``prompt_templates`` (Phase 8, ADMIN-05): its ``slug`` is intentionally NON-unique so
+    versions coexist — uniqueness is ``(slug, version)``, plus a partial-unique index that enforces
+    at most one active row per slug (the safety valve the engine's ``_active_template`` relies on).
+    """
     assert _column("users", "telegram_id").unique is True
     assert _column("payments", "payload").unique is True
-    for table in ("decks", "cards", "spread_types", "prompt_templates", "products", "topics"):
+    for table in ("decks", "cards", "spread_types", "products", "topics"):
         assert _column(table, "slug").unique is True, table
+
+    prompt = Base.metadata.tables["prompt_templates"]
+    assert _column("prompt_templates", "slug").unique is not True  # non-unique: versions coexist
+    unique_constraint_cols = {
+        tuple(col.name for col in con.columns)
+        for con in prompt.constraints
+        if con.__class__.__name__ == "UniqueConstraint"
+    }
+    assert ("slug", "version") in unique_constraint_cols
+    assert "uq_prompt_active_per_slug" in {ix.name for ix in prompt.indexes}
 
 
 def test_native_enums_present() -> None:

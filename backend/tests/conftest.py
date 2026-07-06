@@ -127,14 +127,24 @@ async def client() -> AsyncIterator[object]:
 
 @pytest.fixture(scope="session")
 async def _db_ready() -> bool:
-    """Create all tables once per session against the test DB.
+    """Build a PRISTINE schema once per session against the dedicated local test DB.
 
     Skips the whole DB-dependent suite if Postgres is unreachable (e.g. Docker not up),
-    so unit tests still run. Later plans run ``alembic upgrade head`` instead of
-    ``create_all`` once the migration exists (Plan 02).
+    so unit tests still run. The test DB (``zerkalo@localhost/zerkalo`` — a throwaway, never the
+    managed/live database) PERSISTS between runs, so a bare ``create_all(checkfirst=True)`` would
+    keep a stale schema when a model's constraints change (e.g. Phase-8 made
+    ``prompt_templates`` slug non-unique + added ``uq_prompt_templates_slug_version``): the existing
+    table is silently skipped and the new constraint never appears, breaking the seed's
+    ``ON CONFLICT (slug, version)``. We therefore DROP + recreate the ``public`` schema first
+    (nuke-and-pave — also clears native ENUM types create_all won't re-drop), so the schema always
+    matches the current models exactly.
     """
+    from sqlalchemy import text
+
     try:
         async with engine.begin() as conn:
+            await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
             await conn.run_sync(Base.metadata.create_all)
         return True
     except Exception as exc:  # pragma: no cover - environment-dependent

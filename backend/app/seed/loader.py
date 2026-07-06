@@ -68,6 +68,25 @@ async def upsert_by_slug(session: AsyncSession, model: type, rows: list[dict[str
         await session.execute(stmt)
 
 
+async def _upsert_prompts(session: AsyncSession, rows: list[dict[str, Any]]) -> None:
+    """Upsert ``prompt_templates`` keyed on the composite ``(slug, version)``.
+
+    Phase 8 (ADMIN-05) made versions coexist per slug, so the conflict key is
+    ``uq_prompt_templates_slug_version`` — NOT ``slug`` alone (which is no longer unique). Re-seeding
+    on a redeploy refreshes the *seeded* version row in place and never clobbers an operator-created
+    newer version: a different ``version`` under the same slug is a different row and survives
+    untouched. Seed rows keep whatever ``is_active`` the JSON declares (the seeded baseline stays
+    active unless an operator has since activated another version).
+    """
+    if not rows:  # pragma: no cover - prompts.json is non-empty
+        return
+    for row in rows:
+        stmt = pg_insert(PromptTemplate).values(**row)
+        update_cols = {k: v for k, v in row.items() if k not in ("slug", "version")}
+        stmt = stmt.on_conflict_do_update(index_elements=["slug", "version"], set_=update_cols)
+        await session.execute(stmt)
+
+
 async def _upsert_spreads(session: AsyncSession, rows: list[dict[str, Any]]) -> None:
     """Upsert spread_types by slug, then seed each spread's positions once.
 
@@ -220,7 +239,7 @@ async def run_seed(session: AsyncSession) -> dict[str, int]:
     await upsert_by_slug(session, Deck, decks)
     await upsert_by_slug(session, Card, cards)
     await _upsert_spreads(session, spreads)
-    await upsert_by_slug(session, PromptTemplate, prompts)
+    await _upsert_prompts(session, prompts)  # keyed on (slug, version) — versions coexist (ADMIN-05)
     await upsert_by_slug(session, Product, products)
     # Compatibility needs deck + spread ids, so it runs AFTER both are upserted.
     compat_count = await _upsert_compatibility(session, compatibility)
