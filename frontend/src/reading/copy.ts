@@ -126,6 +126,12 @@ export const SHARE_BUTTON = "Поделиться раскладом";
 export const SHARE_SAVED_HINT = "Карта сохранена — поделитесь ей из галереи.";
 export const SHARE_FAILED = "Не удалось создать карту. Попробуйте ещё раз.";
 
+// App-level error boundary (UI-05) — the in-voice fallback for an UNEXPECTED render error. The user
+// never sees a stack trace or a blank screen; the details go to the console for diagnostics only.
+export const APP_ERROR_TITLE = "Отражение подёрнулось";
+export const APP_ERROR_HINT = "Что-то дрогнуло в зеркале. Обновите приложение — колода вернётся к вам.";
+export const APP_ERROR_RETRY = "Обновить";
+
 // Meta-row labels (тема / колода / расклад / дата / вопрос).
 export const RESULT_LABELS = {
   question: "Вопрос",
