@@ -24,9 +24,12 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 ## Current Position
 
-Phase: 8 (admin-analytics-polish-deploy) — COMPLETE (4/4 plans + all gates passed). MILESTONE v1.0 DONE.
+Phase: 8 (admin-analytics-polish-deploy) — COMPLETE + DEPLOYED. MILESTONE v1.0 DONE & LIVE.
 Plan: 4 of 4 · Gates: verify passed, security threats_open:0 (SEC-01 fixed), review 0-critical.
-Next: coordinated deploy of the Phase-8 code (migration 0005) to the NL apps (see DEPLOY NOTE below).
+Deployed: both NL apps on sha 07d6ae3 (backend 213035 + frontend 213031). Migration 0005 applied on
+the live PG (seed re-ran via the new (slug,version) key), healthz {db:ok,redis:ok} 200×3, new
+/api/events + /api/admin/prompts correctly gated (401 unauth), webhook 403, frontend 200. All 8
+roadmap phases Complete — no further planned phases.
 Status: Phases 1-7 EXECUTED + all gates resolved (verify-work 7; secure-phase 4/5/6/7 threats_open:0;
 code-review 4/5/6/7 all resolved). App LIVE — ЮKassa payments verified with 2 real purchases. Phase 8
 = final slice: prompt-version safety-valve · analytics `app_events` · privacy-safe share-card · polish.
