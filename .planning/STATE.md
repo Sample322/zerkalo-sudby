@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-07-03T11:15:00.000Z"
-last_activity: 2026-07-03
+last_updated: "2026-07-06T14:00:00.000Z"
+last_activity: 2026-07-06
 progress:
   total_phases: 8
   completed_phases: 7
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Один и тот же вопрос ощущается по-разному в разных колодах — красивый мистический ритуал в Telegram, дающий глубокий, но бережный ответ.
-**Current focus:** Phase 7 — telegram-stars-payments
+**Current focus:** Phase 8 — admin-analytics-polish-deploy (last phase; CONTEXT done, lean slice)
 
 ## Current Position
 
-Phase: 7 (telegram-stars-payments) — EXECUTED (7/7 plans)
-Plan: 7 of 7
-Status: Execution complete → gates pending (/gsd-verify-work, /gsd-code-review + /gsd-secure-phase 4-7)
-Last activity: 2026-07-03
+Phase: 8 (admin-analytics-polish-deploy) — CONTEXT done (`/gsd-discuss-phase 8`), lean-slice scope locked
+Plan: 0 of ? (next: `/gsd-plan-phase 8`)
+Status: Phases 1-7 EXECUTED + all gates resolved (verify-work 7; secure-phase 4/5/6/7 threats_open:0;
+code-review 4/5/6/7 all resolved). App LIVE — ЮKassa payments verified with 2 real purchases. Phase 8
+= final slice: prompt-version safety-valve · analytics `app_events` · privacy-safe share-card · polish.
+Last activity: 2026-07-06
 
 Progress: [██████████] 100%
 
@@ -167,7 +169,11 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-03T08:48:50.894Z
-Stopped at: Completed 07-04-PLAN.md (SUBSCRIPTION/PAID consume-gate arms + get_payment_service)
+Last session: 2026-07-06
+Stopped at: Phase 8 CONTEXT done (`/gsd-discuss-phase 8`) — lean-slice scope locked.
 Resume file: None
-Next: 07-05-PLAN.md (ЮKassa routes — /api/products, create-payment, IP-gated webhook, admin refund + async project_limits/`/api/me` window; get_payment_service seam + sub/paid consume-gate now in place)
+Next: `/gsd-plan-phase 8` — plan the lean slice (D-01..D-05 in 08-CONTEXT.md): prompt-version
+safety-valve · analytics `app_events` (server-inline + best-effort `POST /api/events`) ·
+client-canvas privacy-safe share-card · empty/error/loading polish. NB deploy+payments (ЮKassa live,
+2 real purchases verified) + stats-dashboard already DONE — criterion-5 satisfied; full admin CRUD-UI
+Deferred (operator = seed-JSON + redeploy).
