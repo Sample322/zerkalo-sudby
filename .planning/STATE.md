@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 ## Current Position
 
-Phase: 8 (admin-analytics-polish-deploy) — PLANNED (4 lean-slice plans), ready to execute
-Plan: 0 of 4 (next: `/gsd-execute-phase 8`)
+Phase: 8 (admin-analytics-polish-deploy) — EXECUTED (4/4 plans, inline), gates pending
+Plan: 4 of 4 (next: gates `/gsd-verify-work 8` + `/gsd-secure-phase 8` + `/gsd-code-review 8`, then deploy)
 Status: Phases 1-7 EXECUTED + all gates resolved (verify-work 7; secure-phase 4/5/6/7 threats_open:0;
 code-review 4/5/6/7 all resolved). App LIVE — ЮKassa payments verified with 2 real purchases. Phase 8
 = final slice: prompt-version safety-valve · analytics `app_events` · privacy-safe share-card · polish.
@@ -169,15 +169,22 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-06
-Stopped at: Phase 8 PLANNED (`/gsd-plan-phase 8`) — CONTEXT + RESEARCH + 4 PLAN.md written (inline;
-subagents kept hitting provider session limits). Lean-slice scope.
+Last session: 2026-07-07
+Stopped at: Phase 8 EXECUTED (all 4 plans inline: 08-01 safety-valve, 08-02 analytics, 08-03
+share-card, 08-04 polish+ErrorBoundary). Commits 7acfb22/f122393/2e3087f/c9602e0/9b80bf7 on master.
+backend 151 pass (+ migration 0005 round-trip validated on real PG), frontend 130 pass + tsc + prod
+build clean. 10 pre-existing integration failures (card_draw greenlet + migration/seed DuplicateTable)
+are NOT from Phase 8 — incidental local Postgres exposed a create_all-vs-alembic harness-isolation
+issue; the user's no-Postgres env skips them (see 08-01-SUMMARY).
 Resume file: None
-Next: `/gsd-execute-phase 8` — 4 plans: 08-01 prompt-version safety-valve (migration 0005 multi-version
-+ partial-unique-active index + admin endpoints + AdminScreen) · 08-02 analytics `app_events`
-(own-session best-effort `record_event` + `POST /api/events` + FE `track()`) · 08-03 client-canvas
-privacy-safe share-card · 08-04 empty/error/loading polish (wave 2, depends 01-03). Waves: 1={01,02,03},
-2={04}; worktrees=false on Windows → sequential execute. Key design facts in 08-RESEARCH.md: engine
-`_active_template` already filters is_active (safety-valve data-plane done); app_events has zero
-writers; `is_active`/`version` columns already exist (migration only swaps uniqueness). Deploy+payments
-+ stats-dashboard already DONE (criterion-5 satisfied); CRUD-UI/data-views/extended-KPIs Deferred.
+Next: **gates** — `/gsd-verify-work 8`, `/gsd-secure-phase 8` (admin auth + new POST /api/events +
+migration), `/gsd-code-review 8`; then **coordinated deploy** (see below). Standing debt: the
+integration-harness isolation fix (own-DB or alembic-based schema for the migration/seed tests) +
+the deferred one-line analytics events (onboarding_*/question_entered/card_revealed/settings_changed
++ server-side payment_succeeded/subscription_started) + `/api/events` Redis cap.
+**DEPLOY NOTE (Phase 8 changes the DB schema — migration 0005):** only the single NL backend (213035)
++ NL frontend (213031) exist now (RU fallback apps removed); NL is MANUAL deploy (not auto-on-push),
+so pushing master does NOT migrate. Deploy = explicit `tw.mjs deploy 213035 <full-40hex-sha>` (entrypoint
+runs `alembic upgrade head` → applies 0005 to the shared managed PG, then re-seeds via the new
+`(slug,version)` conflict key) + `tw.mjs deploy 213031 <sha>` for the frontend. Backend flaps on the
+timeweb "Configuring web server" step → retrigger + poll 3×200. Do BOTH apps for the same sha.
