@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 ## Current Position
 
-Phase: 8 (admin-analytics-polish-deploy) — CONTEXT done (`/gsd-discuss-phase 8`), lean-slice scope locked
-Plan: 0 of ? (next: `/gsd-plan-phase 8`)
+Phase: 8 (admin-analytics-polish-deploy) — PLANNED (4 lean-slice plans), ready to execute
+Plan: 0 of 4 (next: `/gsd-execute-phase 8`)
 Status: Phases 1-7 EXECUTED + all gates resolved (verify-work 7; secure-phase 4/5/6/7 threats_open:0;
 code-review 4/5/6/7 all resolved). App LIVE — ЮKassa payments verified with 2 real purchases. Phase 8
 = final slice: prompt-version safety-valve · analytics `app_events` · privacy-safe share-card · polish.
@@ -170,10 +170,14 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-07-06
-Stopped at: Phase 8 CONTEXT done (`/gsd-discuss-phase 8`) — lean-slice scope locked.
+Stopped at: Phase 8 PLANNED (`/gsd-plan-phase 8`) — CONTEXT + RESEARCH + 4 PLAN.md written (inline;
+subagents kept hitting provider session limits). Lean-slice scope.
 Resume file: None
-Next: `/gsd-plan-phase 8` — plan the lean slice (D-01..D-05 in 08-CONTEXT.md): prompt-version
-safety-valve · analytics `app_events` (server-inline + best-effort `POST /api/events`) ·
-client-canvas privacy-safe share-card · empty/error/loading polish. NB deploy+payments (ЮKassa live,
-2 real purchases verified) + stats-dashboard already DONE — criterion-5 satisfied; full admin CRUD-UI
-Deferred (operator = seed-JSON + redeploy).
+Next: `/gsd-execute-phase 8` — 4 plans: 08-01 prompt-version safety-valve (migration 0005 multi-version
++ partial-unique-active index + admin endpoints + AdminScreen) · 08-02 analytics `app_events`
+(own-session best-effort `record_event` + `POST /api/events` + FE `track()`) · 08-03 client-canvas
+privacy-safe share-card · 08-04 empty/error/loading polish (wave 2, depends 01-03). Waves: 1={01,02,03},
+2={04}; worktrees=false on Windows → sequential execute. Key design facts in 08-RESEARCH.md: engine
+`_active_template` already filters is_active (safety-valve data-plane done); app_events has zero
+writers; `is_active`/`version` columns already exist (migration only swaps uniqueness). Deploy+payments
++ stats-dashboard already DONE (criterion-5 satisfied); CRUD-UI/data-views/extended-KPIs Deferred.

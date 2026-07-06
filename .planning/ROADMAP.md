@@ -243,7 +243,7 @@ Plans:
   4. The user can generate a privacy-safe share-card (deck background, 3–4 cards, spread name, short summary) that excludes the personal question by default, and every empty/error/loading state is rendered in product voice (no stack traces)
   5. The app is deployed and reachable over HTTPS on timeweb.cloud (Mini App opens, bot webhook reachable), with Stars verified in test mode and a documented legal/IP review of deck assets completed before public launch
 
-**Plans**: TBD
+**Plans**: 4 plans — LEAN slice (08-CONTEXT D-01): 08-01 prompt-version safety-valve · 08-02 analytics `app_events` · 08-03 privacy-safe share-card · 08-04 empty/error/loading polish. Covers ADMIN-05, ANALYTICS-01, UI-05, UI-06 (+ADMIN-01 reuse; partial ADMIN-09 via the shipped stats dashboard). DEFERRED by owner decision: full admin CRUD-UI + data views (ADMIN-02/03/04/06/07/08) + extended KPI dashboard — operator uses seed-JSON+redeploy. Criterion 5 deploy+payments ALREADY DONE (ЮKassa live, 2 real purchases verified — supersedes the 'Stars' wording, D-01); legal/IP review = owner task.
 **UI hint**: yes
 
 ## Progress
@@ -260,4 +260,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. History & Profile | 7/7 | Complete    | 2026-06-14 |
 | 6. Free Limits & Soft Paywall | 4/4 | Complete    | 2026-06-16 |
 | 7. Telegram Stars Payments | 7/7 | Complete    | 2026-07-03 |
-| 8. Admin, Analytics, Polish & Deploy | 0/TBD | Not started | - |
+| 8. Admin, Analytics, Polish & Deploy | 0/4 | Planned | - |
