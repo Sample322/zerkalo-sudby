@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 
@@ -27,13 +27,19 @@ interface UndoSnackbarProps {
 export function UndoSnackbar({ open, onUndo, onDismiss }: UndoSnackbarProps) {
   const insets = getContentSafeAreaInsets();
 
-  // Auto-dismiss after the undo window. Re-armed whenever `open` (re)opens; cleared on
-  // unmount/close so an undo cancels the pending timer (no double-fire).
+  // Keep the latest onDismiss in a ref so the auto-dismiss timer depends ONLY on `open` — a parent
+  // passing an inline (non-memoized) onDismiss (HistoryScreen does) would otherwise re-run this
+  // effect on every re-render (e.g. when the delete mutation settles), CLEARING + RE-ARMING the 5s
+  // timer and measuring the window from the last render instead of from open. Ref-ing the callback
+  // arms the timer exactly once per open (the component owns its contract, no parent memoization).
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+
   useEffect(() => {
     if (!open) return;
-    const timer = window.setTimeout(onDismiss, UNDO_WINDOW_MS);
+    const timer = window.setTimeout(() => onDismissRef.current(), UNDO_WINDOW_MS);
     return () => window.clearTimeout(timer);
-  }, [open, onDismiss]);
+  }, [open]);
 
   return (
     <AnimatePresence>
