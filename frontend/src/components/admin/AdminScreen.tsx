@@ -12,6 +12,7 @@ import { getContentSafeAreaInsets } from "../../lib/telegram";
 import { useSelection } from "../../stores/selection";
 import { NAV_BACK } from "../../reading/copy";
 import type { StatItem } from "../../api/admin";
+import { PromptVersions } from "./PromptVersions";
 
 export function AdminScreen() {
   const back = useSelection((s) => s.back);
@@ -50,26 +51,32 @@ export function AdminScreen() {
 
       {!isAdmin ? (
         <Muted>Доступ только для администратора.</Muted>
-      ) : isPending ? (
-        <Muted>Собираю статистику…</Muted>
-      ) : isError || !data ? (
-        <Muted>Не удалось загрузить статистику.</Muted>
       ) : (
         <>
-          <section className="grid grid-cols-2 gap-3">
-            <Metric label="Пользователей" value={data.total_users} />
-            <Metric label="Раскладов всего" value={data.total_readings} />
-            <Metric label="Активных за 7д" value={data.active_users_7d} />
-            <Metric label="Раскладов за 7д" value={data.readings_7d} />
-            <Metric label="Сегодня" value={data.readings_today} />
-            <Metric label="Завершено" value={data.completed_readings} />
-            <Metric label="Сбоев" value={data.failed_readings} />
-            <Metric label="Безлимит" value={data.unlimited_users} />
-          </section>
+          {isPending ? (
+            <Muted>Собираю статистику…</Muted>
+          ) : isError || !data ? (
+            <Muted>Не удалось загрузить статистику.</Muted>
+          ) : (
+            <>
+              <section className="grid grid-cols-2 gap-3">
+                <Metric label="Пользователей" value={data.total_users} />
+                <Metric label="Раскладов всего" value={data.total_readings} />
+                <Metric label="Активных за 7д" value={data.active_users_7d} />
+                <Metric label="Раскладов за 7д" value={data.readings_7d} />
+                <Metric label="Сегодня" value={data.readings_today} />
+                <Metric label="Завершено" value={data.completed_readings} />
+                <Metric label="Сбоев" value={data.failed_readings} />
+                <Metric label="Безлимит" value={data.unlimited_users} />
+              </section>
 
-          <Distribution title="Стиль ответа" items={data.by_answer_style} />
-          <Distribution title="По колодам" items={data.by_deck} />
-          <Distribution title="По темам" items={data.by_topic} />
+              <Distribution title="Стиль ответа" items={data.by_answer_style} />
+              <Distribution title="По колодам" items={data.by_deck} />
+              <Distribution title="По темам" items={data.by_topic} />
+            </>
+          )}
+
+          <PromptVersions isAdmin={isAdmin} />
         </>
       )}
     </main>
