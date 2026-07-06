@@ -19,6 +19,7 @@ from app.api import (
     admin_prompts,
     auth,
     decks,
+    events,
     health,
     payments,
     readings,
@@ -81,6 +82,7 @@ app.include_router(admin_prompts.router, prefix="/api")  # /api/admin/prompts (r
 app.include_router(decks.router, prefix="/api")  # GET  /api/decks, /api/decks/{slug}
 app.include_router(spreads.router, prefix="/api")  # GET  /api/spreads, /api/spreads/recommend
 app.include_router(readings.router, prefix="/api")  # POST /api/readings (Bearer JWT)
+app.include_router(events.router, prefix="/api")  # POST /api/events (Bearer JWT, best-effort analytics)
 app.include_router(payments.router, prefix="/api")  # /api/products, /api/payments/* (ЮKassa)
 
 # --- INFRA-05: global soft-error handler (no stacktrace leak to the client) --------

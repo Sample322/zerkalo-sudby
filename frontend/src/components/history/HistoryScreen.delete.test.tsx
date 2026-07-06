@@ -4,6 +4,10 @@ import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react
 import { domAnimation, LazyMotion } from "motion/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+// history_opened analytics is fire-and-forget — no-op it so the ~5s undo-timer test isn't perturbed
+// by the extra /api/events fetch on mount.
+vi.mock("../../api/events", () => ({ track: () => {} }));
+
 import { useSelection } from "../../stores/selection";
 import { HISTORY_DELETED_NOTICE, HISTORY_DELETE_UNDO } from "../../reading/copy";
 import type { ReadingListItem } from "../../api/readings";

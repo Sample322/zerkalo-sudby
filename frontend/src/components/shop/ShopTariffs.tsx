@@ -16,6 +16,7 @@ import {
   useProducts,
 } from "../../hooks/usePayments";
 import type { ProductOut } from "../../api/payments";
+import { track } from "../../api/events";
 import { haptic, onActivated, openLink } from "../../lib/telegram";
 import {
   HISTORY_ERROR,
@@ -61,6 +62,7 @@ export function ShopTariffs({ variant = "sheet", onClose }: ShopTariffsProps) {
 
   async function buy(product: ProductOut): Promise<void> {
     haptic.selection();
+    track("product_clicked", { product_slug: product.slug, product_type: product.product_type });
     setFlow({ slug: product.slug, status: "pending" });
 
     const isSub = product.product_type === "subscription";

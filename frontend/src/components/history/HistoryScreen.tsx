@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as m from "motion/react-m";
 import type { PanInfo } from "motion/react";
 
+import { track } from "../../api/events";
 import {
   useDeleteReading,
   useReadingsList,
@@ -56,6 +57,11 @@ export function HistoryScreen() {
   const restoreReadingMutation = useRestoreReading();
 
   const [pending, setPending] = useState<PendingDelete | null>(null);
+
+  // ANALYTICS-01 — history_opened once per mount (best-effort, fire-and-forget).
+  useEffect(() => {
+    track("history_opened");
+  }, []);
 
   function openReading(item: ReadingListItem): void {
     setDetailReadingId(item.reading_id);

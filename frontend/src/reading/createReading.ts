@@ -11,6 +11,7 @@
 // async-function signature and the store hand-off is unchanged.
 
 import { apiFetch } from "../api/client";
+import { track } from "../api/events";
 import { SHORT_PHRASES } from "./copy";
 import type {
   MockReading,
@@ -191,6 +192,9 @@ export async function createReading(
     answer_style: params.answerStyle ?? "berezhny",
   };
 
+  // Analytics funnel (ANALYTICS-01) — non-PII only (slugs/enums), NEVER the question text.
+  track("reading_started", { topic, deck_slug: deckSlug, spread_slug: spreadSlug });
+
   const response = await apiFetch("/api/readings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -200,10 +204,16 @@ export async function createReading(
   if (!response.ok) {
     // D-08: a 429 is the Redis burst gate (06-03) — the FIRST gate, distinct from the paywall.
     // Any other non-OK status is a generic failure. Reject so the ritual does not advance.
-    throw new ReadingError(
-      response.status === 429 ? "throttle" : "failure",
-      `createReading failed: HTTP ${response.status}`,
-    );
+    const kind = response.status === 429 ? "throttle" : "failure";
+    if (kind === "failure") {
+      track("reading_failed", {
+        topic,
+        deck_slug: deckSlug,
+        spread_slug: spreadSlug,
+        reason: `http_${response.status}`,
+      });
+    }
+    throw new ReadingError(kind, `createReading failed: HTTP ${response.status}`);
   }
 
   const data = (await response.json()) as ReadingOutResponse;
@@ -218,8 +228,16 @@ export async function createReading(
     if (data.reason === "paywall") {
       throw new ReadingError("paywall", "createReading blocked: free limit reached", data.reset_at);
     }
+    track("reading_failed", {
+      topic,
+      deck_slug: deckSlug,
+      spread_slug: spreadSlug,
+      reason: data.status ?? "unknown",
+    });
     throw new ReadingError("failure", `createReading not completed: status=${data.status}`);
   }
+
+  track("reading_completed", { topic, deck_slug: deckSlug, spread_slug: spreadSlug });
 
   // Map through the ONE shared transform (DRY). The result meta shows the RU titles (the slugs
   // go to the backend; the human labels go on screen) — fall back to the slug only if a label

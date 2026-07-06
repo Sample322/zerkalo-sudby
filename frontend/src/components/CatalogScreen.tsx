@@ -6,6 +6,7 @@ import { useDecks } from "../hooks/useDecks";
 import { useMe } from "../hooks/useMe";
 import { useRecommendation, useSpreads } from "../hooks/useSpreads";
 import { getContentSafeAreaInsets, getSafeAreaInsets, haptic } from "../lib/telegram";
+import { track } from "../api/events";
 import { createReading, ReadingError } from "../reading/createReading";
 import { formatRemaining } from "../reading/limitCopy";
 import {
@@ -176,14 +177,17 @@ export function CatalogScreen() {
   function pickTopic(slug: string): void {
     haptic.selection();
     setTopic(slug);
+    track("topic_selected", { topic: slug }); // ANALYTICS-01 (best-effort)
   }
   function pickDeck(slug: string): void {
     haptic.selection();
     setDeck(slug);
+    track("deck_selected", { deck_slug: slug });
   }
   function pickSpread(slug: string): void {
     haptic.selection();
     setSpread(slug);
+    track("spread_selected", { spread_slug: slug });
   }
   function pickStyle(style: AnswerStyle): void {
     haptic.selection();

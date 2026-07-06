@@ -1,7 +1,8 @@
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import { stagger } from "motion/react";
 import * as m from "motion/react-m";
 
+import { track } from "../../api/events";
 import { useSelection } from "../../stores/selection";
 import { useReadingDetail, useReadingsList } from "../../hooks/useReadings";
 import { mapReadingOutToMock } from "../../reading/createReading";
@@ -206,6 +207,12 @@ export function ResultScreen() {
   const goTo = useSelection((s) => s.goTo);
   const back = useSelection((s) => s.back);
   const insets = getSafeAreaInsets();
+
+  // ANALYTICS-01 — summary_viewed once per mount (best-effort). Distinguishes the live result from
+  // a reopened past reading, without any PII.
+  useEffect(() => {
+    track("summary_viewed", { mode: isDetail ? "detail" : "live" });
+  }, [isDetail]);
 
   if (isDetail && !reading) {
     return (

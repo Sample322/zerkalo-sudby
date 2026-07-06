@@ -5,6 +5,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Analytics is fire-and-forget (its own /api/events fetch) — no-op it so these tests can assert the
+// exact /api/readings fetch behaviour (one call) without the extra reading_* analytics call.
+vi.mock("../api/events", () => ({ track: () => {} }));
+
 import { useSession } from "../stores/session";
 import { BANNED_BRAND_TOKENS } from "./copy";
 import { createReading, ReadingError } from "./createReading";

@@ -17,6 +17,7 @@ import {
 } from "motion/react";
 import * as m from "motion/react-m";
 
+import { track } from "../api/events";
 import { hasSeenOnboarding } from "../hooks/useOnboardingSeen";
 import { useMe, usePatchSettings } from "../hooks/useMe";
 import { useSelection } from "../stores/selection";
@@ -50,6 +51,11 @@ const SCREENS: Record<Step, () => React.JSX.Element> = {
 
 export function FlowRoot() {
   const step = useSelection((s) => s.step);
+
+  // ANALYTICS-01 — app_opened once per mount (best-effort, fire-and-forget).
+  useEffect(() => {
+    track("app_opened");
+  }, []);
 
   // Onboarding gate is now SERVER-PRIMARY (D-09 / RESEARCH OQ3): `GET /api/me`
   // `settings.onboarding_completed` is the truth; localStorage is only a boot fallback so the

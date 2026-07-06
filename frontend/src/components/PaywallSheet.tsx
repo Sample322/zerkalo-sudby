@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 
+import { track } from "../api/events";
 import { getContentSafeAreaInsets, getSafeAreaInsets, haptic } from "../lib/telegram";
 import { formatReset } from "../reading/limitCopy";
 import {
@@ -38,7 +39,10 @@ export function PaywallSheet({ open, resetAt, onDismiss }: PaywallSheetProps) {
   // A soft selection haptic on open — never notify("warning"/"error"); a blocked reading is not
   // an alarm. No-op outside Telegram.
   useEffect(() => {
-    if (open) haptic.selection();
+    if (open) {
+      haptic.selection();
+      track("paywall_viewed"); // ANALYTICS-01 (best-effort, fire-and-forget)
+    }
   }, [open]);
 
   const bottomInset = Math.max(getSafeAreaInsets().bottom, getContentSafeAreaInsets().bottom);
