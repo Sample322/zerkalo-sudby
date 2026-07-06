@@ -7,9 +7,9 @@ last_updated: "2026-07-06T14:00:00.000Z"
 last_activity: 2026-07-06
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 38
-  completed_plans: 38
+  completed_phases: 8
+  total_plans: 42
+  completed_plans: 42
   percent: 100
 ---
 
@@ -24,8 +24,9 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 ## Current Position
 
-Phase: 8 (admin-analytics-polish-deploy) — EXECUTED (4/4 plans, inline), gates pending
-Plan: 4 of 4 (next: gates `/gsd-verify-work 8` + `/gsd-secure-phase 8` + `/gsd-code-review 8`, then deploy)
+Phase: 8 (admin-analytics-polish-deploy) — COMPLETE (4/4 plans + all gates passed). MILESTONE v1.0 DONE.
+Plan: 4 of 4 · Gates: verify passed, security threats_open:0 (SEC-01 fixed), review 0-critical.
+Next: coordinated deploy of the Phase-8 code (migration 0005) to the NL apps (see DEPLOY NOTE below).
 Status: Phases 1-7 EXECUTED + all gates resolved (verify-work 7; secure-phase 4/5/6/7 threats_open:0;
 code-review 4/5/6/7 all resolved). App LIVE — ЮKassa payments verified with 2 real purchases. Phase 8
 = final slice: prompt-version safety-valve · analytics `app_events` · privacy-safe share-card · polish.
