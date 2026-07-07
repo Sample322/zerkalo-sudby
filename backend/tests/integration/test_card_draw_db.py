@@ -13,6 +13,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import Deck, SpreadType
 from app.models.enums import Orientation
@@ -28,7 +29,10 @@ async def _first_deck_and_spread(
     ).scalar_one()
     spread = (
         await session.execute(
-            select(SpreadType).where(SpreadType.is_active.is_(True)).limit(1)
+            select(SpreadType)
+            .options(selectinload(SpreadType.positions))  # eager: draw() reads spread.positions
+            .where(SpreadType.is_active.is_(True))
+            .limit(1)
         )
     ).scalar_one()
     n_positions = len(
@@ -61,8 +65,8 @@ async def test_draw_count_and_records_over_seeded_catalog(
 
     assert all(isinstance(r, DrawnCard) for r in records)
     assert len(records) == spread.card_count == n_positions
-    # Positions are assigned 0..n-1 in order; no card is reused across positions.
-    assert [r.position_index for r in records] == list(range(n_positions))
+    # Positions carry the seeded ``spread_positions.position_index`` (1-based, in order); no reuse.
+    assert [r.position_index for r in records] == list(range(1, n_positions + 1))
     assert len({r.card_id for r in records}) == n_positions
     for r in records:
         assert r.deck_card_id is not None

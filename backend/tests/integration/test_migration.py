@@ -157,7 +157,7 @@ async def _unique_columns() -> set[tuple[str, str]]:
         await engine.dispose()
 
 
-async def test_full_schema_applies() -> None:
+async def test_full_schema_applies(clean_migration_db: None) -> None:
     """INFRA-02: upgrade head creates all 17 tables + key uniques; downgrade base reverses."""
     if not await _db_reachable():
         pytest.skip("Postgres unreachable — start `docker compose up` to run the migration test")

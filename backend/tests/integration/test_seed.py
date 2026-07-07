@@ -41,7 +41,7 @@ EXPECTED_COUNTS: dict[str, int] = {
     "spread_types": 7,
     "cards": 78,
     "spread_positions": 23,  # 3+3+3+3+3+4+4
-    "prompt_templates": 11,  # system + single_card + final_summary + 6 deck_modifier + safety + refusal
+    "prompt_templates": 12,  # system + single_card + final_summary + 6 deck_modifier + safety + refusal + redirect
 }
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -112,8 +112,8 @@ async def _seed_once() -> None:
         await session.commit()
 
 
-async def test_seed_counts() -> None:
-    """INFRA-03: seed loads exactly 7 topics / 6 decks / 7 spreads / 78 cards / 23 positions / 11 prompts."""
+async def test_seed_counts(clean_migration_db: None) -> None:
+    """INFRA-03: seed loads exactly 7 topics / 6 decks / 7 spreads / 78 cards / 23 positions / 12 prompts."""
     if not await _db_reachable():
         pytest.skip("Postgres unreachable — start `docker compose up` to run the seed test")
 
@@ -128,7 +128,7 @@ async def test_seed_counts() -> None:
         _run_alembic("downgrade", "base")
 
 
-async def test_seed_idempotent() -> None:
+async def test_seed_idempotent(clean_migration_db: None) -> None:
     """INFRA-03: running the seed twice yields identical counts with no duplicate-key error."""
     if not await _db_reachable():
         pytest.skip("Postgres unreachable — start `docker compose up` to run the seed test")

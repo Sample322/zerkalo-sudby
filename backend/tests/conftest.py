@@ -146,6 +146,9 @@ async def _db_ready() -> bool:
             await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
             await conn.execute(text("CREATE SCHEMA public"))
             await conn.run_sync(Base.metadata.create_all)
+        # Recreating native ENUM types changes their OIDs; flush the pool so no connection carries a
+        # stale type-OID cache (else later queries fail with "cache lookup failed for type <oid>").
+        await engine.dispose()
         return True
     except Exception as exc:  # pragma: no cover - environment-dependent
         pytest.skip(f"Postgres unreachable for integration tests: {exc}")

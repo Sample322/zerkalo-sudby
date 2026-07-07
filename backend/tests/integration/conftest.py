@@ -19,11 +19,13 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
 from app.core.db import SessionLocal, engine
 from app.main import app
+from app.models.base import Base
 from app.schemas.reading import (
     CardInterpretation,
     ReadingOutput,
@@ -67,6 +69,35 @@ async def auth_client(auth_session: AsyncSession) -> AsyncIterator[object]:
             yield ac
     finally:
         app.dependency_overrides.pop(get_session, None)
+
+
+@pytest.fixture
+async def clean_migration_db(_db_ready: bool) -> AsyncIterator[None]:
+    """An EMPTY schema for the alembic-owning tests (migration / seed), restored afterwards.
+
+    ``test_migration`` / ``test_seed`` / ``test_seed_compatibility`` own the whole DB lifecycle via
+    ``alembic upgrade head`` / ``downgrade base``, so they need to start from a truly empty schema —
+    but ``_db_ready`` (session-scoped) has already built the model schema via ``create_all`` (with no
+    ``alembic_version`` stamp), which makes ``upgrade head`` collide (``DuplicateTable "topics"``).
+    This fixture drops the schema clean for the test, then on teardown rebuilds the shared
+    ``create_all`` schema so every OTHER test that relies on it is unaffected — making the alembic
+    tests order-independent. Dedicated local test DB only (``zerkalo@localhost``); never the live DB.
+    """
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+    # Dropping the native ENUM types changes their OIDs; pooled connections cache the old ones and
+    # then fail with "cache lookup failed for type <oid>". Flush the pool so every connection after a
+    # schema rebuild re-introspects the fresh OIDs.
+    await engine.dispose()
+    try:
+        yield
+    finally:
+        async with engine.begin() as conn:
+            await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
+            await conn.run_sync(Base.metadata.create_all)
+        await engine.dispose()
 
 
 # ---------------------------------------------------------------------------------------

@@ -136,7 +136,7 @@ async def _seed_once() -> None:
         await session.commit()
 
 
-async def test_compat_seeded() -> None:
+async def test_compat_seeded(clean_migration_db: None) -> None:
     """SPREAD-04: after seed, compatibility is non-empty with >=1 is_recommended row."""
     if not await _db_reachable():
         pytest.skip("Postgres unreachable — start `docker compose up` to run the seed test")
@@ -151,7 +151,7 @@ async def test_compat_seeded() -> None:
         _run_alembic("downgrade", "base")
 
 
-async def test_compat_idempotent() -> None:
+async def test_compat_idempotent(clean_migration_db: None) -> None:
     """SPREAD-04: running the seed twice yields identical compat counts, no dup-key error."""
     if not await _db_reachable():
         pytest.skip("Postgres unreachable — start `docker compose up` to run the seed test")
@@ -170,7 +170,7 @@ async def test_compat_idempotent() -> None:
         _run_alembic("downgrade", "base")
 
 
-async def test_compat_scores() -> None:
+async def test_compat_scores(clean_migration_db: None) -> None:
     """SPREAD-04: heart_oracle x between_us is recommended; score == topic overlap (2).
 
     heart_oracle.recommended_topics = {love, general, self_reflection}
