@@ -26,10 +26,20 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 Phase: 8 (admin-analytics-polish-deploy) — COMPLETE + DEPLOYED. MILESTONE v1.0 DONE & LIVE.
 Plan: 4 of 4 · Gates: verify passed, security threats_open:0 (SEC-01 fixed), review 0-critical.
-Deployed: both NL apps on sha 07d6ae3 (backend 213035 + frontend 213031). Migration 0005 applied on
-the live PG (seed re-ran via the new (slug,version) key), healthz {db:ok,redis:ok} 200×3, new
-/api/events + /api/admin/prompts correctly gated (401 unauth), webhook 403, frontend 200. All 8
-roadmap phases Complete — no further planned phases.
+Deployed: both NL apps on sha 5a9744f (backend 213035 + frontend 213031), healthz {db:ok,redis:ok},
+gated endpoints 401, frontend 200. All 8 roadmap phases Complete — no further planned phases.
+
+**POST-MILESTONE DEBT CLEARED (2026-07-07):** (1) ANALYTICS-01 COMPLETE — wired the 4 deferred client
+events (onboarding_started/completed, question_entered, card_revealed, settings_changed) + the
+authoritative server-side payment_succeeded/subscription_started (post-commit best-effort in the grant
+path); all ~18 criterion-3 events now covered (commit 52d7e2b, deployed). (2) INTEGRATION HARNESS NOW
+FULLY GREEN against real Postgres — the 10 pre-existing sandbox failures fixed (commit 5a9744f, test-
+only): clean_migration_db fixture isolates the alembic-owning tests, engine.dispose() flushes stale
+ENUM-OID caches, seed count 11→12 (redirect), card_draw eager-loads spread.positions + 1-based index.
+**Full suite: backend 165 pass / 0 fail, frontend 130 pass.** Remaining: 2 LOW review advisories
+(analytics double-count on re-tap; share-card slug for OLD reopened readings) — cosmetic, accepted.
+Owner-side: rotate live keys, 54-ФЗ receipts, legal/IP deck-asset review. Formal milestone archival
+(`/gsd-complete-milestone` for a v2) not run — no v2 scope defined yet (user's call).
 Status: Phases 1-7 EXECUTED + all gates resolved (verify-work 7; secure-phase 4/5/6/7 threats_open:0;
 code-review 4/5/6/7 all resolved). App LIVE — ЮKassa payments verified with 2 real purchases. Phase 8
 = final slice: prompt-version safety-valve · analytics `app_events` · privacy-safe share-card · polish.
