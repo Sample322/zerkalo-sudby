@@ -8,10 +8,11 @@
 // "motion/react-m". Slide navigation is a local `index` + AnimatePresence (no carousel library).
 // All copy is from reading/copy.ts (SAFE-06), rendered as React text nodes only.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 
+import { track } from "../../api/events";
 import { markOnboardingSeen } from "../../hooks/useOnboardingSeen";
 import { usePatchSettings } from "../../hooks/useMe";
 import { useSelection } from "../../stores/selection";
@@ -46,10 +47,16 @@ export function OnboardingFlow() {
   const isLast = index === SLIDES.length - 1;
   const slide = SLIDES[index];
 
+  // ANALYTICS-01 — onboarding_started once per mount (best-effort).
+  useEffect(() => {
+    track("onboarding_started");
+  }, []);
+
   // ONB-04 / D-09 / D-11: both the CTA and «Пропустить» complete onboarding then advance to
   // selection. Server-primary: a fire-and-forget PATCH records it; markOnboardingSeen is the boot
   // fallback. The optimistic PATCH never blocks navigation.
   function finishOnboarding(): void {
+    track("onboarding_completed"); // ANALYTICS-01 (best-effort)
     markOnboardingSeen();
     patchSettings.mutate({ onboarding_completed: true });
     goTo("selection");

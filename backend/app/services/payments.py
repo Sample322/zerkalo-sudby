@@ -57,6 +57,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models import Payment, Product, Subscription, UserLimits
 from app.models.enums import PaymentStatus, ProductType, SubscriptionStatus
+from app.services.analytics import record_event
 
 logger = logging.getLogger("app.payments")
 
@@ -503,7 +504,8 @@ class PaymentService:
             await session.commit()
             return
 
-        if product.product_type == ProductType.SUBSCRIPTION:
+        is_subscription = product.product_type == ProductType.SUBSCRIPTION
+        if is_subscription:
             await self._grant_subscription(
                 session,
                 user_id=user_id,
@@ -516,6 +518,17 @@ class PaymentService:
                 session, user_id=user_id, spreads_amount=product.spreads_amount or 0
             )
         await session.commit()
+
+        # Analytics (ANALYTICS-01) — the AUTHORITATIVE revenue signal, emitted only AFTER the grant
+        # commits and fully isolated (record_event uses its own session + swallows all errors), so it
+        # can never touch the money path. Non-PII: product slug + purchase type only.
+        await record_event(
+            user_id,
+            "payment_succeeded",
+            {"product_slug": product.slug, "purchase_type": product.product_type.value},
+        )
+        if is_subscription:
+            await record_event(user_id, "subscription_started", {"product_slug": product.slug})
 
     @staticmethod
     async def _grant_paid_spreads(

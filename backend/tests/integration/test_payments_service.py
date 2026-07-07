@@ -208,6 +208,35 @@ async def test_grant_paid_balance_on_succeeded(
     assert any(call[0] == "find_payment" for call in fake.recorded_calls)
 
 
+async def test_grant_emits_payment_succeeded_event(
+    auth_session: AsyncSession, seeded_catalog: dict
+) -> None:
+    """A successful grant emits a best-effort ``payment_succeeded`` analytics event (ANALYTICS-01).
+
+    ``record_event`` uses its OWN committed session, so the row is asserted via a fresh ``SessionLocal``
+    (scoped to this test's unique ``user_id``). The emit is POST-commit + swallow-all, so it can never
+    affect the grant itself.
+    """
+    from sqlalchemy import select
+
+    from app.core.db import SessionLocal
+    from app.models.analytics import AppEvent
+
+    fake = FakeYooKassa(succeeded=True)
+    service = _make_service(fake)
+    user = await _make_user(auth_session, paid_balance=0)
+    product = await _make_product(auth_session, slug="pack_3", spreads_amount=3, price_rub=169)
+    await _make_created_payment(auth_session, user=user, product=product)
+    handle = _resolve(service, "handle_webhook_event", "handle_payment_succeeded")
+    await handle(auth_session, SUCCEEDED_EVENT)
+
+    async with SessionLocal() as s:
+        rows = (
+            await s.execute(select(AppEvent).where(AppEvent.user_id == user.id))
+        ).scalars().all()
+    assert "payment_succeeded" in {r.event_name for r in rows}
+
+
 @pytest.mark.xfail(strict=False, reason="Plan 07-03 grants only on the re-fetched succeeded status")
 async def test_no_grant_on_unconfirmed_status(
     auth_session: AsyncSession, seeded_catalog: dict

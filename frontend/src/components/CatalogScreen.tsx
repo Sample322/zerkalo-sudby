@@ -158,6 +158,11 @@ export function CatalogScreen() {
   // `direction` drives the slide (forward = +1, back = -1) so the page transition reads as motion
   // through the wizard, not a jump-cut.
   function goToStep(step: WizardStep, direction: number = 1): void {
+    // ANALYTICS-01 — question_entered when the user confirms the question step (non-PII: just
+    // whether a question was written, never its text).
+    if (wizardStep === "question" && step !== "question") {
+      track("question_entered", { has_question: question.trim().length > 0 });
+    }
     setDir(direction);
     setStartError(false);
     setWizardStep(step);

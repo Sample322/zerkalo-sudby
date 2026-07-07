@@ -2,6 +2,7 @@ import { useState } from "react";
 import { stagger } from "motion/react";
 import * as m from "motion/react-m";
 
+import { track } from "../../api/events";
 import { useSelection } from "../../stores/selection";
 import { getSafeAreaInsets } from "../../lib/telegram";
 import {
@@ -49,13 +50,15 @@ export function RevealScreen() {
   const anyFlipped = flipped.size > 0;
   const allFlipped = flipped.size === cards.length;
 
-  const flipOne = (key: string) =>
+  const flipOne = (key: string) => {
+    if (!flipped.has(key)) track("card_revealed"); // ANALYTICS-01 (best-effort, on a new flip)
     setFlipped((prev) => {
       if (prev.has(key)) return prev;
       const next = new Set(prev);
       next.add(key);
       return next;
     });
+  };
 
   const revealAll = () => setFlipped(new Set(cards.map(cardKey)));
 

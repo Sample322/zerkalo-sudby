@@ -12,6 +12,7 @@
 
 import * as m from "motion/react-m";
 
+import { track } from "../../api/events";
 import { useMe, usePatchSettings } from "../../hooks/useMe";
 import { useCancelSubscription } from "../../hooks/usePayments";
 import { useSelection } from "../../stores/selection";
@@ -145,6 +146,7 @@ export function ProfileScreen() {
 
   function toggle(flag: keyof SessionSettings, next: boolean): void {
     patchSettings.mutate({ [flag]: next });
+    track("settings_changed", { setting: flag, value: next }); // ANALYTICS-01 (best-effort)
   }
 
   const body = (() => {
